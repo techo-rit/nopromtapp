@@ -12,6 +12,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Code Optimization (December 19, 2025)
+- Fixed duplicate key "Great Wall of China Trek" in manifestationQuotes.ts
+- Fixed SVG invalid DOM properties (stroke-width, stroke-linecap, stroke-linejoin → camelCase)
+- Replaced Tailwind CSS CDN with proper @tailwindcss/postcss v4 build
+- Added safe localStorage access with try-catch guards to prevent crashes
+- Added useMemo for trendingTemplates to prevent unnecessary recalculations
+- Fixed TrendingCarousel style injection to prevent duplicate style elements
+- Created src/index.css with Tailwind v4 @import and CSS variables
+
 ### Smart Selfie Feature (December 18, 2025)
 - Added SmartSelfieModal.tsx: Full-screen camera modal with auto-capture
 - Uses react-webcam for camera feed with mirrored selfie view (facingMode: user)
@@ -64,7 +73,7 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 - **Framework**: React 19 with TypeScript
 - **Build Tool**: Vite 6 for development and bundling
-- **Styling**: Tailwind CSS via CDN with custom CSS variables for theming
+- **Styling**: Tailwind CSS v4 via @tailwindcss/postcss with custom CSS variables for theming
 - **Design System**: Mobile-first responsive design with safe-area support for native app wrapping
 - **State Management**: React useState with localStorage persistence for navigation state
 - **Routing**: Custom in-app page state management (home/stack/template pages)
@@ -109,6 +118,9 @@ Preferred communication style: Simple, everyday language.
 - `react-webcam`: Webcam access for Smart Selfie feature
 - `react` / `react-dom`: UI framework
 - `vite` with `@vitejs/plugin-react`: Build tooling
+- `@tailwindcss/postcss`: Tailwind CSS v4 PostCSS plugin
+- `tailwindcss`: Tailwind CSS v4 core
+- `autoprefixer`: CSS vendor prefixing
 
 ### External Assets
 - Google Fonts: Playfair Display for serif headings

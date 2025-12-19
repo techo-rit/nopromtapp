@@ -155,9 +155,7 @@ const App: React.FC = () => {
         // Trigger when trending section is leaving viewport (ratio drops below threshold)
         // and user is scrolling down (boundingClientRect.top is negative)
         if (!entry.isIntersecting && entry.boundingClientRect.top < 0 && !hasSnappedRef.current) {
-          // SCROLL SNAP TRIGGERED HERE
           hasSnappedRef.current = true;
-          console.log('[ScrollSnap] Snap triggered! Scrolling to first stack card.');
 
           // Mobile header offset
           const headerOffset = 56;
