@@ -51,12 +51,13 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
             onClick={() => onSelectTemplate(template)}
             className={`
               /* LAYOUT & SNAP */
-              group relative w-full max-w-[1000px] shrink-0
+              group relative w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px] shrink-0
               snap-center
 
               /* HEIGHTS - "PEEK" LOGIC */
               /* Mobile: 68vh - taller cards while still showing peek of next */
-              h-[68vh] md:h-[600px] lg:h-[700px]
+              /* Desktop: wider and less tall for cinematic look */
+              h-[68vh] md:h-[450px] lg:h-[500px]
 
               /* STYLING */
               cursor-pointer rounded-[24px] md:rounded-[40px] overflow-hidden 
