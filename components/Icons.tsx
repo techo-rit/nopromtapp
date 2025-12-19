@@ -7,9 +7,9 @@ export const RemixLogoIcon: React.FC = () => (
     <path
       d="M21 46V29C21 20 32 20 32 29V46M32 21C42 21 47 25 47 31C47 37 42 41 32 41"
       stroke="#FFFFFF" 
-      stroke-width="5" 
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="5" 
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
 </svg>
 );

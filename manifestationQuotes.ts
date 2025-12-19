@@ -6,7 +6,7 @@ export const manifestationQuotes: Record<string, string> = {
   "Race Track Ferrari": "Speed answers when you're ready",
   "Cozy Christmas Portrait": "Peace settles where you stand",
   "Summer Linen": "Ease looks natural on you",
-  "Great Wall of China Trek": "You walk paths that outlast time",
+  "Great Wall of China": "You walk paths that outlast time",
   "Sahara Desert Walk": "Silence meets you halfway",
 
   // FITIT
