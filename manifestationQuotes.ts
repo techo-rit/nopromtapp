@@ -2,7 +2,7 @@ export const manifestationQuotes: Record<string, string> = {
   // TRENDING TEMPLATES
   "Private Jet Lifestyle": "This level already recognizes you",
   "Infinity Pool Villa": "Rest comes easily at this height",
-  "Dramatic Studio Portrait": "You don't disappear when the light sharpens",
+  "Dramatic Studio": "You don't disappear when the light sharpens",
   "Race Track Ferrari": "Speed answers when you're ready",
   "Cozy Christmas Portrait": "Peace settles where you stand",
   "Summer Linen": "Ease looks natural on you",
@@ -28,25 +28,25 @@ export const manifestationQuotes: Record<string, string> = {
 
   // AESTHETICS
   "Warm Rustic Interior": "You belong in spaces that breathe",
-  "Urban Alleyway Portrait": "Edge sharpens you",
+  "Urban Alleyway": "Edge sharpens you",
   "Vibrant Fabric Market": "Color responds to you",
-  "Royal Luxury Portrait": "This authority feels familiar",
-  "Forest Sunlight Portrait": "Stillness works in your favor",
-  "Ancient Monument Portrait": "Respect meets you here",
+  "Royal Luxury ": "This authority feels familiar",
+  "Forest Sunlight": "Stillness works in your favor",
+  "Ancient Monument": "Respect meets you here",
   "Seaside Golden Hour": "Time slows around you",
-  "Artistic Studio Portrait": "You hold the frame",
+  "Artistic Studio": "You hold the frame",
   "Elegant Silk Saree": "Grace carries weight",
   "Bohemian Chic": "Nothing about you feels copied",
   "Evening Gown Twilight": "Attention settles without effort",
   "Modern Casual City": "You move easily through noise",
   "Vintage 1950s Style": "Class doesn't expire",
   "Pastel Professional": "Softness doesn't weaken you",
-  "Serene Landscape Portrait": "Calm keeps pace with you",
+  "Serene Landscape": "Calm keeps pace with you",
 
   // CELEBRATION
   "Diwali Celebration": "Light finds its way to you",
   "Holi Celebration": "Joy doesn't ask permission",
-  "Elegant Eid Portrait": "Peace arrives dressed in clarity",
+  "Elegant Eid": "Peace arrives dressed in clarity",
 
   // CLOTHES
   "Maharaja Majesty": "History feels close to you",
@@ -82,12 +82,12 @@ export const manifestationQuotes: Record<string, string> = {
   // MONUMENTS
   "Taj Mahal Sunrise": "Some beauty endures",
   "Eiffel Tower Romance": "Belonging travels well",
-  "Pyramids of Giza": "You stand with history",
+  "Pyramids of Giza Expedetion": "You stand with history",
   "Statue of Liberty": "Arrival feels earned",
-  "Great Wall of China": "Endurance respects you",
-  "Colosseum Rome": "Strength remembers form",
+  "Great Wall of China Trek": "Endurance respects you",
+  "Colosseum Gladiator Pose": "Strength remembers form",
   "Lotus Temple Sunset": "Calm takes shape",
-  "Machu Picchu Explorer": "You walk above noise",
+  "Machu Picchu Sunrise": "You walk above noise",
 
   // SCENERIES
   "Himalayan Trek": "The climb meets you halfway",

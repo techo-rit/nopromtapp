@@ -315,7 +315,7 @@ const App: React.FC = () => {
           .map(id => STACKS.find(s => s.id === id))
           .filter((s): s is Stack => !!s);
           
-        const pageTitle = 'Creator Stacks.';
+        const pageTitle = 'Choose your form';
 
         return (
           <>
@@ -323,7 +323,7 @@ const App: React.FC = () => {
               <TrendingCarousel templates={trendingTemplates} onSelectTemplate={handleSelectTemplate} />
             </div>
             <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
-              <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 border-t border-[#2a2a2a] text-left">{pageTitle}</h2>
+              <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 pt-4 md:pt-6 lg:pt-8 border-t border-[#2a2a2a] text-left">{pageTitle}</h2>
               <StackGrid 
                 stacks={stacksToShow} 
                 onSelectStack={handleSelectStack}
