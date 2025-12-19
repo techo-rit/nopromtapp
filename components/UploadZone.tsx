@@ -188,7 +188,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           className="mt-3 w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] font-medium hover:bg-[#2a2a2a] hover:border-[#c9a962]/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#c9a962]/50"
         >
           <CameraIcon />
-          <span>Take Selfie</span>
+          <span>Capture your face</span>
         </button>
 
         <SmartSelfieModal

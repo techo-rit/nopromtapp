@@ -39,14 +39,14 @@ const App: React.FC = () => {
     const savedId = localStorage.getItem(STORAGE_KEY_TEMPLATE);
     return savedId ? TEMPLATES.find(t => t.id === savedId) || null : null;
   });
-  
+
   // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  
+
   const trendingTemplates = TRENDING_TEMPLATE_IDS.map(id => TEMPLATES.find(t => t.id === id)).filter((t): t is Template => !!t);
 
   // Refs for mobile scroll snap between sections
@@ -58,7 +58,7 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_PAGE, currentPage);
     localStorage.setItem(STORAGE_KEY_NAV, activeNav);
-    
+
     if (selectedStack) {
       localStorage.setItem(STORAGE_KEY_STACK, selectedStack.id);
     } else {
@@ -120,7 +120,7 @@ const App: React.FC = () => {
 
     const trendingEl = trendingSectionRef.current;
     const firstCardEl = firstStackCardRef.current;
-    
+
     if (!trendingEl || !firstCardEl) return;
 
     // Reset snap flag when page changesThere is a problem in the home screen, creator screen. There is a double scrolling happening in the mobile screen. I don't want double scrolling. It is irritating. Try to fix it with a replaceable system without removing the existing features. 
@@ -129,18 +129,18 @@ const App: React.FC = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        
+
         // Trigger when trending section is leaving viewport (ratio drops below threshold)
         // and user is scrolling down (boundingClientRect.top is negative)
         if (!entry.isIntersecting && entry.boundingClientRect.top < 0 && !hasSnappedRef.current) {
           // SCROLL SNAP TRIGGERED HERE
           hasSnappedRef.current = true;
           console.log('[ScrollSnap] Snap triggered! Scrolling to first stack card.');
-          
+
           // Mobile header offset
           const headerOffset = 56;
           const elementTop = firstCardEl.getBoundingClientRect().top + window.scrollY;
-          
+
           window.scrollTo({
             top: elementTop - headerOffset - 16, // 16px extra padding
             behavior: 'smooth'
@@ -171,7 +171,7 @@ const App: React.FC = () => {
     };
   }, [currentPage]);
 
-  
+
   const handleSelectStack = useCallback((stack: Stack) => {
     setSelectedStack(stack);
     setCurrentPage('stack');
@@ -187,7 +187,7 @@ const App: React.FC = () => {
         console.error(`Could not find stack with id ${template.stackId} for template ${template.name}`);
     }
   }, []);
-  
+
   const handleBack = useCallback(() => {
     if (currentPage === 'template') {
       if (activeNav === 'Try on') {
@@ -203,7 +203,7 @@ const App: React.FC = () => {
       setSelectedStack(null);
     }
   }, [currentPage, activeNav]);
-  
+
   const handleNavClick = useCallback((category: NavCategory) => {
     setActiveNav(category);
     setCurrentPage('home');
@@ -309,12 +309,12 @@ const App: React.FC = () => {
             </div>
           );
         }
-        
+
         const creatorsStackIds = ['flex', 'aesthetics', 'sceneries', 'clothes', 'monuments', 'celebration', 'fitit', 'animation'];
         const stacksToShow = creatorsStackIds
           .map(id => STACKS.find(s => s.id === id))
           .filter((s): s is Stack => !!s);
-          
+
         const pageTitle = 'Choose your form';
 
         return (
