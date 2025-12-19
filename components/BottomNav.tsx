@@ -154,7 +154,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                                     : "text-[#6b6b6b]"
                             }`}
                         >
-                            Creators
+                            Create
                         </span>
                     </button>
 
