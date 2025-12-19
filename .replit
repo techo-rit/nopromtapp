@@ -1,0 +1,51 @@
+modules = ["nodejs-20", "web"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+GEMINI_API_KEY = "GOOGLE_API_KEY"
+VITE_SUPABASE_URL = "https://ducufhqcxdhqcuhrpnrb.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1Y3VmaHFjeGRocWN1aHJwbnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzOTA2MjksImV4cCI6MjA3OTk2NjYyOX0.F-OShcdX3C5OpDElqFfRTEcpAw18tR06qPnm09828p8"
+VITE_SUPABASE_GOOGLE_CLIENT_ID = "125437919151-798ahu4hrnvnngd9j04ec48sieeujkvh.apps.googleusercontent.com"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Dev Server"
+
+[[workflows.workflow]]
+name = "Dev Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
+[deployment]
+deploymentTarget = "static"
+build = ["npm", "run", "build"]
+publicDir = "dist"

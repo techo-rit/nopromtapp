@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="ico/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="ico/favicon.svg" />
+    <link rel="shortcut icon" href="ico/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="ico/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="nopromt" />
+    <link rel="manifest" href="ico/site.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>NoPrompt AI – Generate AI Images Without Prompt Engineering</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --color-bg: #0a0a0a;
+        --color-surface: #141414;
+        --color-surface-elevated: #1a1a1a;
+        --color-text-primary: #f5f5f5;
+        --color-text-secondary: #a0a0a0;
+        --color-text-muted: #6b6b6b;
+        --color-accent: #c9a962;
+        --color-accent-hover: #d4b872;
+        --color-border: #2a2a2a;
+        --font-serif: 'Playfair Display', Georgia, serif;
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --safe-area-top: env(safe-area-inset-top, 0px);
+        --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-left: env(safe-area-inset-left, 0px);
+        --safe-area-right: env(safe-area-inset-right, 0px);
+      }
+      
+      html {
+        scroll-behavior: smooth;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      body {
+        font-family: var(--font-sans), "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: var(--color-bg);
+        color: var(--color-text-primary);
+        padding-top: var(--safe-area-top);
+        padding-bottom: var(--safe-area-bottom);
+        padding-left: var(--safe-area-left);
+        padding-right: var(--safe-area-right);
+        overscroll-behavior: none;
+        overscroll-behavior-y: contain;
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      @media (max-width: 768px) {
+        * {
+          scroll-behavior: smooth;
+        }
+        
+        .snap-y {
+          scroll-snap-type: y proximity;
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        .snap-x {
+          scroll-snap-type: x proximity;
+          -webkit-overflow-scrolling: touch;
+        }
+      }
+      
+      .font-serif {
+        font-family: var(--font-serif);
+      }
+      
+      .safe-area-top {
+        padding-top: var(--safe-area-top);
+      }
+      
+      .safe-area-bottom {
+        padding-bottom: var(--safe-area-bottom);
+      }
+      
+      * {
+        -webkit-touch-callout: none;
+      }
+      
+      img, a, button {
+        -webkit-user-drag: none;
+        user-select: none;
+      }
+      
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0"
+  }
+}
+</script>
+
+</head>
+  <body class="bg-[#0a0a0a] text-[#f5f5f5]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

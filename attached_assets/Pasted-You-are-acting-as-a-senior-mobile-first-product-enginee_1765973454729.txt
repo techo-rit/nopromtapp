@@ -1,0 +1,53 @@
+You are acting as a senior mobile-first product engineer and premium UI designer.
+
+Context:
+This is a React + TypeScript + Vite web app (nopromt.ai) that will be WRAPPED into a native mobile app using Capacitor.
+The app is already functional. Do NOT change business logic, APIs, auth, or backend behavior.
+
+GOALS (in this exact order of priority):
+
+1) MAKE THE WEB APP READY FOR MOBILE WRAPPING
+- Ensure the app is fully mobile-first and responsive
+- Avoid desktop-only layouts
+- Ensure no horizontal scrolling on mobile
+- Use safe-area-friendly spacing (top/bottom padding)
+- Avoid browser-specific APIs that break inside WebView
+- Ensure routing, modals, and overlays work correctly in mobile WebView
+- Ensure the app works correctly inside an iframe / WebView environment
+
+2) LUXURY + MANIFESTATION UI REDESIGN
+- Redesign ONLY the UI (styles, layout, spacing, typography, animations)
+- Keep all logic and functionality unchanged
+- Use a dark, calm, premium aesthetic
+- Colors: near-black background, soft white text, muted gold accents
+- Typography: elegant serif for headings, clean sans-serif for body
+- Increase whitespace and reduce clutter
+- Use rounded corners and soft shadows
+- Add subtle, slow micro-interactions (fade, slight scale)
+- No flashy gradients, neon colors, or aggressive animations
+- The app should feel calm, intentional, and expensive
+
+3) MOBILE UX QUALITY
+- Buttons must be thumb-friendly
+- Touch targets must be large and comfortable
+- Primary actions should be visually clear but not loud
+- Animations must be smooth and not distracting
+- UI should feel native-like when wrapped, not like a website in a browser
+
+STRICT RULES:
+- DO NOT change existing logic, API calls, or authentication
+- DO NOT add new features
+- DO NOT fix bugs unless they block mobile usability
+- DO NOT introduce breaking changes
+- DO NOT add ads, tracking, or analytics
+- DO NOT connect custom domains or production deployments
+
+PROCESS:
+- Start with global layout and typography
+- Then improve shared components (buttons, inputs, cards)
+- Then refine screens one by one
+- Show updated code clearly for each change
+
+OUTPUT EXPECTATION:
+Return only the updated code and short explanations of UI changes.
+Assume the app will be wrapped into iOS and Android without rewriting in native code.
