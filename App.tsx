@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { AuthModal } from './components/AuthModal';
@@ -20,55 +20,77 @@ const STORAGE_KEY_STACK = 'nopromt_stack_id';
 const STORAGE_KEY_TEMPLATE = 'nopromt_template_id';
 const STORAGE_KEY_NAV = 'nopromt_nav';
 
+const safeGetItem = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSetItem = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+};
+
+const safeRemoveItem = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+};
+
 const App: React.FC = () => {
-  // 1. Initialize State
   const [currentPage, setCurrentPage] = useState<Page>(() => {
-    return (localStorage.getItem(STORAGE_KEY_PAGE) as Page) || 'home';
+    const saved = safeGetItem(STORAGE_KEY_PAGE);
+    return saved === 'home' || saved === 'stack' || saved === 'template' ? saved : 'home';
   });
 
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
-    return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || 'Creators';
+    const saved = safeGetItem(STORAGE_KEY_NAV);
+    return saved === 'Try on' || saved === 'Creators' ? saved : 'Creators';
   });
 
   const [selectedStack, setSelectedStack] = useState<Stack | null>(() => {
-    const savedId = localStorage.getItem(STORAGE_KEY_STACK);
+    const savedId = safeGetItem(STORAGE_KEY_STACK);
     return savedId ? STACKS.find(s => s.id === savedId) || null : null;
   });
 
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(() => {
-    const savedId = localStorage.getItem(STORAGE_KEY_TEMPLATE);
+    const savedId = safeGetItem(STORAGE_KEY_TEMPLATE);
     return savedId ? TEMPLATES.find(t => t.id === savedId) || null : null;
   });
 
-  // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const trendingTemplates = TRENDING_TEMPLATE_IDS.map(id => TEMPLATES.find(t => t.id === id)).filter((t): t is Template => !!t);
+  const trendingTemplates = useMemo(() => 
+    TRENDING_TEMPLATE_IDS.map(id => TEMPLATES.find(t => t.id === id)).filter((t): t is Template => !!t),
+    []
+  );
 
   // Refs for mobile scroll snap between sections
   const trendingSectionRef = useRef<HTMLDivElement>(null);
   const firstStackCardRef = useRef<HTMLDivElement>(null);
   const hasSnappedRef = useRef(false);
 
-  // 2. Save State to Memory
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PAGE, currentPage);
-    localStorage.setItem(STORAGE_KEY_NAV, activeNav);
+    safeSetItem(STORAGE_KEY_PAGE, currentPage);
+    safeSetItem(STORAGE_KEY_NAV, activeNav);
 
     if (selectedStack) {
-      localStorage.setItem(STORAGE_KEY_STACK, selectedStack.id);
+      safeSetItem(STORAGE_KEY_STACK, selectedStack.id);
     } else {
-      localStorage.removeItem(STORAGE_KEY_STACK);
+      safeRemoveItem(STORAGE_KEY_STACK);
     }
 
     if (selectedTemplate) {
-      localStorage.setItem(STORAGE_KEY_TEMPLATE, selectedTemplate.id);
+      safeSetItem(STORAGE_KEY_TEMPLATE, selectedTemplate.id);
     } else {
-      localStorage.removeItem(STORAGE_KEY_TEMPLATE);
+      safeRemoveItem(STORAGE_KEY_TEMPLATE);
     }
   }, [currentPage, activeNav, selectedStack, selectedTemplate]);
 

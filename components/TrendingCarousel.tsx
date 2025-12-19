@@ -228,8 +228,10 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     );
 };
 
-const style = document.createElement("style");
-style.textContent = `
+if (typeof document !== 'undefined' && !document.getElementById('scrollbar-hide-style')) {
+    const style = document.createElement("style");
+    style.id = 'scrollbar-hide-style';
+    style.textContent = `
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
@@ -238,6 +240,5 @@ style.textContent = `
     scrollbar-width: none;
 }
 `;
-if (!document.head.contains(style)) {
     document.head.append(style);
 }
