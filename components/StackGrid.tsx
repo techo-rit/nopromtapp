@@ -74,7 +74,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
   return (
     <>
       {/* Mobile: Vertical list without internal scroll (Fixes double scrolling) */}
-      <div className="md:hidden flex flex-col gap-6 pb-20">
+      <div className="md:hidden flex flex-col gap-5 pb-20">
         {stacks.map((stack, index) => {
           const isFocused = focusedCardId === stack.id;
           
@@ -105,7 +105,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
               <img src={stack.imageUrl} alt={stack.name} className="w-full h-full object-cover object-[center_25%]" />
               <div className={`absolute inset-0 transition-colors duration-300 ${isFocused ? 'bg-black/50' : 'bg-black/30'}`} />
               <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isFocused ? 'opacity-100' : 'opacity-0'}`}>
-                <h3 className="text-white text-[32px] md:text-[48px] lg:text-[56px] font-bold tracking-[-0.01em] md:tracking-[-0.015em] lg:tracking-[-0.02em] leading-[1.1] md:leading-[1.05] lg:leading-[1.0]" style={{fontFamily: 'var(--font-sans)'}}>{stack.name}</h3>
+                <h3 className="text-white text-3xl font-bold tracking-tight">{stack.name}</h3>
               </div>
             </div>
           );
@@ -127,7 +127,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
             <img src={stack.imageUrl} alt={stack.name} className="w-full h-full object-cover object-[center_25%]" />
             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors" />
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <h3 className="text-white text-[32px] md:text-[48px] lg:text-[56px] font-bold tracking-[-0.01em] md:tracking-[-0.015em] lg:tracking-[-0.02em] leading-[1.1] md:leading-[1.05] lg:leading-[1.0]" style={{fontFamily: 'var(--font-sans)'}}>{stack.name}</h3>
+              <h3 className="text-white text-3xl font-bold tracking-tight">{stack.name}</h3>
             </div>
           </div>
         ))}

@@ -1180,7 +1180,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_3",
-    name: "Urban Alleyway Portrait",
+    name: "Urban Alleyway ",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_urbanalleywaypotrait_cover.webp",
     prompt:
@@ -1198,7 +1198,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_5",
-    name: "Royal Luxury Portrait",
+    name: "Royal Luxury ",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_royalluxury_cover.webp",
     prompt:
@@ -1207,7 +1207,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_6",
-    name: "Forest Sunlight Portrait",
+    name: "Forest Sunlight",
     stackId: "aesthetics",
     imageUrl: "/images/astheics_forestsunlight_cover.webp",
     prompt:
@@ -1216,7 +1216,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_8",
-    name: "Ancient Monument Portrait",
+    name: "Ancient Monument",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_ancientmonument_cover.webp",
     prompt:
@@ -1234,7 +1234,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_10",
-    name: "Artistic Studio Portrait",
+    name: "Artistic Studio",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_artisticstudiopotrait_cover.webp",
     prompt:
@@ -1297,7 +1297,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_19",
-    name: "Serene Landscape Portrait",
+    name: "Serene Landscape",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_scerenelandscape_cover.webp",
     prompt:
@@ -1306,7 +1306,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_20",
-    name: "Dramatic Studio Portrait",
+    name: "Dramatic Studio",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_dramaticstudiopotrail_cover.webp",
     prompt:
@@ -1327,7 +1327,7 @@ const celebrationTemplates: Template[] = [
   },
   {
     id: "celebration_template_3",
-    name: "Cozy Christmas Portrait",
+    name: "Cozy Christmas",
     stackId: "celebration",
     imageUrl: "/images/clebration_cozycristmas_cover.webp",
     prompt:
@@ -1345,7 +1345,7 @@ const celebrationTemplates: Template[] = [
   },
   {
     id: "celebration_template_5",
-    name: "Elegant Eid Portrait",
+    name: "Elegant Eid",
     stackId: "celebration",
     imageUrl: "/images/celebration_eid_cover.webp",
     prompt:
@@ -2237,7 +2237,7 @@ const flexTemplates: Template[] = [
 const monumentsTemplates: Template[] = [
   {
     id: "monuments_template_1",
-    name: "Taj Mahal Sunrise Portrait",
+    name: "Taj Mahal Sunrise",
     stackId: "monuments",
     imageUrl: "/images/monuments_tajmahal_cover.webp",
     prompt:
@@ -2291,7 +2291,7 @@ const monumentsTemplates: Template[] = [
   },
   {
     id: "monuments_template_7",
-    name: "Lotus Temple Sunset Portrait",
+    name: "Lotus Temple Sunset",
     stackId: "monuments",
     imageUrl: "/images/monuments_lotustemple_cover.webp",
     prompt:
@@ -2300,7 +2300,7 @@ const monumentsTemplates: Template[] = [
   },
   {
     id: "monuments_template_8",
-    name: "Machu Picchu Sunrise Explorer",
+    name: "Machu Picchu Sunrise",
     stackId: "monuments",
     imageUrl: "/images/monuments_machupichu_cover.webp",
     prompt:
@@ -2330,7 +2330,7 @@ const sceneriesTemplates: Template[] = [
   },
   {
     id: "sceneries_template_3",
-    name: "Amazon Rainforest Explorer",
+    name: "Amazon Rainforest",
     stackId: "sceneries",
     imageUrl: "/images/sceneries_amazonrainforest_cover.webp",
     prompt:
