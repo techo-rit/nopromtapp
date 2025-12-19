@@ -57,7 +57,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               /* HEIGHTS - "PEEK" LOGIC */
               /* Mobile: 68vh - taller cards while still showing peek of next */
               /* Desktop: wider and less tall for cinematic look */
-              h-[68vh] md:h-[450px] lg:h-[500px]
+              h-[68vh] md:h-[500px] lg:h-[550px]
 
               /* STYLING */
               cursor-pointer rounded-[24px] md:rounded-[40px] overflow-hidden 
