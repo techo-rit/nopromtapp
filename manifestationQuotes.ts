@@ -4,7 +4,7 @@ export const manifestationQuotes: Record<string, string> = {
   "Infinity Pool Villa": "Rest comes easily at this height",
   "Dramatic Studio": "You don't disappear when the light sharpens",
   "Race Track Ferrari": "Speed answers when you're ready",
-  "Cozy Christmas Portrait": "Peace settles where you stand",
+  "Cozy Christmas": "Peace settles where you stand",
   "Summer Linen": "Ease looks natural on you",
   "Sahara Desert Walk": "Silence meets you halfway",
 

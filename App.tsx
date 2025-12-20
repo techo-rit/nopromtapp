@@ -261,19 +261,18 @@ const App: React.FC = () => {
             />
           )
         );
-      case "stack":
-        return (
-          selectedStack && (
-            <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
-              <TemplateGrid
-                templates={TEMPLATES.filter(
-                  (t) => t.stackId === selectedStack.id,
-                )}
-                onSelectTemplate={handleSelectTemplate}
-              />
-            </div>
-          )
-        );
+        case "stack":
+          return (
+            selectedStack && (
+              // No padding, fixed screen height ensures the Grid controls the scroll
+              <div className="w-full h-screen overflow-hidden bg-[#0a0a0a]">
+                <TemplateGrid
+                  templates={TEMPLATES.filter((t) => t.stackId === selectedStack.id)}
+                  onSelectTemplate={handleSelectTemplate}
+                />
+              </div>
+            )
+          );
       case "home":
       default:
         if (activeNav === "Try on") {
