@@ -143,7 +143,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
 
   return (
     <div className="w-full" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-        <p className="block text-xl font-semibold text-[#f5f5f5] mb-3">{title} <span className={`text-base font-normal ${subtitle === 'Required' ? 'text-[#c9a962]' : 'text-[#6b6b6b]'}`}>({subtitle})</span></p>
+        <p className="block text-xl font-semibold text-[#f5f5f5] mb-3">{title}</p>
         
         <div
           role="button"
@@ -173,8 +173,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] pointer-events-none select-none px-4">
                 <UploadIcon />
-                <p className="mt-3 text-center text-lg">Drag, drop, <span className="font-semibold text-[#c9a962]">paste</span> or <span className="font-semibold text-[#c9a962]">tap to browse</span></p>
-                <p className="text-sm mt-1 text-[#6b6b6b]">JPG, PNG, WebP up to 10MB</p>
+                <p className="mt-3 text-center text-lg">Drag and drop / paste / tap</p>
             </div>
           )}
         </div>

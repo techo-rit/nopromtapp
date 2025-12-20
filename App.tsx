@@ -1,24 +1,30 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Header } from './components/Header';
-import { BottomNav } from './components/BottomNav';
-import { AuthModal } from './components/AuthModal';
-import { TrendingCarousel } from './components/TrendingCarousel';
-import { StackGrid } from './components/StackGrid';
-import { TemplateGrid } from './components/TemplateGrid';
-import { TemplateExecution } from './components/TemplateExecution';
-import { authService } from './services/authService';
-import type { Stack, Template, User } from './types';
-import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from './constants';
-import { ArrowLeftIcon } from './components/Icons';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
+import { Header } from "./components/Header";
+import { BottomNav } from "./components/BottomNav";
+import { AuthModal } from "./components/AuthModal";
+import { TrendingCarousel } from "./components/TrendingCarousel";
+import { StackGrid } from "./components/StackGrid";
+import { TemplateGrid } from "./components/TemplateGrid";
+import { TemplateExecution } from "./components/TemplateExecution";
+import { authService } from "./services/authService";
+import type { Stack, Template, User } from "./types";
+import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
+import { ArrowLeftIcon } from "./components/Icons";
 
-type Page = 'home' | 'stack' | 'template';
-type NavCategory = 'Try on' | 'Creators';
+type Page = "home" | "stack" | "template";
+type NavCategory = "Try on" | "Creators";
 
 // STORAGE KEYS
-const STORAGE_KEY_PAGE = 'nopromt_page';
-const STORAGE_KEY_STACK = 'nopromt_stack_id';
-const STORAGE_KEY_TEMPLATE = 'nopromt_template_id';
-const STORAGE_KEY_NAV = 'nopromt_nav';
+const STORAGE_KEY_PAGE = "nopromt_page";
+const STORAGE_KEY_STACK = "nopromt_stack_id";
+const STORAGE_KEY_TEMPLATE = "nopromt_template_id";
+const STORAGE_KEY_NAV = "nopromt_nav";
 
 const safeGetItem = (key: string): string | null => {
   try {
@@ -43,23 +49,27 @@ const safeRemoveItem = (key: string): void => {
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
     const saved = safeGetItem(STORAGE_KEY_PAGE);
-    return saved === 'home' || saved === 'stack' || saved === 'template' ? saved : 'home';
+    return saved === "home" || saved === "stack" || saved === "template"
+      ? saved
+      : "home";
   });
 
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     const saved = safeGetItem(STORAGE_KEY_NAV);
-    return saved === 'Try on' || saved === 'Creators' ? saved : 'Creators';
+    return saved === "Try on" || saved === "Creators" ? saved : "Creators";
   });
 
   const [selectedStack, setSelectedStack] = useState<Stack | null>(() => {
     const savedId = safeGetItem(STORAGE_KEY_STACK);
-    return savedId ? STACKS.find(s => s.id === savedId) || null : null;
+    return savedId ? STACKS.find((s) => s.id === savedId) || null : null;
   });
 
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(() => {
-    const savedId = safeGetItem(STORAGE_KEY_TEMPLATE);
-    return savedId ? TEMPLATES.find(t => t.id === savedId) || null : null;
-  });
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    () => {
+      const savedId = safeGetItem(STORAGE_KEY_TEMPLATE);
+      return savedId ? TEMPLATES.find((t) => t.id === savedId) || null : null;
+    },
+  );
 
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
@@ -67,9 +77,12 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const trendingTemplates = useMemo(() => 
-    TRENDING_TEMPLATE_IDS.map(id => TEMPLATES.find(t => t.id === id)).filter((t): t is Template => !!t),
-    []
+  const trendingTemplates = useMemo(
+    () =>
+      TRENDING_TEMPLATE_IDS.map((id) =>
+        TEMPLATES.find((t) => t.id === id),
+      ).filter((t): t is Template => !!t),
+    [],
   );
 
   // Refs for mobile scroll snap between sections
@@ -96,42 +109,42 @@ const App: React.FC = () => {
 
   // In App.tsx
 
- useEffect(() => {
-  let isActive = true;
+  useEffect(() => {
+    let isActive = true;
 
-  const initializeAuth = async () => {
-    try {
-      // Step 1: Check stored session FIRST
-      const existingUser = await authService.getCurrentUser();
-      if (isActive) {
-        setUser(existingUser);
+    const initializeAuth = async () => {
+      try {
+        // Step 1: Check stored session FIRST
+        const existingUser = await authService.getCurrentUser();
+        if (isActive) {
+          setUser(existingUser);
+        }
+      } catch (error) {
+        console.warn("Failed to restore session:", error);
+        if (isActive) {
+          setUser(null);
+        }
       }
-    } catch (error) {
-      console.warn('Failed to restore session:', error);
+    };
+
+    // Start checking immediately
+    initializeAuth();
+
+    // Also listen for future changes
+    const subscription = authService.onAuthStateChange((user) => {
       if (isActive) {
-        setUser(null);
+        setUser(user);
       }
-    }
-  };
+    });
 
-  // Start checking immediately
-  initializeAuth();
+    // Stop loading immediately
+    setIsGlobalLoading(false);
 
-  // Also listen for future changes
-  const subscription = authService.onAuthStateChange((user) => {
-    if (isActive) {
-      setUser(user);
-    }
-  });
-
-  // Stop loading immediately
-  setIsGlobalLoading(false);
-
-  return () => {
-    isActive = false;
-    subscription.unsubscribe();
-  };
-}, []);
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // MOBILE-ONLY: Guided scroll snap from Trending to Creator Stacks
   // Uses IntersectionObserver to detect when Trending section leaves viewport
@@ -145,7 +158,7 @@ const App: React.FC = () => {
 
     if (!trendingEl || !firstCardEl) return;
 
-    // Reset snap flag when page changesThere is a problem in the home screen, creator screen. There is a double scrolling happening in the mobile screen. I don't want double scrolling. It is irritating. Try to fix it with a replaceable system without removing the existing features. 
+    // Reset snap flag when page changesThere is a problem in the home screen, creator screen. There is a double scrolling happening in the mobile screen. I don't want double scrolling. It is irritating. Try to fix it with a replaceable system without removing the existing features.
     hasSnappedRef.current = false;
 
     const observer = new IntersectionObserver(
@@ -154,24 +167,29 @@ const App: React.FC = () => {
 
         // Trigger when trending section is leaving viewport (ratio drops below threshold)
         // and user is scrolling down (boundingClientRect.top is negative)
-        if (!entry.isIntersecting && entry.boundingClientRect.top < 0 && !hasSnappedRef.current) {
+        if (
+          !entry.isIntersecting &&
+          entry.boundingClientRect.top < 0 &&
+          !hasSnappedRef.current
+        ) {
           hasSnappedRef.current = true;
 
           // Mobile header offset
           const headerOffset = 56;
-          const elementTop = firstCardEl.getBoundingClientRect().top + window.scrollY;
+          const elementTop =
+            firstCardEl.getBoundingClientRect().top + window.scrollY;
 
           window.scrollTo({
             top: elementTop - headerOffset - 16, // 16px extra padding
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         }
       },
       {
         root: null, // viewport
         threshold: 0.15, // trigger when 15% visible
-        rootMargin: '0px'
-      }
+        rootMargin: "0px",
+      },
     );
 
     observer.observe(trendingEl);
@@ -183,50 +201,51 @@ const App: React.FC = () => {
       }
     };
 
-    window.addEventListener('scroll', handleScrollReset, { passive: true });
+    window.addEventListener("scroll", handleScrollReset, { passive: true });
 
     return () => {
       observer.disconnect();
-      window.removeEventListener('scroll', handleScrollReset);
+      window.removeEventListener("scroll", handleScrollReset);
     };
   }, [currentPage]);
 
-
   const handleSelectStack = useCallback((stack: Stack) => {
     setSelectedStack(stack);
-    setCurrentPage('stack');
+    setCurrentPage("stack");
   }, []);
 
   const handleSelectTemplate = useCallback((template: Template) => {
-    const stackForTemplate = STACKS.find(s => s.id === template.stackId);
+    const stackForTemplate = STACKS.find((s) => s.id === template.stackId);
     if (stackForTemplate) {
-        setSelectedStack(stackForTemplate);
-        setSelectedTemplate(template);
-        setCurrentPage('template');
+      setSelectedStack(stackForTemplate);
+      setSelectedTemplate(template);
+      setCurrentPage("template");
     } else {
-        console.error(`Could not find stack with id ${template.stackId} for template ${template.name}`);
+      console.error(
+        `Could not find stack with id ${template.stackId} for template ${template.name}`,
+      );
     }
   }, []);
 
   const handleBack = useCallback(() => {
-    if (currentPage === 'template') {
-      if (activeNav === 'Try on') {
-        setCurrentPage('home');
+    if (currentPage === "template") {
+      if (activeNav === "Try on") {
+        setCurrentPage("home");
         setSelectedStack(null);
         setSelectedTemplate(null);
       } else {
-        setCurrentPage('stack');
+        setCurrentPage("stack");
         setSelectedTemplate(null);
       }
-    } else if (currentPage === 'stack') {
-      setCurrentPage('home');
+    } else if (currentPage === "stack") {
+      setCurrentPage("home");
       setSelectedStack(null);
     }
   }, [currentPage, activeNav]);
 
   const handleNavClick = useCallback((category: NavCategory) => {
     setActiveNav(category);
-    setCurrentPage('home');
+    setCurrentPage("home");
     setSelectedStack(null);
     setSelectedTemplate(null);
   }, []);
@@ -237,7 +256,11 @@ const App: React.FC = () => {
     }
   }, [user]);
 
-  const handleSignUp = async (email: string, password: string, name: string) => {
+  const handleSignUp = async (
+    email: string,
+    password: string,
+    name: string,
+  ) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
@@ -249,7 +272,7 @@ const App: React.FC = () => {
         setAuthError("Account created! Please check your email to confirm.");
       }
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Sign up failed');
+      setAuthError(error instanceof Error ? error.message : "Sign up failed");
     } finally {
       setAuthLoading(false);
     }
@@ -263,7 +286,7 @@ const App: React.FC = () => {
       setUser(loggedInUser);
       setShowAuthModal(false);
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Login failed');
+      setAuthError(error instanceof Error ? error.message : "Login failed");
     } finally {
       setAuthLoading(false);
     }
@@ -275,7 +298,9 @@ const App: React.FC = () => {
     try {
       await authService.signInWithGoogle();
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Google sign in failed');
+      setAuthError(
+        error instanceof Error ? error.message : "Google sign in failed",
+      );
       setAuthLoading(false);
     }
   };
@@ -287,65 +312,82 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'template':
-        return selectedTemplate && selectedStack && (
-          <TemplateExecution
-            template={selectedTemplate}
-            stack={selectedStack}
-            onBack={handleBack}
-            onLoginRequired={handleLoginRequired}
-            user={user}
-          />
-        );
-      case 'stack':
-        return selectedStack && (
-          <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
-            <button
-              onClick={handleBack}
-              aria-label="Go back to all stacks"
-              className="flex items-center gap-2 text-[#c9a962] hover:text-[#d4b872] mb-8 transition-colors rounded-md focus:outline-none font-medium text-lg"
-            >
-              <ArrowLeftIcon />
-              Back to Stacks
-            </button>
-            <h1 className="text-[44px] md:text-[64px] lg:text-[80px] font-bold md:font-semibold tracking-[-0.02em] lg:tracking-[-0.03em] text-[#f5f5f5] mb-4 leading-[1.1] md:leading-[1.05]">{selectedStack.name}</h1>
-            <p className="text-[#a0a0a0] text-[17px] md:text-[19px] lg:text-[21px] font-medium mb-12 leading-[1.4] lg:leading-[1.33] tracking-normal md:tracking-[0.01em] lg:tracking-[0.015em] max-w-2xl">Choose a template to start remixing your image.</p>
-            <TemplateGrid
-              templates={TEMPLATES.filter(t => t.stackId === selectedStack.id)}
-              onSelectTemplate={handleSelectTemplate}
+      case "template":
+        return (
+          selectedTemplate &&
+          selectedStack && (
+            <TemplateExecution
+              template={selectedTemplate}
+              stack={selectedStack}
+              onBack={handleBack}
+              onLoginRequired={handleLoginRequired}
+              user={user}
             />
-          </div>
+          )
         );
-      case 'home':
+      case "stack":
+        return (
+          selectedStack && (
+            <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
+              <button
+                onClick={handleBack}
+                aria-label="Go back to all stacks"
+                className="flex items-center gap-2 text-[#c9a962] hover:text-[#d4b872] mb-8 transition-colors rounded-md focus:outline-none font-medium text-lg"
+              >
+                <ArrowLeftIcon />
+              </button>
+
+              <TemplateGrid
+                templates={TEMPLATES.filter(
+                  (t) => t.stackId === selectedStack.id,
+                )}
+                onSelectTemplate={handleSelectTemplate}
+              />
+            </div>
+          )
+        );
+      case "home":
       default:
-        if (activeNav === 'Try on') {
-          const fititTemplates = TEMPLATES.filter(t => t.stackId === 'fitit');
+        if (activeNav === "Try on") {
+          const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
           return (
             <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
-              <TemplateGrid 
-                templates={fititTemplates} 
+              <TemplateGrid
+                templates={fititTemplates}
                 onSelectTemplate={handleSelectTemplate}
               />
             </div>
           );
         }
 
-        const creatorsStackIds = ['flex', 'aesthetics', 'sceneries', 'clothes', 'monuments', 'celebration', 'fitit', 'animation'];
+        const creatorsStackIds = [
+          "flex",
+          "aesthetics",
+          "sceneries",
+          "clothes",
+          "monuments",
+          "celebration",
+          "fitit",
+          "animation",
+        ];
         const stacksToShow = creatorsStackIds
-          .map(id => STACKS.find(s => s.id === id))
+          .map((id) => STACKS.find((s) => s.id === id))
           .filter((s): s is Stack => !!s);
 
-        const pageTitle = 'Choose your form';
+        const pageTitle = "Choose your form";
 
         return (
           <>
             <div ref={trendingSectionRef}>
-              <TrendingCarousel templates={trendingTemplates} onSelectTemplate={handleSelectTemplate} />
+              <TrendingCarousel
+                templates={trendingTemplates}
+                onSelectTemplate={handleSelectTemplate}
+              />
             </div>
             <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
-              <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 pt-4 md:pt-6 lg:pt-8 border-t border-[#2a2a2a] text-left">{pageTitle}</h2>
-              <StackGrid 
-                stacks={stacksToShow} 
+              
+              <StackGrid
+                stacks={stacksToShow}
                 onSelectStack={handleSelectStack}
                 firstCardRef={firstStackCardRef}
               />
@@ -377,9 +419,7 @@ const App: React.FC = () => {
         isLoading={authLoading}
         error={authError}
       />
-      <main className="pb-[80px] md:pb-0">
-        {renderContent()}
-      </main>
+      <main className="pb-[80px] md:pb-0">{renderContent()}</main>
       <BottomNav
         activeNav={activeNav}
         onNavClick={handleNavClick}
