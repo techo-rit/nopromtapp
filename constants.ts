@@ -18,9 +18,8 @@ export const STACKS: Stack[] = [
   { id: "fitit", name: "Fitit", imageUrl: "/images/fitit_cover.webp" },
   {
     id: "animation",
-    name: "Animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?q=80&w=1200&auto=format&fit=crop",
+    name: "Anime",
+    imageUrl: "/images/anime_cover.webp",
   },
   {
     id: "aesthetics",
@@ -99,8 +98,7 @@ const animationTemplates: Template[] = [
     id: "animation_template_1",
     name: "Monkey D. Luffy",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1613376023733-0a7536aa4d63?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/Anime_MonkeyD_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography",
 
@@ -254,8 +252,7 @@ const animationTemplates: Template[] = [
     id: "animation_template_2",
     name: "Son Goku",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1578351184307-e16856c14a43?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/Anime_songoku_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography",
 
@@ -377,8 +374,7 @@ const animationTemplates: Template[] = [
     id: "animation_template_3",
     name: "Naruto Uzumaki",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1629822355420-10a45937a353?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/Anime_Naruto_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography",
 
@@ -534,8 +530,7 @@ const animationTemplates: Template[] = [
     id: "animation_template_4",
     name: "Usagi Tsukino",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1531379415763-6c7414da4546?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/anime_usagi_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography",
 
@@ -690,8 +685,7 @@ const animationTemplates: Template[] = [
     id: "animation_template_5",
     name: "Levi Ackerman",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1559899479-58a794025a4d?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/anime_leviAckerman_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography",
 
@@ -832,8 +826,7 @@ const animationTemplates: Template[] = [
     id: "animation_template_6",
     name: "Satoru Gojo",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1611894982245-42a138679b33?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/Anime_Satorugojo_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography",
 
@@ -991,10 +984,9 @@ const animationTemplates: Template[] = [
   },
   {
     id: "animation_template_7",
-    name: "Pixar 3D Style",
+    name: "Tanjiro Kamado",
     stackId: "animation",
-    imageUrl:
-      "https://images.unsplash.com/photo-1635805737707-575885ab0820?q=80&w=1200&auto=format&fit=crop",
+    imageUrl: "/images/anime_tanjirokamado_cover.webp",
     prompt: {
       task: "real_life_cosplay_photography_non_portrait_action",
 
@@ -1023,6 +1015,38 @@ const animationTemplates: Template[] = [
         preserve_forehead_structure: true,
         no_anime_face_translation: true,
         no_character_face_override: true,
+      },
+
+      head_scar: {
+        presence: true,
+        location:
+          "left side of forehead extending slightly toward the hairline",
+        shape_reference: "Tanjiro Kamado forehead scar silhouette",
+        interpretation: "real_world_healed_injury",
+        realism_constraints: {
+          no_glowing_edges: true,
+          no_symbolic_or_rune_patterns: true,
+          no_anime_outline: true,
+          human_skin_healing_logic: true,
+        },
+        texture: {
+          type: "old_burn_or_healed_laceration",
+          surface: "slightly uneven skin texture",
+          color_variation:
+            "subtle reddish-brown pigmentation with natural fading",
+          edge_definition: "soft, irregular, non-symmetrical",
+        },
+        integration_rules: {
+          respect_facial_anatomy: true,
+          follow_forehead_wrinkle_and_skin_tension_lines: true,
+          partially_obscured_by_hair_when_applicable: true,
+          affected_by_lighting_and_environmental_shadows: true,
+        },
+        constraints: {
+          do_not_change_face_structure: true,
+          do_not_morph_identity: true,
+          no_fantasy_markings: true,
+        },
       },
 
       cosplay_definition: {
@@ -1158,12 +1182,112 @@ const animationTemplates: Template[] = [
   },
   {
     id: "animation_template_8",
-    name: "Chibi Sticker Sheet",
+    name: "Nezuko Kamado",
     stackId: "animation",
     imageUrl:
-      "https://images.unsplash.com/photo-1620027582882-c34015f6b3e7?q=80&w=1200&auto=format&fit=crop",
-    prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Please create a set of 9 Chibi stickers featuring [the character in the reference image], arranged in a 3x3 grid.\nDesign requirements:\n- Transparent background.\n- 1:1 square aspect ratio.\n- Consistent Chibi Ghibli cartoon style with vibrant colors.\n- Each sticker must have a unique action, expression, and theme, reflecting diverse emotions like \"sassy, mischievous, cute, frantic\" (e.g., rolling eyes, laughing hysterically on the floor, soul leaving body, petrified, throwing money, foodie mode, social anxiety attack). Incorporate elements related to office workers and internet memes.\n- Each character depiction must be complete, with no missing parts.\n- Each sticker must have a uniform white outline, giving it a sticker-like appearance.\n- No extraneous or detached elements in the image.\n- Strictly no text, or ensure any text is 100% accurate (no text preferred).",
+      "/images/anime_NezukoKamado_cover.webp",
+    prompt: {
+      task: "real_life_anime_character_conversion",
+
+      input: {
+        source_image: "person_photo",
+        identity_preservation: {
+          enabled: true,
+          strength: 0.92,
+          face_structure_lock: true,
+          no_beautification: true,
+        },
+      },
+
+      character_translation: {
+        style_source: "anime_reference_character",
+        conversion_type: "anime_to_real_human",
+        rules: [
+          "translate anime proportions into realistic human anatomy",
+          "keep eyes, nose, lips fully realistic",
+          "no oversized eyes, no chibi features",
+        ],
+      },
+
+      appearance: {
+        hair: {
+          color: "natural black",
+          length: "long, waist-length",
+          texture: "real human hair, slightly wavy",
+          movement: "wind-affected strands, imperfect flow",
+        },
+        outfit: {
+          type: "traditional Japanese-inspired outfit adapted to real-world tailoring",
+          inner_garment: "soft pink patterned kimono fabric",
+          outer_layer: "dark brown haori-style coat",
+          belt: "checkered waist belt with fabric knot",
+          details: "real cloth folds, stitching visible, fabric weight realism",
+        },
+        accessories: {
+          hair_accessory: "small pink ribbon clip",
+          bamboo_element: "realistic bamboo accessory adapted naturally",
+        },
+      },
+
+      pose_and_expression: {
+        pose: "gentle forward walk",
+        body_language: "calm, innocent, relaxed shoulders",
+        expression: "soft smile, natural lips, realistic teeth",
+        eyes: "human-sized, moist highlights, natural iris texture",
+      },
+
+      environment: {
+        setting: "real outdoor environment",
+        ground: "natural grass or stone path",
+        background: "clean, realistic surroundings",
+        depth_of_field: "moderate, background clearly visible",
+        no_blur_abuse: true,
+      },
+
+      lighting: {
+        type: "natural daylight",
+        direction: "soft side lighting",
+        shadows: "realistic falloff",
+        no_neon: true,
+        no_studio_glow: true,
+      },
+
+      camera: {
+        lens: "50mm",
+        angle: "eye level",
+        distortion: "none",
+        framing: "full body portrait",
+      },
+
+      rendering_constraints: {
+        photorealism: true,
+        skin_texture: "visible pores, fine imperfections",
+        no_plastic_skin: true,
+        no_anime_rendering: true,
+        no_figurine_look: true,
+        no_cgi: true,
+      },
+
+      quality_control: {
+        resolution: "high",
+        sharpness: "natural",
+        grain: "subtle real-camera grain",
+      },
+
+      negative_prompt: [
+        "anime eyes",
+        "cartoon face",
+        "doll skin",
+        "figurine",
+        "3d render",
+        "cgi",
+        "plastic texture",
+        "over-smooth skin",
+        "fantasy glow",
+        "unreal lighting",
+        "blurred background",
+      ],
+    },
     aspectRatio: "1:1",
   },
 ];
@@ -1180,7 +1304,7 @@ const aestheticsTemplates: Template[] = [
   },
   {
     id: "aesthetics_template_3",
-    name: "Urban Alleyway ",
+    name: "Urban Alleyway",
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_urbanalleywaypotrait_cover.webp",
     prompt:
@@ -2081,7 +2205,7 @@ const flexTemplates: Template[] = [
   },
   {
     id: "flex_template_2",
-    name: "Luxury Superbike Rider",
+    name: "Luxury Superbike",
     stackId: "flex",
     imageUrl: "/images/flex_luxurysuperbikerider_cover.webp",
     prompt:

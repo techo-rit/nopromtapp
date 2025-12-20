@@ -158,7 +158,7 @@ const App: React.FC = () => {
 
     if (!trendingEl || !firstCardEl) return;
 
-    // Reset snap flag when page changesThere is a problem in the home screen, creator screen. There is a double scrolling happening in the mobile screen. I don't want double scrolling. It is irritating. Try to fix it with a replaceable system without removing the existing features.
+    // Reset snap flag when page changes
     hasSnappedRef.current = false;
 
     const observer = new IntersectionObserver(
@@ -329,14 +329,6 @@ const App: React.FC = () => {
         return (
           selectedStack && (
             <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
-              <button
-                onClick={handleBack}
-                aria-label="Go back to all stacks"
-                className="flex items-center gap-2 text-[#c9a962] hover:text-[#d4b872] mb-8 transition-colors rounded-md focus:outline-none font-medium text-lg"
-              >
-                <ArrowLeftIcon />
-              </button>
-
               <TemplateGrid
                 templates={TEMPLATES.filter(
                   (t) => t.stackId === selectedStack.id,
@@ -385,7 +377,11 @@ const App: React.FC = () => {
               />
             </div>
             <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
-              
+              {/* Heading restored here */}
+              <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 pt-4 md:pt-6 lg:pt-8 border-t border-[#2a2a2a] text-left">
+                {pageTitle}
+              </h2>
+
               <StackGrid
                 stacks={stacksToShow}
                 onSelectStack={handleSelectStack}
@@ -406,6 +402,8 @@ const App: React.FC = () => {
         onSignIn={() => setShowAuthModal(true)}
         onLogout={handleLogout}
         isLoading={isGlobalLoading}
+        isSecondaryPage={currentPage !== "home"}
+        onBack={handleBack}
       />
       <AuthModal
         isOpen={showAuthModal}

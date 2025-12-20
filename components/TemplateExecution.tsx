@@ -225,13 +225,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
 
     return (
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-12">
-            <button
-                onClick={onBack}
-                aria-label={`Back to ${stack.name} templates`}
-                className="min-h-[44px] flex items-center gap-2 text-[#c9a962] hover:text-[#d4b872] mb-8 transition-colors rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962]/50 text-lg"
-            >
-                <ArrowLeftIcon />
-            </button>
+            
 
             {!generatedImages && !isLoading && (
                 <>
@@ -283,10 +277,21 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                         <button
                             onClick={handleRemix}
                             disabled={remixButtonDisabled}
-                            className="min-h-[56px] inline-flex items-center justify-center gap-3 px-12 py-5 bg-[#1a1a1a] text-[#f5f5f5] font-semibold text-xl rounded-2xl border border-[#3a3a3a] hover:bg-[#2a2a2a] hover:border-[#c9a962]/30 transition-all duration-300 disabled:bg-[#141414] disabled:text-[#6b6b6b] disabled:border-[#2a2a2a] disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962]/50"
+                            className="group relative min-h-[56px] inline-flex items-center justify-center gap-3 px-12 py-5 
+                            bg-[#0a0a0a] text-[#E4C085] font-medium text-xl tracking-wide rounded-2xl 
+                            border border-[#E4C085]/30 
+                            shadow-[0_0_15px_rgba(228,192,133,0.05)]
+                            hover:bg-[#141414] hover:border-[#E4C085]/60 hover:shadow-[0_0_30px_rgba(228,192,133,0.15)] hover:-translate-y-0.5
+                            active:translate-y-0 active:shadow-none
+                            transition-all duration-500 ease-out 
+                            disabled:bg-[#0a0a0a] disabled:text-[#6b6b6b] disabled:border-[#2a2a2a] disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0
+                            focus:outline-none focus-visible:ring-1 focus-visible:ring-[#E4C085]/50"
                         >
-                            <SparklesIcon />
-                            Remix Image
+                            {/* Inner Ambient Gradient for depth */}
+                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#E4C085]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                            
+                            <span className="relative">Transform your soul</span>
                         </button>
                     </div>
                 </>

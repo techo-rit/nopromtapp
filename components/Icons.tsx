@@ -21,16 +21,30 @@ export const ArrowLeftIcon: React.FC = () => (
 );
 
 export const UploadIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-    </svg>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-12 w-12 text-[#E4C085]"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      opacity="0.5"
+      d="M3 15C3 17.8284 3 19.2426 3.87868 20.1213C4.75736 21 6.17157 21 9 21H15C17.8284 21 19.2426 21 20.1213 20.1213C21 19.2426 21 17.8284 21 15"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M12 16V3M12 3L16 7.375M12 3L8 7.375"
+    />
+  </svg>
 );
 
-export const SparklesIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L16 10l-4 4-1.293-1.293a1 1 0 010-1.414L13 9m7-3l-2.293 2.293a1 1 0 01-1.414 0L14 6m2-2l2.293 2.293a1 1 0 001.414 0L22 6m-7 12l-2.293-2.293a1 1 0 00-1.414 0L10 18l4 4 1.293-1.293a1 1 0 000-1.414L13 17" />
-    </svg>
-);
+
 
 export const DownloadIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

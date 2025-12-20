@@ -88,7 +88,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
                  src={template.imageUrl} 
                  alt={template.name} 
                  className={`
-                   w-full h-full object-cover object-[center_40%] 
+                   w-full h-full object-cover object-[center_30%] 
                    transition-transform duration-700 
                    ${isFocused ? 'scale-110' : 'scale-100'}
                    md:group-hover:scale-105

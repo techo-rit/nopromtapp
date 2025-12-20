@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { RemixLogoIcon } from "./Icons";
+import { RemixLogoIcon, ArrowLeftIcon } from "./Icons";
 import type { User } from "../types";
 
 type NavCategory = "Try on" | "Creators";
@@ -11,6 +11,9 @@ interface HeaderProps {
     onSignIn: () => void;
     onLogout: () => void;
     isLoading?: boolean;
+    // New props for the secondary navigation
+    isSecondaryPage?: boolean;
+    onBack?: () => void;
 }
 
 const SearchIcon: React.FC = () => (
@@ -38,12 +41,57 @@ export const Header: React.FC<HeaderProps> = ({
     onSignIn,
     onLogout,
     isLoading = false,
+    isSecondaryPage = false,
+    onBack,
 }) => {
     const navItems: NavCategory[] = ["Creators", "Try on"];
     const [showUserMenu, setShowUserMenu] = useState(false);
     const mobileSearchRef = useRef<HTMLInputElement>(null);
     const desktopSearchRef = useRef<HTMLInputElement>(null);
 
+    // 1. SECONDARY NAV (Used on Stack/Template pages)
+    if (isSecondaryPage) {
+        return (
+            <header className="sticky top-0 z-50 w-full bg-[#0a0a0a] border-b border-[#2a2a2a] h-[60px]">
+                <div className="w-full h-full max-w-[1440px] mx-auto px-4 flex items-center justify-between gap-3">
+
+                    {/* Left: Back Arrow */}
+                    <button 
+                        onClick={onBack}
+                        className="p-2 -ml-2 text-[#f5f5f5] hover:text-[#c9a962] transition-colors"
+                        aria-label="Go back"
+                    >
+                        <ArrowLeftIcon />
+                    </button>
+
+                    {/* Middle: Search Bar (Flex-1 to take available space) */}
+                    <div className="flex-1 max-w-[720px]">
+                        <div
+                            className="flex items-center gap-2 h-[40px] px-4 bg-transparent cursor-text w-full"
+                            onClick={() => mobileSearchRef.current?.focus()}
+                        >
+                            <SearchIcon />
+                            <input
+                                ref={mobileSearchRef}
+                                type="text"
+                                placeholder="desire for..."
+                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] focus:outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Right: 12 days pill (kept for balance, optional) */}
+                    <div className="shrink-0 flex items-center px-4 py-2 bg-transparent border border-[#3a3a3a] rounded-full hidden sm:flex">
+                        <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
+                            12 days
+                        </span>
+                    </div>
+                </div>
+            </header>
+        );
+    }
+
+    // 2. MAIN HEADER (Home Screen: Create / Changing Room)
     return (
         <>
             {/* MOBILE TOP BAR */}
@@ -103,7 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </nav>
                     </div>
 
-                    {/* Right side - Auth Button, User Menu, OR SKELETON */}
+                    {/* Right side - Auth Button, User Menu */}
                     <div className="flex items-center gap-4">
                         {isLoading ? (
                             <div className="flex items-center gap-3 animate-pulse">

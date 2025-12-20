@@ -6,7 +6,6 @@ export const manifestationQuotes: Record<string, string> = {
   "Race Track Ferrari": "Speed answers when you're ready",
   "Cozy Christmas Portrait": "Peace settles where you stand",
   "Summer Linen": "Ease looks natural on you",
-  "Great Wall of China": "You walk paths that outlast time",
   "Sahara Desert Walk": "Silence meets you halfway",
 
   // FITIT
@@ -18,7 +17,7 @@ export const manifestationQuotes: Record<string, string> = {
 
   // ANIMATION / COSPLAY
   "Monkey D. Luffy": "Freedom answers your name",
-  "Son Goku": "Strength rises without effort",
+  "Son Goku": "Strength rises with effort",
   "Naruto Uzumaki": "You keep moving forward",
   "Usagi Tsukino": "Gentleness holds its own power",
   "Levi Ackerman": "Control stays quiet",
@@ -64,7 +63,7 @@ export const manifestationQuotes: Record<string, string> = {
 
   // FLEX
   "Bugatti Coastal Drive": "Momentum listens to you",
-  "Luxury Superbike Rider": "Control stays steady",
+  "Luxury Superbike": "Control stays steady",
   "Ice Rink Elegance": "Balance comes naturally",
   "Deep Sea Diver": "Depth doesn't intimidate you",
   "Yacht Life": "Calm carries status",
@@ -84,7 +83,7 @@ export const manifestationQuotes: Record<string, string> = {
   "Eiffel Tower Romance": "Belonging travels well",
   "Pyramids of Giza Expedetion": "You stand with history",
   "Statue of Liberty": "Arrival feels earned",
-  "Great Wall of China Trek": "Endurance respects you",
+  "Great Wall of China Trek": "You walk paths that outlast time",
   "Colosseum Gladiator Pose": "Strength remembers form",
   "Lotus Temple Sunset": "Calm takes shape",
   "Machu Picchu Sunrise": "You walk above noise",
