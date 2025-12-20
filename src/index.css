@@ -45,11 +45,6 @@ body {
     scroll-behavior: smooth;
   }
   
-  .snap-y {
-    scroll-snap-type: y proximity;
-    -webkit-overflow-scrolling: touch;
-  }
-  
   .snap-x {
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;

@@ -85,10 +85,7 @@ const App: React.FC = () => {
     [],
   );
 
-  // Refs for mobile scroll snap between sections
-  const trendingSectionRef = useRef<HTMLDivElement>(null);
-  const firstStackCardRef = useRef<HTMLDivElement>(null);
-  const hasSnappedRef = useRef(false);
+  
 
   useEffect(() => {
     safeSetItem(STORAGE_KEY_PAGE, currentPage);
@@ -146,68 +143,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // MOBILE-ONLY: Guided scroll snap from Trending to Creator Stacks
-  // Uses IntersectionObserver to detect when Trending section leaves viewport
-  useEffect(() => {
-    // Only run on mobile (max-width: 768px)
-    const isMobile = window.innerWidth < 768;
-    if (!isMobile) return;
-
-    const trendingEl = trendingSectionRef.current;
-    const firstCardEl = firstStackCardRef.current;
-
-    if (!trendingEl || !firstCardEl) return;
-
-    // Reset snap flag when page changes
-    hasSnappedRef.current = false;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-
-        // Trigger when trending section is leaving viewport (ratio drops below threshold)
-        // and user is scrolling down (boundingClientRect.top is negative)
-        if (
-          !entry.isIntersecting &&
-          entry.boundingClientRect.top < 0 &&
-          !hasSnappedRef.current
-        ) {
-          hasSnappedRef.current = true;
-
-          // Mobile header offset
-          const headerOffset = 56;
-          const elementTop =
-            firstCardEl.getBoundingClientRect().top + window.scrollY;
-
-          window.scrollTo({
-            top: elementTop - headerOffset - 16, // 16px extra padding
-            behavior: "smooth",
-          });
-        }
-      },
-      {
-        root: null, // viewport
-        threshold: 0.15, // trigger when 15% visible
-        rootMargin: "0px",
-      },
-    );
-
-    observer.observe(trendingEl);
-
-    // Reset snap flag when scrolling back to top
-    const handleScrollReset = () => {
-      if (window.scrollY < 100) {
-        hasSnappedRef.current = false;
-      }
-    };
-
-    window.addEventListener("scroll", handleScrollReset, { passive: true });
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("scroll", handleScrollReset);
-    };
-  }, [currentPage]);
+ 
 
   const handleSelectStack = useCallback((stack: Stack) => {
     setSelectedStack(stack);
@@ -370,7 +306,7 @@ const App: React.FC = () => {
 
         return (
           <>
-            <div ref={trendingSectionRef}>
+            <div>
               <TrendingCarousel
                 templates={trendingTemplates}
                 onSelectTemplate={handleSelectTemplate}
@@ -385,7 +321,6 @@ const App: React.FC = () => {
               <StackGrid
                 stacks={stacksToShow}
                 onSelectStack={handleSelectStack}
-                firstCardRef={firstStackCardRef}
               />
             </div>
           </>
