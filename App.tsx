@@ -28,7 +28,8 @@ const HomeRoute = ({
   if (activeNav === "Try on") {
     const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
     return (
-      <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
+      // FIX: Removed px-8 py-12 to align focused cards upwards (matching Stack view)
+      <div className="w-full max-w-[1440px] mx-auto">
         <TemplateGrid
           templates={fititTemplates}
           onSelectTemplate={handleSelectTemplate}

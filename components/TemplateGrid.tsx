@@ -92,9 +92,10 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               border border-[#2a2a2a]
               bg-[#050505]
 
-              /* FOCUS STATE SCALING */
+              /* FOCUS STATE SCALING & MOBILE OFFSET FIX */
+              /* translate-y-6 pushes it DOWN on mobile. md:translate-y-0 resets it for desktop. */
               ${isFocused 
-                ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10' 
+                ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10 translate-y-6 md:translate-y-0' 
                 : 'scale-[0.93] opacity-60 blur-[0.5px] z-0' /* Subtle shrink for non-focused */
               }
             `}
