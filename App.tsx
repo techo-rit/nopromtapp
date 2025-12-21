@@ -2,9 +2,9 @@ import React, {
   useState,
   useCallback,
   useEffect,
-  useRef,
   useMemo,
 } from "react";
+import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
 import { Header } from "./components/Header";
 import { BottomNav } from "./components/BottomNav";
 import { AuthModal } from "./components/AuthModal";
@@ -15,61 +15,129 @@ import { TemplateExecution } from "./components/TemplateExecution";
 import { authService } from "./services/authService";
 import type { Stack, Template, User } from "./types";
 import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
-import { ArrowLeftIcon } from "./components/Icons";
 
-type Page = "home" | "stack" | "template";
+// --- Route Components (Wrappers to handle URL parameters) ---
+
+// 1. Home Page Component
+const HomeRoute = ({ 
+  activeNav, 
+  handleSelectStack, 
+  handleSelectTemplate, 
+  trendingTemplates 
+}: any) => {
+  if (activeNav === "Try on") {
+    const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
+    return (
+      <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
+        <TemplateGrid
+          templates={fititTemplates}
+          onSelectTemplate={handleSelectTemplate}
+        />
+      </div>
+    );
+  }
+
+  const creatorsStackIds = [
+    "flex",
+    "aesthetics",
+    "sceneries",
+    "clothes",
+    "monuments",
+    "celebration",
+    "fitit",
+    "animation",
+  ];
+  const stacksToShow = creatorsStackIds
+    .map((id) => STACKS.find((s) => s.id === id))
+    .filter((s): s is Stack => !!s);
+
+  return (
+    <>
+      <div>
+        <TrendingCarousel
+          templates={trendingTemplates}
+          onSelectTemplate={handleSelectTemplate}
+        />
+      </div>
+      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
+        <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 pt-4 md:pt-6 lg:pt-8 border-t border-[#2a2a2a] text-left">
+          Choose your form
+        </h2>
+        <StackGrid
+          stacks={stacksToShow}
+          onSelectStack={handleSelectStack}
+        />
+      </div>
+    </>
+  );
+};
+
+// 2. Stack Page Component (Reads ID from URL)
+const StackRoute = ({ onSelectTemplate }: { onSelectTemplate: (t: Template) => void }) => {
+  const { stackId } = useParams();
+  const selectedStack = STACKS.find((s) => s.id === stackId);
+
+  if (!selectedStack) return <Navigate to="/" replace />;
+
+  return (
+    <div className="w-full h-screen overflow-hidden bg-[#0a0a0a]">
+      <TemplateGrid
+        templates={TEMPLATES.filter((t) => t.stackId === selectedStack.id)}
+        onSelectTemplate={onSelectTemplate}
+      />
+    </div>
+  );
+};
+
+// 3. Template Execution Component (Reads ID from URL)
+const TemplateRoute = ({ 
+  user, 
+  onLoginRequired, 
+  onBack 
+}: { 
+  user: User | null, 
+  onLoginRequired: () => void,
+  onBack: () => void 
+}) => {
+  const { templateId } = useParams();
+  const selectedTemplate = TEMPLATES.find((t) => t.id === templateId);
+  
+  if (!selectedTemplate) return <Navigate to="/" replace />;
+  
+  const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
+  if (!stack) return <Navigate to="/" replace />;
+
+  return (
+    <TemplateExecution
+      template={selectedTemplate}
+      stack={stack}
+      onBack={onBack}
+      onLoginRequired={onLoginRequired}
+      user={user}
+    />
+  );
+};
+
+// --- Main App Component ---
+
 type NavCategory = "Try on" | "Creators";
-
-// STORAGE KEYS
-const STORAGE_KEY_PAGE = "nopromt_page";
-const STORAGE_KEY_STACK = "nopromt_stack_id";
-const STORAGE_KEY_TEMPLATE = "nopromt_template_id";
 const STORAGE_KEY_NAV = "nopromt_nav";
 
 const safeGetItem = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  try { return localStorage.getItem(key); } catch { return null; }
 };
-
 const safeSetItem = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {}
-};
-
-const safeRemoveItem = (key: string): void => {
-  try {
-    localStorage.removeItem(key);
-  } catch {}
+  try { localStorage.setItem(key, value); } catch {}
 };
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>(() => {
-    const saved = safeGetItem(STORAGE_KEY_PAGE);
-    return saved === "home" || saved === "stack" || saved === "template"
-      ? saved
-      : "home";
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     const saved = safeGetItem(STORAGE_KEY_NAV);
     return saved === "Try on" || saved === "Creators" ? saved : "Creators";
   });
-
-  const [selectedStack, setSelectedStack] = useState<Stack | null>(() => {
-    const savedId = safeGetItem(STORAGE_KEY_STACK);
-    return savedId ? STACKS.find((s) => s.id === savedId) || null : null;
-  });
-
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
-    () => {
-      const savedId = safeGetItem(STORAGE_KEY_TEMPLATE);
-      return savedId ? TEMPLATES.find((t) => t.id === savedId) || null : null;
-    },
-  );
 
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
@@ -78,125 +146,68 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const trendingTemplates = useMemo(
-    () =>
-      TRENDING_TEMPLATE_IDS.map((id) =>
-        TEMPLATES.find((t) => t.id === id),
-      ).filter((t): t is Template => !!t),
+    () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES.find((t) => t.id === id)).filter((t): t is Template => !!t),
     [],
   );
 
-  
-
   useEffect(() => {
-    safeSetItem(STORAGE_KEY_PAGE, currentPage);
     safeSetItem(STORAGE_KEY_NAV, activeNav);
-
-    if (selectedStack) {
-      safeSetItem(STORAGE_KEY_STACK, selectedStack.id);
-    } else {
-      safeRemoveItem(STORAGE_KEY_STACK);
-    }
-
-    if (selectedTemplate) {
-      safeSetItem(STORAGE_KEY_TEMPLATE, selectedTemplate.id);
-    } else {
-      safeRemoveItem(STORAGE_KEY_TEMPLATE);
-    }
-  }, [currentPage, activeNav, selectedStack, selectedTemplate]);
-
-  // In App.tsx
+  }, [activeNav]);
 
   useEffect(() => {
     let isActive = true;
-
     const initializeAuth = async () => {
       try {
-        // Step 1: Check stored session FIRST
         const existingUser = await authService.getCurrentUser();
-        if (isActive) {
-          setUser(existingUser);
-        }
+        if (isActive) setUser(existingUser);
       } catch (error) {
         console.warn("Failed to restore session:", error);
-        if (isActive) {
-          setUser(null);
-        }
+        if (isActive) setUser(null);
       }
     };
-
-    // Start checking immediately
     initializeAuth();
-
-    // Also listen for future changes
     const subscription = authService.onAuthStateChange((user) => {
-      if (isActive) {
-        setUser(user);
-      }
+      if (isActive) setUser(user);
     });
-
-    // Stop loading immediately
     setIsGlobalLoading(false);
-
     return () => {
       isActive = false;
       subscription.unsubscribe();
     };
   }, []);
 
- 
-
+  // Navigation Handlers using React Router
   const handleSelectStack = useCallback((stack: Stack) => {
-    setSelectedStack(stack);
-    setCurrentPage("stack");
-  }, []);
+    navigate(`/stack/${stack.id}`);
+  }, [navigate]);
 
   const handleSelectTemplate = useCallback((template: Template) => {
-    const stackForTemplate = STACKS.find((s) => s.id === template.stackId);
-    if (stackForTemplate) {
-      setSelectedStack(stackForTemplate);
-      setSelectedTemplate(template);
-      setCurrentPage("template");
-    } else {
-      console.error(
-        `Could not find stack with id ${template.stackId} for template ${template.name}`,
-      );
-    }
-  }, []);
+    navigate(`/template/${template.id}`);
+  }, [navigate]);
 
   const handleBack = useCallback(() => {
-    if (currentPage === "template") {
-      if (activeNav === "Try on") {
-        setCurrentPage("home");
-        setSelectedStack(null);
-        setSelectedTemplate(null);
-      } else {
-        setCurrentPage("stack");
-        setSelectedTemplate(null);
-      }
-    } else if (currentPage === "stack") {
-      setCurrentPage("home");
-      setSelectedStack(null);
+    // If inside a template, go back to stack or home depending on history
+    if (location.pathname.includes('/template/')) {
+       // Logic: Check if we have history state or just go back one level
+       navigate(-1); 
+    } else if (location.pathname.includes('/stack/')) {
+       navigate('/');
+    } else {
+      navigate('/');
     }
-  }, [currentPage, activeNav]);
+  }, [location, navigate]);
 
   const handleNavClick = useCallback((category: NavCategory) => {
     setActiveNav(category);
-    setCurrentPage("home");
-    setSelectedStack(null);
-    setSelectedTemplate(null);
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
   const handleLoginRequired = useCallback(() => {
-    if (!user) {
-      setShowAuthModal(true);
-    }
+    if (!user) setShowAuthModal(true);
   }, [user]);
 
-  const handleSignUp = async (
-    email: string,
-    password: string,
-    name: string,
-  ) => {
+  // Auth Handlers
+  const handleSignUp = async (email: string, password: string, name: string) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
@@ -234,9 +245,7 @@ const App: React.FC = () => {
     try {
       await authService.signInWithGoogle();
     } catch (error) {
-      setAuthError(
-        error instanceof Error ? error.message : "Google sign in failed",
-      );
+      setAuthError(error instanceof Error ? error.message : "Google sign in failed");
       setAuthLoading(false);
     }
   };
@@ -246,86 +255,8 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  const renderContent = () => {
-    switch (currentPage) {
-      case "template":
-        return (
-          selectedTemplate &&
-          selectedStack && (
-            <TemplateExecution
-              template={selectedTemplate}
-              stack={selectedStack}
-              onBack={handleBack}
-              onLoginRequired={handleLoginRequired}
-              user={user}
-            />
-          )
-        );
-        case "stack":
-          return (
-            selectedStack && (
-              // No padding, fixed screen height ensures the Grid controls the scroll
-              <div className="w-full h-screen overflow-hidden bg-[#0a0a0a]">
-                <TemplateGrid
-                  templates={TEMPLATES.filter((t) => t.stackId === selectedStack.id)}
-                  onSelectTemplate={handleSelectTemplate}
-                />
-              </div>
-            )
-          );
-      case "home":
-      default:
-        if (activeNav === "Try on") {
-          const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
-          return (
-            <div className="w-full max-w-[1440px] mx-auto px-8 py-12">
-              <TemplateGrid
-                templates={fititTemplates}
-                onSelectTemplate={handleSelectTemplate}
-              />
-            </div>
-          );
-        }
-
-        const creatorsStackIds = [
-          "flex",
-          "aesthetics",
-          "sceneries",
-          "clothes",
-          "monuments",
-          "celebration",
-          "fitit",
-          "animation",
-        ];
-        const stacksToShow = creatorsStackIds
-          .map((id) => STACKS.find((s) => s.id === id))
-          .filter((s): s is Stack => !!s);
-
-        const pageTitle = "Choose your form";
-
-        return (
-          <>
-            <div>
-              <TrendingCarousel
-                templates={trendingTemplates}
-                onSelectTemplate={handleSelectTemplate}
-              />
-            </div>
-            <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
-              {/* Heading restored here */}
-              <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 pt-4 md:pt-6 lg:pt-8 border-t border-[#2a2a2a] text-left">
-                {pageTitle}
-              </h2>
-
-              <StackGrid
-                stacks={stacksToShow}
-                onSelectStack={handleSelectStack}
-              />
-            </div>
-          </>
-        );
-    }
-  };
+  // Check if we are not on home for the Header "isSecondaryPage" prop
+  const isSecondaryPage = location.pathname !== '/';
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#f5f5f5] font-sans selection:bg-[#c9a962] selection:text-[#0a0a0a]">
@@ -336,7 +267,7 @@ const App: React.FC = () => {
         onSignIn={() => setShowAuthModal(true)}
         onLogout={handleLogout}
         isLoading={isGlobalLoading}
-        isSecondaryPage={currentPage !== "home"}
+        isSecondaryPage={isSecondaryPage}
         onBack={handleBack}
       />
       <AuthModal
@@ -351,7 +282,39 @@ const App: React.FC = () => {
         isLoading={authLoading}
         error={authError}
       />
-      <main className="pb-[80px] md:pb-0">{renderContent()}</main>
+      
+      <main className="pb-[80px] md:pb-0">
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <HomeRoute 
+                activeNav={activeNav}
+                handleSelectStack={handleSelectStack}
+                handleSelectTemplate={handleSelectTemplate}
+                trendingTemplates={trendingTemplates}
+              />
+            } 
+          />
+          <Route 
+            path="/stack/:stackId" 
+            element={<StackRoute onSelectTemplate={handleSelectTemplate} />} 
+          />
+          <Route 
+            path="/template/:templateId" 
+            element={
+              <TemplateRoute 
+                user={user} 
+                onLoginRequired={handleLoginRequired} 
+                onBack={handleBack} 
+              />
+            } 
+          />
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+
       <BottomNav
         activeNav={activeNav}
         onNavClick={handleNavClick}
