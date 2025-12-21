@@ -23,13 +23,14 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+          // FIX: Reduced threshold slightly to be more forgiving on fast scrolls
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
             const id = entry.target.getAttribute('data-card-id');
             if (id) setFocusedCardId(id);
           }
         });
       },
-      { root: null, threshold: 0.6 }
+      { root: null, threshold: 0.5 }
     );
     cardRefs.current.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
@@ -56,8 +57,9 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
                 /* SNAP */
                 snap-center shrink-0 
 
-                /* SIZE - 75vh for taller cards */
-                w-full h-[75vh]
+                /* SIZE - FIX: Used 75svh instead of 75vh */
+                /* This prevents the card from stretching when address bar hides, keeping snap points stable */
+                w-full h-[75svh]
 
                 /* STYLE */
                 relative rounded-[24px] overflow-hidden cursor-pointer 

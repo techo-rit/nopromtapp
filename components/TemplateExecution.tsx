@@ -6,7 +6,6 @@ import {
     ArrowLeftIcon,
     DownloadIcon,
     RefreshIcon,
-    SparklesIcon,
 } from "./Icons";
 import { generateImage } from "../services/geminiService";
 

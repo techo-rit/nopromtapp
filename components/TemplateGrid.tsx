@@ -29,9 +29,10 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
       },
       { 
         root: null,
-        // Trigger focus only when the card is strictly in the center (2% window)
-        // This prevents "early" triggering while scrolling
-        rootMargin: '-49% 0px -49% 0px', 
+        // FIX: Widened the detection window from -49% to -40%.
+        // This creates a 20% "sweet spot" in the center. 
+        // Even if the address bar shifts the snap point slightly, the card remains focused.
+        rootMargin: '-40% 0px -40% 0px', 
         threshold: 0 
       }
     );
@@ -43,7 +44,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
   return (
     <div className="
       /* CONTAINER LAYOUT */
-      w-full h-[100dvh] /* Full mobile viewport height */
+      w-full h-[100dvh] /* Use dynamic height for container to fill screen */
 
       /* SCROLL SNAP ENGINE */
       overflow-y-scroll 
@@ -51,16 +52,18 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
       scroll-smooth 
 
       /* PHYSICS & FEEL */
-      overscroll-y-contain /* Prevents rubber-banding the whole page */
-      touch-pan-y /* Native touch handling */
+      overscroll-y-contain /* FIX: Prevents body scroll chaining (App-like feel) */
+      touch-pan-y 
 
       /* LAYOUT ALIGNMENT */
       flex flex-col items-center 
-      gap-8 /* Keeps your original gap */
+      gap-8 
 
       /* EXACT CENTERING PADDING */
-      /* Card is 68vh. Remaining space is 32vh. Top/Bottom needs 16vh to center. */
-      py-[16vh]
+      /* FIX: Switched to svh (stable viewport height) for padding.
+         Calculation: (100svh - 68svh) / 2 = 16svh.
+         This ensures padding doesn't jump when address bar moves. */
+      py-[16svh]
 
       /* HIDE SCROLLBAR */
       scrollbar-hide
@@ -76,31 +79,32 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
             data-card-id={template.id}
             onClick={() => onSelectTemplate(template)}
             className={`
-              /* SNAP ALIGNMENT - The "Apple Feel" */
+              /* SNAP ALIGNMENT */
               snap-center 
-              snap-always /* <--- FORCE STOP: Prevents skipping cards on fast swipes */
+              snap-always
               shrink-0
 
-              /* NATIVE OFFSET FIX (Mobile Only) */
-              /* scroll-mt-6 pushes the snap point UP, which pushes the card DOWN visually by 24px */
-              scroll-mt-6 md:scroll-mt-0
-
+              /* FIX: Removed scroll-mt-6. 
+                 The svh padding and center alignment handles positioning naturally now. */
+              
               /* BASE LAYOUT */
               group relative w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px]
 
-              /* DIMENSIONS - RESTORED ORIGINAL HEIGHTS */
-              h-[68vh] md:h-[500px] lg:h-[550px]
+              /* DIMENSIONS - STABLE UNITS */
+              /* FIX: Used 'svh' (Small Viewport Height). 
+                 The card height will now remain constant even if the URL bar retracts. */
+              h-[68svh] md:h-[500px] lg:h-[550px]
 
               /* STYLING */
               cursor-pointer rounded-[24px] md:rounded-[40px] overflow-hidden 
-              transition-all duration-700 cubic-bezier(0.2, 0.8, 0.2, 1) /* Smoother, slower easing */
+              transition-all duration-700 cubic-bezier(0.2, 0.8, 0.2, 1)
               border border-[#2a2a2a]
               bg-[#050505]
 
-              /* FOCUS STATE SCALING - Removed translation to fix jitter bug */
+              /* FOCUS STATE SCALING */
               ${isFocused 
                 ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10' 
-                : 'scale-[0.93] opacity-60 blur-[0.5px] z-0' /* Subtle shrink for non-focused */
+                : 'scale-[0.93] opacity-60 blur-[0.5px] z-0'
               }
             `}
           >
