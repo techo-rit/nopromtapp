@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { Stack } from '../types';
 
 interface StackGridProps {
@@ -9,7 +9,6 @@ interface StackGridProps {
 
 export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, firstCardRef }) => {
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -17,69 +16,30 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
     else cardRefs.current.delete(id);
   }, []);
 
-  // --- MOBILE FOCUS ENGINE ---
-  const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current;
-    const containerCenter = container.scrollTop + (container.clientHeight / 2);
-    
-    let closestId = null;
-    let minDiff = Infinity;
-
-    cardRefs.current.forEach((el, id) => {
-      const cardCenter = el.offsetTop + (el.offsetHeight / 2);
-      const diff = Math.abs(containerCenter - cardCenter);
-      
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestId = id;
-      }
-    });
-    
-    // Safety check for bottom scroll
-    const isAtBottom = Math.abs(container.scrollHeight - container.clientHeight - container.scrollTop) < 50;
-    if (isAtBottom && stacks.length > 0) {
-         const lastId = stacks[stacks.length - 1].id;
-         if (focusedCardId !== lastId) setFocusedCardId(lastId);
-         return;
-    }
-
-    if (closestId && closestId !== focusedCardId) {
-      setFocusedCardId(closestId);
-    }
-  }, [focusedCardId, stacks]);
-
   useEffect(() => {
-    if (window.innerWidth < 768) {
-        handleScroll();
-    }
-  }, [stacks, handleScroll]);
+    const isMobile = window.innerWidth < 768;
+    if (!isMobile) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // FIX: Reduced threshold slightly to be more forgiving on fast scrolls
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            const id = entry.target.getAttribute('data-card-id');
+            if (id) setFocusedCardId(id);
+          }
+        });
+      },
+      { root: null, threshold: 0.5 }
+    );
+    cardRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [stacks]);
 
   return (
     <>
-      {/* MOBILE: SNAP LIST 
-        - Using h-[100svh] to lock the viewport stability
-      */}
-      <div 
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="
-            md:hidden 
-            w-full h-[85svh] /* Keep existing height constraint */
-            overflow-y-scroll 
-            snap-y snap-mandatory 
-            scroll-smooth
-            flex flex-col gap-8 
-            
-            /* PADDING FIX */
-            /* Top: 5svh */
-            /* Bottom: 30svh - Ensures the last card can 'float' to the middle */
-            pt-[5svh] pb-[30svh]
-            
-            scrollbar-hide
-        "
-      >
+      {/* Mobile: Snap Vertical List with Peek View */}
+      <div className="md:hidden flex flex-col gap-8 w-full pb-32">
         {stacks.map((stack, index) => {
           const isFocused = focusedCardId === stack.id;
 
@@ -97,11 +57,9 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
                 /* SNAP */
                 snap-center shrink-0 
 
-                /* SIZE - STABLE SVH */
+                /* SIZE - FIX: Used 75svh instead of 75vh */
+                /* This prevents the card from stretching when address bar hides, keeping snap points stable */
                 w-full h-[75svh]
-
-                /* ALIGNMENT FIX */
-                mx-auto
 
                 /* STYLE */
                 relative rounded-[24px] overflow-hidden cursor-pointer 
@@ -109,7 +67,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
                 border border-[#2a2a2a]
 
                 /* FOCUS */
-                ${isFocused ? 'scale-[1.02] shadow-2xl border-[#c9a962]/50 z-10' : 'scale-95 opacity-80 z-0'}
+                ${isFocused ? 'scale-[1.02] shadow-2xl border-[#c9a962]/50' : 'scale-95 opacity-80'}
               `}
               onClick={() => onSelectStack(stack)}
             >
