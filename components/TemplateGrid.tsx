@@ -29,8 +29,9 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
       },
       { 
         root: null,
-        // Trigger focus when the card hits the center 10% of the screen
-        rootMargin: '-45% 0px -45% 0px', 
+        // Trigger focus only when the card is strictly in the center (2% window)
+        // This prevents "early" triggering while scrolling
+        rootMargin: '-49% 0px -49% 0px', 
         threshold: 0 
       }
     );
@@ -80,6 +81,10 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               snap-always /* <--- FORCE STOP: Prevents skipping cards on fast swipes */
               shrink-0
 
+              /* NATIVE OFFSET FIX (Mobile Only) */
+              /* scroll-mt-6 pushes the snap point UP, which pushes the card DOWN visually by 24px */
+              scroll-mt-6 md:scroll-mt-0
+
               /* BASE LAYOUT */
               group relative w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px]
 
@@ -92,10 +97,9 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               border border-[#2a2a2a]
               bg-[#050505]
 
-              /* FOCUS STATE SCALING & MOBILE OFFSET FIX */
-              /* translate-y-6 pushes it DOWN on mobile. md:translate-y-0 resets it for desktop. */
+              /* FOCUS STATE SCALING - Removed translation to fix jitter bug */
               ${isFocused 
-                ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10 translate-y-6 md:translate-y-0' 
+                ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10' 
                 : 'scale-[0.93] opacity-60 blur-[0.5px] z-0' /* Subtle shrink for non-focused */
               }
             `}
