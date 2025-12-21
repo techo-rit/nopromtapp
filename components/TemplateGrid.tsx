@@ -12,26 +12,23 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Register card refs for position calculation
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) cardRefs.current.set(id, el);
     else cardRefs.current.delete(id);
   }, []);
 
-  // --- INDUSTRY STANDARD FOCUS ENGINE ---
-  // Replaces IntersectionObserver. Calculates the physical center of the card
-  // vs. the physical center of the scroll container. Deterministic and bug-free.
+  // --- FOCUS ENGINE ---
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
     
-    // Calculate the precise center line of the visible area
+    // Determine the "Center Line" of the visible viewport
     const containerCenter = container.scrollTop + (container.clientHeight / 2);
 
     let closestId = null;
     let minDiff = Infinity;
 
-    // Find which card's center is closest to the container's center
+    // Check distance of each card's center to the container's center
     cardRefs.current.forEach((el, id) => {
       const cardCenter = el.offsetTop + (el.offsetHeight / 2);
       const diff = Math.abs(containerCenter - cardCenter);
@@ -42,12 +39,21 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
       }
     });
 
+    // FORCE SNAP: If we are at the very bottom of the scroll, 
+    // always focus the last card to prevent "stuck between" states.
+    const isAtBottom = Math.abs(container.scrollHeight - container.clientHeight - container.scrollTop) < 50;
+    if (isAtBottom && templates.length > 0) {
+        const lastId = templates[templates.length - 1].id;
+        if (focusedCardId !== lastId) setFocusedCardId(lastId);
+        return;
+    }
+
     if (closestId && closestId !== focusedCardId) {
       setFocusedCardId(closestId);
     }
-  }, [focusedCardId]);
+  }, [focusedCardId, templates]);
 
-  // Initial focus check on mount
+  // Initial focus
   useEffect(() => {
     handleScroll();
   }, [templates, handleScroll]);
@@ -59,8 +65,8 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
       className="
         /* CONTAINER LAYOUT */
         w-full 
-        /* FIX: Use 'svh' to lock height to the 'Small Viewport'. 
-           This prevents the layout from jumping when the mobile address bar retracts. */
+        /* STABILITY FIX: Use 100svh. This ignores address bar expansion.
+           This means your UI won't 'jump' when the bar disappears. */
         h-[100svh] 
 
         /* SCROLL ENGINE */
@@ -72,13 +78,18 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
         overscroll-y-contain
         touch-pan-y 
 
-        /* ALIGNMENT */
+        /* ALIGNMENT - DESKTOP FIX */
         flex flex-col items-center 
         gap-8 
 
-        /* PADDING - Calculated for perfect centering */
-        /* (100svh - 68svh) / 2 = 16svh padding top/bottom */
-        py-[16svh]
+        /* PADDING STRATEGY (INDUSTRY STANDARD) */
+        /* Top: Centers the first card ((100-68)/2 = 16) */
+        pt-[16svh]
+        
+        /* Bottom: HUGE BUFFER to fix 'Bottom Card' alignment issue.
+           We give extra space (35svh) so the last card can easily scroll
+           up to the center line without hitting the scroll limit. */
+        pb-[35svh]
         
         /* HIDE SCROLLBAR */
         scrollbar-hide
@@ -99,14 +110,13 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               snap-always
               shrink-0
 
-              /* LAYOUT & CENTERING FIXES */
-              /* FIX: Added 'mx-auto' to force centering on Desktop if Flexbox fails */
+              /* DESKTOP ALIGNMENT FIX */
+              /* flex-shrink-0 and mx-auto ensures it doesn't drift left in the flex container */
               mx-auto
               relative 
               w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px]
 
-              /* DIMENSIONS - LOCKED TO SVH */
-              /* 68svh ensures the card size never changes during scroll */
+              /* DIMENSIONS - LOCKED TO SVH (STABLE) */
               h-[68svh] md:h-[500px] lg:h-[550px]
 
               /* VISUAL STYLING */
