@@ -1398,7 +1398,54 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_moderncasualcity_cover.webp",
     prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in modern casual wear — jeans, light top, sneakers — city backdrop with graffiti walls or cozy café vibe, relaxed pose, cinematic lifestyle look.\nno washed-out colors, no messy framing, no extra people, no cartoon tone. no background blur, change the hand gestures according to the background, no change in hairstyle.",
+      {
+  theme: "Modern Casual City — Professional Editorial",
+  output_type: "high_end_urban_fashion_editorial",
+
+  identity_lock: {
+    face_preservation: "absolute",
+    identity_priority: "reference_face_over_fashion_stylization",
+    facial_structure_lock: [
+      "exact_jawline",
+      "chin_definition",
+      "nose_shape",
+      "eye_spacing",
+      "lip_ratio",
+      "overall_face_geometry"
+    ],
+    expression_lock: "calm_confident_editorial",
+    symmetry_enforcement: "natural",
+    skin_tone_consistency: "exact"
+  },
+
+  eyewear_control: {
+    state: "single_item_only",
+    type: "optical_glasses_or_sunglasses",
+    position: "on_face_only",
+    duplicate_prevention: "strict",
+    interaction_with_eyewear: "none"
+  },
+
+  composition: {
+    style: "single_continuous_scene",
+    camera_position: "front_facing_subject",
+    camera_distance: "medium_shot",
+    framing: "upper_body_to_thighs",
+    camera_angle: "eye_level",
+    lens_feel: "environmental_editorial",
+    depth_of_field: "infinite_focus_full_scene_sharp",
+    focus_plane: "entire_frame"
+  },
+
+  subject: {
+    presence: "confident_refined_modern",
+    posture: "upright_balanced",
+    pose: "still_editorial_stance",
+    body_orientation: "facing_camera",
+    head_position: "neutral_slight_elegant_tilt",
+    gaze: "direct_soft_eye_contact",
+    hair: "professionally_styled_m.",
+  },
     aspectRatio: "3:4",
   },
   {
