@@ -2728,7 +2728,7 @@ const aestheticsTemplates: Template[] = [
     id: "aesthetics_template_20",
     name: "Dramatic Studio",
     stackId: "aesthetics",
-    imageUrl: "/images/asthetics_dramaticstudiopotrail_cover.webp",
+    imageUrl: "/images/asthetics_dramaticstudiopotrait_cover.webp",
     prompt:
       {
   task: "identity_locked_editorial_close_up_photography",
