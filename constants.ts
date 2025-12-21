@@ -2320,7 +2320,7 @@ const flexTemplates: Template[] = [
     imageUrl: "/images/flex_sunsetdrive_cover.webp",
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} driving a convertible through a scenic coastal road at sunset, soft warm light, detailed car reflections, relaxed posture, cinematic Raymond tone of leisure and freedom.\nno glare, no blur, no fantasy colors, no distorted vehicle.no change in hairstyle , no blur background, change the hand gestures accordingly . whole face should be visible",
-    aspectRatio: "4:3",
+    aspectRatio: "3:4",
   },
   {
     id: "flex_template_10",
