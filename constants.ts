@@ -3965,7 +3965,7 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_icerink_cover.webp",
     prompt:
-       ,
+       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} gliding across a glassy ice rink wearing a stylish winter outfit — wool coat, gloves, and scarf, soft white lighting, reflections on ice, hyper-real fabric and frost details, serene elegance, each background object should be clearly visible. no background blur, no fantasy snow, no overexposure, no messy reflections.no change in hairstyle , no blur background, change the hand gestures accordingly.",
     aspectRatio: "3:4",
   },
   {
