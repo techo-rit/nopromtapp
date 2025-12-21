@@ -2721,7 +2721,215 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_scerenelandscape_cover.webp",
     prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in simple earthy outfit surrounded by tall grass or mountain landscape, golden-hour sunlight, serene composition, cinematic National Geographic realism.\nno fog blur, no harsh shadows, no flat lighting, no digital noise. no background blur, change the hand gestures according to the background, no change in hairstyle.",
+      {
+  task: "identity_locked_editorial_environmental_photography",
+  theme: "serene_landscape_enhanced",
+
+  identity_control: {
+    source: "input_person_image",
+    identity_lock: true,
+    identity_priority: "absolute",
+    identity_weight: 0.95,
+    style_weight: 0.05,
+    face_recognition_enforced: true,
+    facial_landmark_constraints: {
+      jawline: "locked",
+      chin_shape: "locked",
+      eye_distance: "locked",
+      nose_width: "locked",
+      lip_ratio: "locked",
+      head_shape: "locked",
+      face_asymmetry: "preserved"
+    },
+    forbid: [
+      "face morphing",
+      "beautification",
+      "AI facial averaging",
+      "symmetry correction"
+    ]
+  },
+
+  rendering_pipeline: [
+    "environment_render_first",
+    "natural_light_simulation",
+    "camera_optics_simulation",
+    "identity_projection",
+    "subject_environment_interaction",
+    "fabric_physics_simulation",
+    "micro_imperfection_injection",
+    "post_generation_realism_pass"
+  ],
+
+  environment: {
+    location: "open serene natural landscape",
+    landscape_layers: {
+      foreground: [
+        "soft grass",
+        "small stones",
+        "wild plants brushing frame edge"
+      ],
+      midground: [
+        "person seated near shallow water stream",
+        "flat rock or wooden log partially touching water"
+      ],
+      background: [
+        "gentle rolling hills",
+        "sparse trees",
+        "soft sky gradient"
+      ]
+    },
+    water_element: {
+      type: "shallow natural stream",
+      behavior: "slow moving, reflective highlights",
+      interaction: "water touching hand or feet lightly"
+    },
+    lighting: {
+      source: "natural sunlight",
+      time_of_day: "early morning or late afternoon",
+      quality: "soft, diffused, clean",
+      shadow_behavior: "soft-edged, realistic",
+      avoid: [
+        "over-glow",
+        "cinematic haze",
+        "fantasy light rays"
+      ]
+    },
+    atmosphere: "open, breathable, calm"
+  },
+
+  camera_simulation: {
+    camera_type: "professional outdoor photography camera",
+    focal_length_mm: 50,
+    aperture: "f/8",
+    iso: 100,
+    shutter_speed: "1/320",
+    focus_behavior: "deep focus with environmental clarity",
+    lens_characteristics: [
+      "neutral contrast",
+      "natural edge softness",
+      "no artificial blur"
+    ]
+  },
+
+  subject: {
+    identity: "exact input image face",
+    framing: "medium shot",
+    pose: "seated comfortably and naturally",
+    interaction: [
+      "one hand resting in flowing stream",
+      "other hand supporting body on rock or grass",
+      "bare feet or shoes touching ground naturally"
+    ],
+    body_language: "relaxed, grounded, open posture",
+    expression: "calm, thoughtful, peaceful",
+    occlusion: [
+      "natural foliage partially crossing foreground",
+      "fabric edges overlapping frame naturally"
+    ]
+  },
+
+  wardrobe_and_accessories: {
+    design_level: "high-end minimalist designer wear",
+    styling_concept: "quiet luxury, nature-aligned",
+    clothing_layers: [
+      "lightweight linen overshirt or long tunic",
+      "inner soft cotton or silk-blend top",
+      "relaxed tailored trousers with natural drape"
+    ],
+    materials: [
+      "washed linen",
+      "organic cotton",
+      "soft wool blend",
+      "raw silk accents"
+    ],
+    colors: [
+      "ivory",
+      "sage green",
+      "warm beige",
+      "muted clay"
+    ],
+    fabric_behavior: [
+      "gentle movement in breeze",
+      "soft folds catching sunlight",
+      "natural wrinkling and texture"
+    ],
+    accessories: [
+      "handcrafted leather strap watch",
+      "minimal metal ring",
+      "natural stone or wooden bracelet",
+      "soft leather sandals or barefoot feel"
+    ],
+    interaction_with_clothing: [
+      "sleeves loosely rolled",
+      "fabric touching water edge",
+      "trouser hems brushing grass or stone"
+    ],
+    avoid: [
+      "bold logos",
+      "high-gloss finishes",
+      "heavy jewelry",
+      "urban fashion elements"
+    ]
+  },
+
+  color_science: {
+    profile: "neutral daylight camera profile",
+    contrast: "low to moderate",
+    saturation: "soft and muted",
+    white_balance: "true daylight",
+    avoid: [
+      "cinematic grading",
+      "over-warming",
+      "pastel exaggeration"
+    ]
+  },
+
+  realism_enforcement: {
+    anti_aesthetic_bias: "moderate",
+    symmetry_breaking: true,
+    imperfection_level: "natural",
+    details: [
+      "uneven sunlight patches on fabric",
+      "minor exposure variation",
+      "natural skin texture retained"
+    ]
+  },
+
+  noise_and_texture: {
+    sensor_noise: "very subtle",
+    grain: "fine organic",
+    environmental_texture: "grass, stone, water detail preserved"
+  },
+
+  post_processing_constraints: {
+    remove: [
+      "beauty filters",
+      "skin smoothing",
+      "face reshaping",
+      "glow effects",
+      "artificial sharpness"
+    ],
+    apply: [
+      "natural tonal balance",
+      "gentle contrast shaping",
+      "realistic highlight roll-off"
+    ]
+  },
+
+  hard_negative_constraints: [
+    "no face change",
+    "no beautification",
+    "no cinematic haze",
+    "no dramatic lighting",
+    "no portrait mode blur",
+    "no stylized fantasy colors",
+    "no artificial environment"
+  ],
+
+  output_goal:
+    "a refined, aesthetically elevated yet realistic serene landscape photograph where the exact face identity is preserved, the subject gently interacts with water and terrain, designer clothing blends naturally with the environment, and the overall image feels calm, breathable, and quietly luxurious"
+}
+,
     aspectRatio: "3:4",
   },
   {
