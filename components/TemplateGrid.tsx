@@ -9,65 +9,81 @@ interface TemplateGridProps {
 
 export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectTemplate }) => {
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // Register card refs for position calculation
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) cardRefs.current.set(id, el);
     else cardRefs.current.delete(id);
   }, []);
 
-  // UX: Focus Logic - Syncs the "Focused" state with the Snap position
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-             const id = entry.target.getAttribute('data-card-id');
-             if (id) setFocusedCardId(id);
-          }
-        });
-      },
-      { 
-        root: null,
-        // FIX: Widened the detection window from -49% to -40%.
-        // This creates a 20% "sweet spot" in the center. 
-        // Even if the address bar shifts the snap point slightly, the card remains focused.
-        rootMargin: '-40% 0px -40% 0px', 
-        threshold: 0 
-      }
-    );
+  // --- INDUSTRY STANDARD FOCUS ENGINE ---
+  // Replaces IntersectionObserver. Calculates the physical center of the card
+  // vs. the physical center of the scroll container. Deterministic and bug-free.
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    
+    // Calculate the precise center line of the visible area
+    const containerCenter = container.scrollTop + (container.clientHeight / 2);
 
-    cardRefs.current.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [templates]);
+    let closestId = null;
+    let minDiff = Infinity;
+
+    // Find which card's center is closest to the container's center
+    cardRefs.current.forEach((el, id) => {
+      const cardCenter = el.offsetTop + (el.offsetHeight / 2);
+      const diff = Math.abs(containerCenter - cardCenter);
+
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestId = id;
+      }
+    });
+
+    if (closestId && closestId !== focusedCardId) {
+      setFocusedCardId(closestId);
+    }
+  }, [focusedCardId]);
+
+  // Initial focus check on mount
+  useEffect(() => {
+    handleScroll();
+  }, [templates, handleScroll]);
 
   return (
-    <div className="
-      /* CONTAINER LAYOUT */
-      w-full h-[100dvh] /* Use dynamic height for container to fill screen */
+    <div 
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="
+        /* CONTAINER LAYOUT */
+        w-full 
+        /* FIX: Use 'svh' to lock height to the 'Small Viewport'. 
+           This prevents the layout from jumping when the mobile address bar retracts. */
+        h-[100svh] 
 
-      /* SCROLL SNAP ENGINE */
-      overflow-y-scroll 
-      snap-y snap-mandatory 
-      scroll-smooth 
+        /* SCROLL ENGINE */
+        overflow-y-scroll 
+        snap-y snap-mandatory 
+        scroll-smooth 
 
-      /* PHYSICS & FEEL */
-      overscroll-y-contain /* FIX: Prevents body scroll chaining (App-like feel) */
-      touch-pan-y 
+        /* PHYSICS */
+        overscroll-y-contain
+        touch-pan-y 
 
-      /* LAYOUT ALIGNMENT */
-      flex flex-col items-center 
-      gap-8 
+        /* ALIGNMENT */
+        flex flex-col items-center 
+        gap-8 
 
-      /* EXACT CENTERING PADDING */
-      /* FIX: Switched to svh (stable viewport height) for padding.
-         Calculation: (100svh - 68svh) / 2 = 16svh.
-         This ensures padding doesn't jump when address bar moves. */
-      py-[16svh]
-
-      /* HIDE SCROLLBAR */
-      scrollbar-hide
-    ">
+        /* PADDING - Calculated for perfect centering */
+        /* (100svh - 68svh) / 2 = 16svh padding top/bottom */
+        py-[16svh]
+        
+        /* HIDE SCROLLBAR */
+        scrollbar-hide
+      "
+    >
       {templates.map(template => {
         const isFocused = focusedCardId === template.id;
         const quote = getManifestationQuote(template.name);
@@ -76,7 +92,6 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
           <div
             key={template.id}
             ref={(el) => setCardRef(template.id, el)}
-            data-card-id={template.id}
             onClick={() => onSelectTemplate(template)}
             className={`
               /* SNAP ALIGNMENT */
@@ -84,27 +99,26 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               snap-always
               shrink-0
 
-              /* FIX: Removed scroll-mt-6. 
-                 The svh padding and center alignment handles positioning naturally now. */
-              
-              /* BASE LAYOUT */
-              group relative w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px]
+              /* LAYOUT & CENTERING FIXES */
+              /* FIX: Added 'mx-auto' to force centering on Desktop if Flexbox fails */
+              mx-auto
+              relative 
+              w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px]
 
-              /* DIMENSIONS - STABLE UNITS */
-              /* FIX: Used 'svh' (Small Viewport Height). 
-                 The card height will now remain constant even if the URL bar retracts. */
+              /* DIMENSIONS - LOCKED TO SVH */
+              /* 68svh ensures the card size never changes during scroll */
               h-[68svh] md:h-[500px] lg:h-[550px]
 
-              /* STYLING */
+              /* VISUAL STYLING */
               cursor-pointer rounded-[24px] md:rounded-[40px] overflow-hidden 
-              transition-all duration-700 cubic-bezier(0.2, 0.8, 0.2, 1)
+              transition-all duration-500 cubic-bezier(0.2, 0.8, 0.2, 1)
               border border-[#2a2a2a]
               bg-[#050505]
 
-              /* FOCUS STATE SCALING */
+              /* FOCUS STATE */
               ${isFocused 
                 ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10' 
-                : 'scale-[0.93] opacity-60 blur-[0.5px] z-0'
+                : 'scale-[0.95] opacity-60 blur-[1px] z-0'
               }
             `}
           >
