@@ -141,7 +141,10 @@ const App: React.FC = () => {
   });
 
   const [user, setUser] = useState<User | null>(null);
+  
+  // FIX: Start loading, but we will force it off shortly
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
+  
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -155,49 +158,56 @@ const App: React.FC = () => {
     safeSetItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
-  // ... inside App component
-
+  // --- AUTHENTICATION FIX START ---
   useEffect(() => {
-    let isActive = true;
+    let mounted = true;
+
+    // 1. SAFETY VALVE: Force loading to stop after 4 seconds max.
+    // This prevents the "infinite blur" if Supabase hangs.
+    const loadingTimeout = setTimeout(() => {
+      if (mounted && isGlobalLoading) {
+        console.warn("Auth check timed out - forcing app load");
+        setIsGlobalLoading(false);
+      }
+    }, 4000);
 
     const initializeAuth = async () => {
       try {
-        // 1. Check for an existing session first
+        // 2. Get the initial session
         const existingUser = await authService.getCurrentUser();
-        
-        // 2. Only update state if the component is still mounted
-        if (isActive) {
-           setUser(existingUser);
+        if (mounted) {
+          setUser(existingUser);
         }
       } catch (error) {
-        console.warn("Failed to restore session:", error);
-        if (isActive) setUser(null);
+        console.error("Failed to restore session:", error);
+        if (mounted) setUser(null);
       } finally {
-        // 3. CRITICAL FIX: Only stop loading AFTER the check is finished!
-        if (isActive) {
+        // 3. Stop loading immediately after check finishes
+        if (mounted) {
           setIsGlobalLoading(false);
+          clearTimeout(loadingTimeout); // Clear the safety timer since we finished
         }
       }
     };
 
     initializeAuth();
 
-    // 4. Set up the listener for future changes (sign in, sign out)
-    const subscription = authService.onAuthStateChange((user) => {
-      if (isActive) {
-         setUser(user);
-         // Ensure loading is off if an event fires (failsafe)
-         setIsGlobalLoading(false); 
+    // 4. Listen for realtime changes (Sign In, Sign Out, Auto-refresh)
+    const subscription = authService.onAuthStateChange((updatedUser) => {
+      if (mounted) {
+        setUser(updatedUser);
+        // Also ensure loading is off when an event fires
+        setIsGlobalLoading(false); 
       }
     });
 
     return () => {
-      isActive = false;
+      mounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
-  }, []);
-
-  // ... rest of component
+  }, []); // Empty dependency array ensures this runs once on mount
+  // --- AUTHENTICATION FIX END ---
 
   // Navigation Handlers using React Router
   const handleSelectStack = useCallback((stack: Stack) => {
@@ -209,9 +219,7 @@ const App: React.FC = () => {
   }, [navigate]);
 
   const handleBack = useCallback(() => {
-    // If inside a template, go back to stack or home depending on history
     if (location.pathname.includes('/template/')) {
-       // Logic: Check if we have history state or just go back one level
        navigate(-1); 
     } else if (location.pathname.includes('/stack/')) {
        navigate('/');
@@ -278,7 +286,6 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  // Check if we are not on home for the Header "isSecondaryPage" prop
   const isSecondaryPage = location.pathname !== '/';
 
   return (
@@ -333,7 +340,6 @@ const App: React.FC = () => {
               />
             } 
           />
-          {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

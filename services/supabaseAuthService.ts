@@ -27,12 +27,11 @@ export const supabaseAuthService = {
 
     if (!data.user) throw new Error('Sign up failed')
 
-    // FIX 1: Added missing 'credits' and 'lastLogin'
     return {
       id: data.user.id,
       email: data.user.email!,
       name: fullName,
-      credits: 0, // Default starting credits
+      credits: 0,
       createdAt: new Date(),
       lastLogin: new Date(),
     }
@@ -50,14 +49,13 @@ export const supabaseAuthService = {
     if (error) throw new Error(error.message)
     if (!data.user) throw new Error('Login failed')
 
-    // FIX 2: Added missing 'credits' and 'lastLogin'
     return {
       id: data.user.id,
       email: data.user.email!,
       name: data.user.user_metadata.full_name || email.split('@')[0],
-      credits: 0, // Ideally, you'd fetch this from your database profile
+      credits: 0, 
       createdAt: new Date(data.user.created_at),
-      lastLogin: new Date(), // They just logged in, so this is now
+      lastLogin: new Date(),
     }
   },
 
@@ -68,7 +66,7 @@ export const supabaseAuthService = {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // FIX 3: Kept your redirect fix here so you don't lose it!
+        // NOTE: For mobile apps later, you will need to change this to your app's deep link scheme
         redirectTo: window.location.href, 
       },
     })
@@ -77,29 +75,38 @@ export const supabaseAuthService = {
   },
 
   async getCurrentUser(): Promise<User | null> {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return null;
-
-    let profileName = null;
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', session.user.id)
-        .single();
-      profileName = profile?.full_name;
-    } catch (e) {
-      console.warn("Could not fetch profile", e);
-    }
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session?.user) return null;
 
-    // FIX 4: Added missing 'credits' and 'lastLogin'
-    return {
-      id: session.user.id,
-      email: session.user.email!,
-      name: profileName || session.user.user_metadata.full_name || 'User',
-      credits: 0, // Placeholder until you hook up database fetching
-      createdAt: new Date(session.user.created_at),
-      lastLogin: new Date(),
+      let profileName = null;
+      try {
+        // FIX: Add a small timeout or fail gracefully if profile fetch hangs
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .single()
+          .throwOnError(); // Explicitly throw if error to catch below
+          
+        profileName = profile?.full_name;
+      } catch (e) {
+        // If profile fetch fails, we still want to log the user in!
+        console.warn("Could not fetch profile details, using metadata", e);
+      }
+
+      return {
+        id: session.user.id,
+        email: session.user.email!,
+        name: profileName || session.user.user_metadata.full_name || 'User',
+        credits: 0, 
+        createdAt: new Date(session.user.created_at),
+        lastLogin: new Date(),
+      }
+    } catch (e) {
+      console.error("Unexpected auth error", e);
+      return null;
     }
   },
 
@@ -112,6 +119,8 @@ export const supabaseAuthService = {
       async (event, session) => {
         if (session?.user) {
           let profileName = null;
+          
+          // Only attempt to fetch profile if we have a session
           try {
              const { data: profile } = await supabase
                 .from('profiles')
@@ -123,7 +132,6 @@ export const supabaseAuthService = {
              console.warn("Could not fetch profile in listener", e);
           }
 
-          // FIX 5: Added missing fields to the typed object
           const user: User = {
             id: session.user.id,
             email: session.user.email!,
