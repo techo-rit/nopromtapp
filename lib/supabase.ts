@@ -13,9 +13,41 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,      // Persist session to localStorage automatically
     autoRefreshToken: true,    // Auto-refresh tokens before expiry
     detectSessionInUrl: true,  // Detect & recover session from URL params (OAuth redirect)
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    
+    // Custom storage with fallback to sessionStorage
+    storage: {
+      getItem: async (key: string) => {
+        try {
+          const item = localStorage.getItem(key);
+          if (item) return item;
+        } catch (e) {}
+        try {
+          return sessionStorage.getItem(key);
+        } catch (e) {
+          return null;
+        }
+      },
+      setItem: async (key: string, value: string) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {}
+        try {
+          sessionStorage.setItem(key, value);
+        } catch (e) {}
+      },
+      removeItem: async (key: string) => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {}
+        try {
+          sessionStorage.removeItem(key);
+        } catch (e) {}
+      }
+    },
+    
     storageKey: 'supabase.auth.token', // Explicit storage key for debugging
   },
+  
   global: {
     headers: {
       // Allow multi-device sessions - ensure no single-device locking
