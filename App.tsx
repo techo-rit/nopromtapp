@@ -218,7 +218,7 @@ const App: React.FC = () => {
         console.warn("Auth initialization timeout - forcing app load");
         setIsGlobalLoading(false);
       }
-    }, 5000);
+    }, 10000);
 
     return () => {
       mounted = false;
