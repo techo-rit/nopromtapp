@@ -60,46 +60,94 @@ export const supabaseAuthService = {
   },
 
   /**
-   * Sign in with Google
+   * Sign in with Google - OAuth flow
+   * CRITICAL: Redirect to current page to enable session recovery after OAuth callback
    */
   async signInWithGoogle(): Promise<void> {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // NOTE: For mobile apps later, you will need to change this to your app's deep link scheme
-        redirectTo: window.location.href, 
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // CRITICAL: Redirect to current page (not exact href which includes hash)
+          // This ensures session recovery when returning from Google OAuth
+          redirectTo: `${window.location.origin}${window.location.pathname}`,
+          queryParams: {
+            // Request offline access to get refresh tokens for multi-device support
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
 
-    if (error) throw new Error(error.message)
+      if (error) {
+        throw new Error(error.message);
+      }
+      // Page will redirect to Google, no need to do anything else
+    } catch (error) {
+      throw error;
+    }
   },
 
   async getCurrentUser(): Promise<User | null> {
     try {
+      // CRITICAL: Try to recover session from multiple sources
+      // 1. First check the cached session (should restore from localStorage immediately)
       const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (error || !session?.user) return null;
+      if (error) {
+        console.warn("Error getting session:", error);
+        return null;
+      }
+
+      if (!session?.user) {
+        // If no session from getSession, try refreshSession to recover from stored token
+        try {
+          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+          if (!refreshedSession?.user) {
+            return null;
+          }
+          // Use refreshed session if available
+          const user = refreshedSession.user;
+          const profileName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+          return {
+            id: user.id,
+            email: user.email!,
+            name: profileName,
+            credits: 0,
+            createdAt: new Date(user.created_at),
+            lastLogin: new Date(),
+          };
+        } catch (refreshErr) {
+          console.warn("Could not refresh session:", refreshErr);
+          return null;
+        }
+      }
 
       let profileName = null;
       try {
-        // FIX: Add a small timeout or fail gracefully if profile fetch hangs
-        const { data: profile } = await supabase
+        // Fetch profile with timeout - profile is optional
+        const profilePromise = supabase
           .from('profiles')
           .select('full_name')
           .eq('id', session.user.id)
-          .single()
-          .throwOnError(); // Explicitly throw if error to catch below
-          
+          .single();
+        
+        // Give profile fetch max 2 seconds before timing out
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
+        );
+        
+        const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
         profileName = profile?.full_name;
       } catch (e) {
-        // If profile fetch fails, we still want to log the user in!
-        console.warn("Could not fetch profile details, using metadata", e);
+        // If profile fetch fails or times out, we still want to log the user in!
+        console.warn("Could not fetch profile details, using metadata instead", e);
       }
 
       return {
         id: session.user.id,
         email: session.user.email!,
-        name: profileName || session.user.user_metadata.full_name || 'User',
+        name: profileName || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
         credits: 0, 
         createdAt: new Date(session.user.created_at),
         lastLogin: new Date(),

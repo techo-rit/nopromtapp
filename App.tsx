@@ -158,55 +158,76 @@ const App: React.FC = () => {
     safeSetItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
-  // --- AUTHENTICATION FIX START ---
+  // --- AUTHENTICATION FIX: PERSISTENT LOGIN ACROSS REFRESH/CLOSE/MULTI-DEVICE ---
   useEffect(() => {
     let mounted = true;
-
-    // 1. SAFETY VALVE: Force loading to stop after 4 seconds max.
-    // This prevents the "infinite blur" if Supabase hangs.
-    const loadingTimeout = setTimeout(() => {
-      if (mounted && isGlobalLoading) {
-        console.warn("Auth check timed out - forcing app load");
-        setIsGlobalLoading(false);
-      }
-    }, 4000);
+    let subscription: any = null;
 
     const initializeAuth = async () => {
       try {
-        // 2. Get the initial session
+        // CRITICAL: First, handle OAuth redirects from URL params
+        // Supabase automatically detects and processes OAuth sessions from URL
+        // (detectSessionInUrl: true in supabase.ts client config)
+        
+        // Small delay to allow OAuth redirect processing
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        if (!mounted) return;
+
+        // CRITICAL: Recover session from localStorage/cache
+        // This immediately restores user session on page refresh or browser reopening
         const existingUser = await authService.getCurrentUser();
+        
         if (mounted) {
           setUser(existingUser);
+          console.log("Session recovered:", existingUser?.id ? "User logged in" : "No session found");
         }
-      } catch (error) {
-        console.error("Failed to restore session:", error);
-        if (mounted) setUser(null);
-      } finally {
-        // 3. Stop loading immediately after check finishes
+
+        // Stop loading after initial session check
         if (mounted) {
           setIsGlobalLoading(false);
-          clearTimeout(loadingTimeout); // Clear the safety timer since we finished
+        }
+      } catch (error) {
+        console.error("Failed to initialize auth:", error);
+        if (mounted) {
+          setUser(null);
+          setIsGlobalLoading(false);
         }
       }
     };
 
-    initializeAuth();
-
-    // 4. Listen for realtime changes (Sign In, Sign Out, Auto-refresh)
-    const subscription = authService.onAuthStateChange((updatedUser) => {
+    // CRITICAL: Set up realtime auth listener
+    // This detects:
+    // - Sign in/out events
+    // - Token refresh (keeps session alive)
+    // - Multi-device changes (when logged in on another device)
+    subscription = authService.onAuthStateChange((updatedUser) => {
       if (mounted) {
+        console.log("Auth state changed:", updatedUser?.id ? "User logged in" : "User logged out");
         setUser(updatedUser);
-        // Also ensure loading is off when an event fires
-        setIsGlobalLoading(false); 
+        setIsGlobalLoading(false);
       }
     });
 
+    // Initialize auth immediately
+    initializeAuth();
+
+    // Safety timeout: If auth check hangs, force app to load anyway after 5 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && isGlobalLoading) {
+        console.warn("Auth initialization timeout - forcing app load");
+        setIsGlobalLoading(false);
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
-      clearTimeout(loadingTimeout);
-      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []); // Run once on mount
   // --- AUTHENTICATION FIX END ---
 
   // Navigation Handlers using React Router

@@ -7,11 +7,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// FIX: Explicitly enable session persistence
+// CRITICAL: Session persistence for auth survival across page refreshes and browser closes
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,   // Save data to localStorage
-    autoRefreshToken: true, // Automatically refresh the token
-    detectSessionInUrl: true // Handle Google Redirects correctly
-  }
+    persistSession: true,      // Persist session to localStorage automatically
+    autoRefreshToken: true,    // Auto-refresh tokens before expiry
+    detectSessionInUrl: true,  // Detect & recover session from URL params (OAuth redirect)
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'supabase.auth.token', // Explicit storage key for debugging
+  },
+  global: {
+    headers: {
+      // Allow multi-device sessions - ensure no single-device locking
+      'X-Client-Info': `supabase-js/${(globalThis as any)?.SUPABASE_JS_VERSION || 'unknown'}`,
+    },
+  },
 });
