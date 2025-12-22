@@ -155,27 +155,49 @@ const App: React.FC = () => {
     safeSetItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
+  // ... inside App component
+
   useEffect(() => {
     let isActive = true;
+
     const initializeAuth = async () => {
       try {
+        // 1. Check for an existing session first
         const existingUser = await authService.getCurrentUser();
-        if (isActive) setUser(existingUser);
+        
+        // 2. Only update state if the component is still mounted
+        if (isActive) {
+           setUser(existingUser);
+        }
       } catch (error) {
         console.warn("Failed to restore session:", error);
         if (isActive) setUser(null);
+      } finally {
+        // 3. CRITICAL FIX: Only stop loading AFTER the check is finished!
+        if (isActive) {
+          setIsGlobalLoading(false);
+        }
       }
     };
+
     initializeAuth();
+
+    // 4. Set up the listener for future changes (sign in, sign out)
     const subscription = authService.onAuthStateChange((user) => {
-      if (isActive) setUser(user);
+      if (isActive) {
+         setUser(user);
+         // Ensure loading is off if an event fires (failsafe)
+         setIsGlobalLoading(false); 
+      }
     });
-    setIsGlobalLoading(false);
+
     return () => {
       isActive = false;
       subscription.unsubscribe();
     };
   }, []);
+
+  // ... rest of component
 
   // Navigation Handlers using React Router
   const handleSelectStack = useCallback((stack: Stack) => {
