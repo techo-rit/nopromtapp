@@ -6,37 +6,35 @@ export const supabaseAuthService = {
    * Sign up new user
    */
   async signUp(email: string, password: string, fullName: string): Promise<User | null> {
-    // Validate inputs
     if (!email || !password || !fullName) throw new Error('All fields are required')
     if (password.length < 8) throw new Error('Password must be at least 8 characters')
 
-    // 1. Sign up with metadata (Trigger will handle profile creation)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName, // This is passed to the SQL trigger
+          full_name: fullName,
         },
       },
     })
 
     if (error) throw new Error(error.message)
 
-    // 2. Check if email confirmation is required
-    // If session is null, the user needs to confirm their email first.
     if (data.user && !data.session) {
-       return null; // Signal to UI that email confirmation is needed
+       return null; 
     }
 
     if (!data.user) throw new Error('Sign up failed')
 
-    // 3. Return user
+    // FIX 1: Added missing 'credits' and 'lastLogin'
     return {
       id: data.user.id,
       email: data.user.email!,
       name: fullName,
+      credits: 0, // Default starting credits
       createdAt: new Date(),
+      lastLogin: new Date(),
     }
   },
 
@@ -52,26 +50,26 @@ export const supabaseAuthService = {
     if (error) throw new Error(error.message)
     if (!data.user) throw new Error('Login failed')
 
-    // Profile is fetched via the listener in App.tsx usually, 
-    // but we can return basic data here.
+    // FIX 2: Added missing 'credits' and 'lastLogin'
     return {
       id: data.user.id,
       email: data.user.email!,
       name: data.user.user_metadata.full_name || email.split('@')[0],
+      credits: 0, // Ideally, you'd fetch this from your database profile
       createdAt: new Date(data.user.created_at),
+      lastLogin: new Date(), // They just logged in, so this is now
     }
   },
 
   /**
    * Sign in with Google
-   * CHANGE: Returns void. It redirects, so it never "returns" a user.
    */
   async signInWithGoogle(): Promise<void> {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // IMPORTANT: Ensure this URL is added in Supabase Dashboard -> Auth -> URL Configuration
-        redirectTo: window.location.origin, 
+        // FIX 3: Kept your redirect fix here so you don't lose it!
+        redirectTo: window.location.href, 
       },
     })
 
@@ -82,8 +80,6 @@ export const supabaseAuthService = {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return null;
 
-    // Fetch profile to get the name
-    // Even if this FAILS (e.g. network error), we still want to log the user in.
     let profileName = null;
     try {
       const { data: profile } = await supabase
@@ -96,12 +92,14 @@ export const supabaseAuthService = {
       console.warn("Could not fetch profile", e);
     }
 
+    // FIX 4: Added missing 'credits' and 'lastLogin'
     return {
       id: session.user.id,
       email: session.user.email!,
-      // Fallback logic is crucial here
       name: profileName || session.user.user_metadata.full_name || 'User',
+      credits: 0, // Placeholder until you hook up database fetching
       createdAt: new Date(session.user.created_at),
+      lastLogin: new Date(),
     }
   },
 
@@ -113,7 +111,6 @@ export const supabaseAuthService = {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          // Robust Profile Fetch inside Listener
           let profileName = null;
           try {
              const { data: profile } = await supabase
@@ -126,11 +123,14 @@ export const supabaseAuthService = {
              console.warn("Could not fetch profile in listener", e);
           }
 
+          // FIX 5: Added missing fields to the typed object
           const user: User = {
             id: session.user.id,
             email: session.user.email!,
             name: profileName || session.user.user_metadata.full_name || 'User',
+            credits: 0, 
             createdAt: new Date(session.user.created_at),
+            lastLogin: new Date(),
           }
           callback(user)
         } else {
