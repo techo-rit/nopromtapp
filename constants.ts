@@ -1187,108 +1187,187 @@ const animationTemplates: Template[] = [
     imageUrl:
       "/images/anime_NezukoKamado_cover.webp",
     prompt: {
-      task: "real_life_anime_character_conversion",
+  task: "real_life_cosplay_photography",
 
-      input: {
-        source_image: "person_photo",
-        identity_preservation: {
-          enabled: true,
-          strength: 0.92,
-          face_structure_lock: true,
-          no_beautification: true,
-        },
+  input: {
+    source_image: "person_photo",
+    identity_preservation: {
+      enabled: true,
+      identity_priority: "absolute",
+      strength: 0.95,
+      face_structure_lock: true,
+      lock_jawline: true,
+      lock_eye_spacing: true,
+      lock_nose_shape: true,
+      lock_lip_shape: true,
+      preserve_existing_accessories: true,
+      glasses: {
+        rule: "if_present_do_not_remove",
+        style: "original_glasses_only",
+        no_replacement: true,
+        no_anime_stylization: true,
+        no_transparency_change: true
       },
+      no_beautification: true,
+      no_style_override_on_face: true
+    }
+  },
 
-      character_translation: {
-        style_source: "anime_reference_character",
-        conversion_type: "anime_to_real_human",
-        rules: [
-          "translate anime proportions into realistic human anatomy",
-          "keep eyes, nose, lips fully realistic",
-          "no oversized eyes, no chibi features",
-        ],
-      },
+  character_reference: {
+    character_name: "Nezuko Kamado",
+    usage_rule: "visual inspiration only",
+    apply_to: [
+      "outfit color palette",
+      "outfit layering",
+      "symbolic accessories",
+      "gentle character mood"
+    ],
+    explicitly_exclude: [
+      "anime facial proportions",
+      "anime eyes",
+      "anime skin rendering",
+      "anime head shape",
+      "anime posing"
+    ]
+  },
 
-      appearance: {
-        hair: {
-          color: "natural black",
-          length: "long, waist-length",
-          texture: "real human hair, slightly wavy",
-          movement: "wind-affected strands, imperfect flow",
-        },
-        outfit: {
-          type: "traditional Japanese-inspired outfit adapted to real-world tailoring",
-          inner_garment: "soft pink patterned kimono fabric",
-          outer_layer: "dark brown haori-style coat",
-          belt: "checkered waist belt with fabric knot",
-          details: "real cloth folds, stitching visible, fabric weight realism",
-        },
-        accessories: {
-          hair_accessory: "small pink ribbon clip",
-          bamboo_element: "realistic bamboo accessory adapted naturally",
-        },
-      },
-
-      pose_and_expression: {
-        pose: "gentle forward walk",
-        body_language: "calm, innocent, relaxed shoulders",
-        expression: "soft smile, natural lips, realistic teeth",
-        eyes: "human-sized, moist highlights, natural iris texture",
-      },
-
-      environment: {
-        setting: "real outdoor environment",
-        ground: "natural grass or stone path",
-        background: "clean, realistic surroundings",
-        depth_of_field: "moderate, background clearly visible",
-        no_blur_abuse: true,
-      },
-
-      lighting: {
-        type: "natural daylight",
-        direction: "soft side lighting",
-        shadows: "realistic falloff",
-        no_neon: true,
-        no_studio_glow: true,
-      },
-
-      camera: {
-        lens: "50mm",
-        angle: "eye level",
-        distortion: "none",
-        framing: "full body portrait",
-      },
-
-      rendering_constraints: {
-        photorealism: true,
-        skin_texture: "visible pores, fine imperfections",
-        no_plastic_skin: true,
-        no_anime_rendering: true,
-        no_figurine_look: true,
-        no_cgi: true,
-      },
-
-      quality_control: {
-        resolution: "high",
-        sharpness: "natural",
-        grain: "subtle real-camera grain",
-      },
-
-      negative_prompt: [
-        "anime eyes",
-        "cartoon face",
-        "doll skin",
-        "figurine",
-        "3d render",
-        "cgi",
-        "plastic texture",
-        "over-smooth skin",
-        "fantasy glow",
-        "unreal lighting",
-        "blurred background",
-      ],
+  appearance: {
+    face: {
+      mode: "fully real human",
+      eye_size: "normal human proportion",
+      skin: "real human skin with pores, uneven tone, micro texture",
+      respect_glasses_occlusion: true,
+      no_anime_translation: true
     },
-    aspectRatio: "1:1",
+
+    hair: {
+      color: "natural black",
+      length: "long, waist-length",
+      texture: "real human hair, slightly wavy",
+      behavior: "gravity-accurate strands, mild wind interaction"
+    },
+
+    outfit: {
+      type: "real-world tailored outfit inspired by Nezuko",
+      inner_layer: "pink patterned fabric adapted as a real dress",
+      outer_layer: "dark brown coat inspired by haori silhouette",
+      fit: "modern tailoring, real clothing physics",
+      details: "visible stitching, fabric thickness, weight realism"
+    },
+
+    accessories: {
+      hair_accessory: "small pink ribbon clip, subtle and realistic",
+      bamboo_element: {
+        mode: "symbolic handheld or waist-hung accessory",
+        rule: "no mouth attachment, no anime exaggeration"
+      }
+    }
+  },
+
+  pose_and_expression: {
+    pose: "interactive Nezuko-inspired real-human action",
+    pose_options: [
+      "one hand gently touching or brushing mulberry leaves",
+      "standing close to the tree trunk with relaxed posture",
+      "slight forward lean while examining leaves",
+      "soft step forward with hand grazing branches"
+    ],
+    interaction_rules: [
+      "hands interact with real environment",
+      "natural finger curl and tension",
+      "no exaggerated anime gestures",
+      "body weight realistically distributed"
+    ],
+    body_language: "gentle, curious, calm, human",
+    expression: "soft neutral face with quiet warmth",
+    eyes: "real iris texture, no shine exaggeration, glasses respected"
+  },
+
+  environment: {
+    render_priority: "environment_first",
+    setting: "real outdoor rural environment",
+    primary_background_element: {
+      object: "mulberry tree",
+      description: [
+        "real mulberry tree with irregular branching",
+        "natural green leaves, uneven density",
+        "rough bark texture clearly visible",
+        "realistic botanical scale"
+      ],
+      position: "behind and slightly beside the subject",
+      interaction: [
+        "leaves displaced by hand contact",
+        "subtle wind movement",
+        "natural leaf shadow patterns"
+      ]
+    },
+    ground: "natural soil or stone path with imperfections",
+    background_behavior: {
+      fully_real_world: true,
+      no_fantasy_elements: true,
+      no_artificial_blur: true
+    }
+  },
+
+  lighting: {
+    type: "natural daylight only",
+    direction: "front-facing or soft overcast",
+    rules: [
+      "sunlight or skylight only",
+      "no artificial lights",
+      "no rim light",
+      "no dramatic contrast",
+      "no glow"
+    ],
+    behavior: [
+      "soft daylight revealing skin texture",
+      "natural shadows from mulberry leaves",
+      "no cinematic shaping"
+    ]
+  },
+
+  camera: {
+    lens: "50mm",
+    angle: "eye level",
+    framing: "medium to full body",
+    distortion: "none"
+  },
+
+  rendering_constraints: {
+    photorealism: "strict",
+    no_anime_rendering: true,
+    no_cgi: true,
+    no_figurine_look: true,
+    no_doll_skin: true
+  },
+
+  quality_control: {
+    grain: "subtle real-camera grain",
+    sharpness: "natural",
+    imperfections_allowed: true
+  },
+
+  negative_prompt: [
+    "remove glasses",
+    "replace glasses",
+    "anime pose",
+    "anime hand gestures",
+    "anime eyes",
+    "cartoon face",
+    "chibi proportions",
+    "doll skin",
+    "figurine",
+    "cgi",
+    "3d render",
+    "plastic texture",
+    "fantasy lighting",
+    "studio glow",
+    "over-smooth skin",
+    "fake trees",
+    "stylized foliage"
+  ]
+},
+    aspectRatio: "3:4",
   },
 ];
 
