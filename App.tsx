@@ -16,19 +16,20 @@ import { authService } from "./services/authService";
 import type { Stack, Template, User } from "./types";
 import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
 
-// --- Route Components (Wrappers to handle URL parameters) ---
+// ... [Keep your Route Components (HomeRoute, StackRoute, TemplateRoute) exactly as they were] ...
 
-// 1. Home Page Component
+// --- Main App Component ---
+
 const HomeRoute = ({ 
   activeNav, 
   handleSelectStack, 
   handleSelectTemplate, 
   trendingTemplates 
 }: any) => {
+  // ... [Keep content exactly as provided in your original file] ...
   if (activeNav === "Try on") {
     const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
     return (
-      // FIX: Removed px-8 py-12. This aligns the grid upwards on Desktop.
       <div className="w-full max-w-[1440px] mx-auto">
         <TemplateGrid
           templates={fititTemplates}
@@ -39,14 +40,7 @@ const HomeRoute = ({
   }
 
   const creatorsStackIds = [
-    "flex",
-    "aesthetics",
-    "sceneries",
-    "clothes",
-    "monuments",
-    "celebration",
-    "fitit",
-    "animation",
+    "flex", "aesthetics", "sceneries", "clothes", "monuments", "celebration", "fitit", "animation",
   ];
   const stacksToShow = creatorsStackIds
     .map((id) => STACKS.find((s) => s.id === id))
@@ -73,13 +67,10 @@ const HomeRoute = ({
   );
 };
 
-// 2. Stack Page Component (Reads ID from URL)
 const StackRoute = ({ onSelectTemplate }: { onSelectTemplate: (t: Template) => void }) => {
   const { stackId } = useParams();
   const selectedStack = STACKS.find((s) => s.id === stackId);
-
   if (!selectedStack) return <Navigate to="/" replace />;
-
   return (
     <div className="w-full h-screen overflow-hidden bg-[#0a0a0a]">
       <TemplateGrid
@@ -90,7 +81,6 @@ const StackRoute = ({ onSelectTemplate }: { onSelectTemplate: (t: Template) => v
   );
 };
 
-// 3. Template Execution Component (Reads ID from URL)
 const TemplateRoute = ({ 
   user, 
   onLoginRequired, 
@@ -102,12 +92,9 @@ const TemplateRoute = ({
 }) => {
   const { templateId } = useParams();
   const selectedTemplate = TEMPLATES.find((t) => t.id === templateId);
-  
   if (!selectedTemplate) return <Navigate to="/" replace />;
-  
   const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
   if (!stack) return <Navigate to="/" replace />;
-
   return (
     <TemplateExecution
       template={selectedTemplate}
@@ -118,8 +105,6 @@ const TemplateRoute = ({
     />
   );
 };
-
-// --- Main App Component ---
 
 type NavCategory = "Try on" | "Creators";
 const STORAGE_KEY_NAV = "nopromt_nav";
@@ -141,8 +126,6 @@ const App: React.FC = () => {
   });
 
   const [user, setUser] = useState<User | null>(null);
-  
-  // FIX: Start loading, but we will force it off shortly
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -158,79 +141,41 @@ const App: React.FC = () => {
     safeSetItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
-  // --- AUTHENTICATION FIX: PERSISTENT LOGIN ACROSS REFRESH/CLOSE/MULTI-DEVICE ---
+  // --- AUTH FIX START: STANDARD INDUSTRY PATTERN ---
   useEffect(() => {
     let mounted = true;
-    let subscription: any = null;
 
-    const initializeAuth = async () => {
-      try {
-        // CRITICAL: First, handle OAuth redirects from URL params
-        // Supabase automatically detects and processes OAuth sessions from URL
-        // (detectSessionInUrl: true in supabase.ts client config)
-        
-        // Small delay to allow OAuth redirect processing
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        if (!mounted) return;
-
-        // CRITICAL: Recover session from localStorage/cache
-        // This immediately restores user session on page refresh or browser reopening
-        const existingUser = await authService.getCurrentUser();
-        
-        if (mounted) {
-          setUser(existingUser);
-          console.log("Session recovered:", existingUser?.id ? "User logged in" : "No session found");
-        }
-
-        // Stop loading after initial session check
-        if (mounted) {
-          setIsGlobalLoading(false);
-        }
-      } catch (error) {
-        console.error("Failed to initialize auth:", error);
-        if (mounted) {
-          setUser(null);
-          setIsGlobalLoading(false);
-        }
-      }
-    };
-
-    // CRITICAL: Set up realtime auth listener
-    // This detects:
-    // - Sign in/out events
-    // - Token refresh (keeps session alive)
-    // - Multi-device changes (when logged in on another device)
-    subscription = authService.onAuthStateChange((updatedUser) => {
+    // 1. Initial Session Check (Optimistic UI)
+    // We check this immediately to see if we have data in localStorage
+    authService.getCurrentUser().then((initialUser) => {
       if (mounted) {
-        console.log("Auth state changed:", updatedUser?.id ? "User logged in" : "User logged out");
-        setUser(updatedUser);
-        setIsGlobalLoading(false);
+        if (initialUser) setUser(initialUser);
+        // We do NOT set loading false here yet, we wait for the listener
+        // to confirm the state to avoid flashing "Logged Out" then "Logged In"
+        setIsGlobalLoading(false); 
       }
     });
 
-    // Initialize auth immediately
-    initializeAuth();
-
-    // Safety timeout: If auth check hangs, force app to load anyway after 5 seconds
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && isGlobalLoading) {
-        console.warn("Auth initialization timeout - forcing app load");
+    // 2. Real-time Subscription (The Single Source of Truth)
+    // This handles: Sign In, Sign Out, Token Refresh, and OAuth Redirects automatically
+    const subscription = authService.onAuthStateChange((updatedUser) => {
+      if (mounted) {
+        setUser(updatedUser);
         setIsGlobalLoading(false);
+        console.log("Auth state synced:", updatedUser?.email);
       }
-    }, 15000);
+    });
 
     return () => {
       mounted = false;
-      clearTimeout(safetyTimeout);
-      if (subscription) {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
         subscription.unsubscribe();
       }
     };
-  }, []); // Run once on mount
-  // --- AUTHENTICATION FIX END ---
+  }, []);
+  // --- AUTH FIX END ---
 
-  // Navigation Handlers using React Router
+  // Navigation Handlers
   const handleSelectStack = useCallback((stack: Stack) => {
     navigate(`/stack/${stack.id}`);
   }, [navigate]);
