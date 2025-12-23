@@ -8,14 +8,11 @@ interface SmartSelfieModalProps {
     onCapture: (file: File) => void;
 }
 
-// Detailed status for better user feedback
+// Simplified status for a smoother UX
 type AlignmentStatus = 
     | 'LOADING' 
     | 'NO_FACE' 
-    | 'TOO_CLOSE' 
-    | 'TOO_FAR' 
-    | 'CENTER_FACE' 
-    | 'TILT_HEAD' 
+    | 'ALIGN_FACE' // General "Fix your position" state
     | 'HOLD_STILL' 
     | 'CAPTURING';
 
@@ -30,22 +27,21 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     
     // State
     const [status, setStatus] = useState<AlignmentStatus>('LOADING');
-    const [progress, setProgress] = useState(0); // 0 to 100
+    const [progress, setProgress] = useState(0); 
     const [flashActive, setFlashActive] = useState(false);
     const [isDetectorReady, setIsDetectorReady] = useState(false);
 
-    // Refs for logic (to avoid re-renders during high-speed loop)
+    // Refs
     const holdStartTimeRef = useRef<number | null>(null);
     const lastStatusRef = useRef<AlignmentStatus>('LOADING');
 
-    // Constants
-    const HOLD_DURATION_MS = 1500; // Hold for 1.5 seconds
-    const FACE_WIDTH_RATIO_MIN = 0.20; // Min face size (20% of screen)
-    const FACE_WIDTH_RATIO_MAX = 0.55; // Max face size (55% of screen)
-    const CENTER_TOLERANCE = 0.15; // How close to center (15%)
-    const TILT_TOLERANCE = 5; // Degrees of tilt allowed
+    // --- TUNED CONSTANTS FOR "INDUSTRY STANDARD" FEEL ---
+    const HOLD_DURATION_MS = 1200;       // 1.2s (Faster than before)
+    const FACE_WIDTH_RATIO_MIN = 0.08;   // 8% (Catches face from very far away)
+    const FACE_WIDTH_RATIO_MAX = 0.8;    // 80% (Allows being very close)
+    const CENTER_TOLERANCE = 0.25;       // 25% deviation allowed (Very forgiving centering)
+    const TILT_TOLERANCE = 20;           // 20 degrees tilt allowed (Natural holding angle)
 
-    // Initialize MediaPipe
     useEffect(() => {
         if (!isOpen) return;
 
@@ -61,6 +57,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         delegate: 'GPU',
                     },
                     runningMode: 'VIDEO',
+                    minDetectionConfidence: 0.4, // Lower confidence threshold for better sensitivity in low light
                 });
                 if (isMounted) {
                     detectorRef.current = detector;
@@ -87,7 +84,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         };
     }, [isOpen]);
 
-    // Calculate alignment status
     const checkAlignment = useCallback((detection: Detection, videoWidth: number, videoHeight: number): AlignmentStatus => {
         const bbox = detection.boundingBox;
         if (!bbox) return 'NO_FACE';
@@ -96,30 +92,40 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         const centerX = originX + width / 2;
         const centerY = originY + height / 2;
 
-        // 1. Check Distance (Size of face relative to screen)
+        // 1. Distance Check (Far vs Close)
         const widthRatio = width / videoWidth;
-        if (widthRatio < FACE_WIDTH_RATIO_MIN) return 'TOO_FAR';
-        if (widthRatio > FACE_WIDTH_RATIO_MAX) return 'TOO_CLOSE';
+        // If it's too tiny (ghost detection) or taking up the WHOLE screen
+        if (widthRatio < FACE_WIDTH_RATIO_MIN || widthRatio > FACE_WIDTH_RATIO_MAX) {
+            return 'ALIGN_FACE';
+        }
 
-        // 2. Check Centering (X and Y axis)
+        // 2. Centering Check
+        // We use a looser tolerance so you don't have to be pixel-perfect
         const devX = Math.abs(centerX - videoWidth / 2) / videoWidth;
         const devY = Math.abs(centerY - videoHeight / 2) / videoHeight;
         
-        // Allow slightly more vertical deviation downwards (natural selfie angle)
-        if (devX > CENTER_TOLERANCE || devY > (CENTER_TOLERANCE + 0.05)) return 'CENTER_FACE';
+        if (devX > CENTER_TOLERANCE || devY > CENTER_TOLERANCE + 0.1) { // +0.1 allows face to be slightly lower (natural)
+            return 'ALIGN_FACE';
+        }
 
-        // 3. Check Head Tilt (Roll) using Eye Keypoints
+        // 3. Tilt Check (Roll)
+        // Calculated from eye positions
         const keypoints = detection.keypoints;
         if (keypoints && keypoints.length >= 2) {
             const rightEye = keypoints[0];
             const leftEye = keypoints[1];
-            // Calculate angle in degrees
-            const dy = rightEye.y - leftEye.y;
-            const dx = rightEye.x - leftEye.x;
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            if (Math.abs(angle) > TILT_TOLERANCE) return 'TILT_HEAD';
+            if (rightEye && leftEye) {
+                const dy = rightEye.y - leftEye.y;
+                const dx = rightEye.x - leftEye.x;
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                
+                if (Math.abs(angle) > TILT_TOLERANCE) {
+                    return 'ALIGN_FACE';
+                }
+            }
         }
 
+        // If we passed all checks, we are good!
         return 'HOLD_STILL';
     }, []);
 
@@ -127,23 +133,21 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         if (!webcamRef.current) return;
         
         setStatus('CAPTURING');
-        setFlashActive(true); // Trigger white flash
+        setFlashActive(true);
 
-        // Short delay to allow flash to render
         setTimeout(() => {
             const imageSrc = webcamRef.current?.getScreenshot();
             if (imageSrc) {
                 fetch(imageSrc)
                     .then(res => res.blob())
                     .then(blob => {
-                        const file = new File([blob], `smart-selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
                         onCapture(file);
-                        // Small delay before closing to show the "flash" effect
                         setTimeout(onClose, 300);
                     })
-                    .catch(() => setStatus('NO_FACE'));
+                    .catch(() => setStatus('ALIGN_FACE'));
             } else {
-                setStatus('NO_FACE');
+                setStatus('ALIGN_FACE');
                 setFlashActive(false);
             }
         }, 150);
@@ -164,7 +168,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             let currentStatus: AlignmentStatus = 'NO_FACE';
 
             if (detections.detections.length > 0) {
-                // Use the first detected face
                 currentStatus = checkAlignment(
                     detections.detections[0],
                     video.videoWidth,
@@ -172,7 +175,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 );
             }
 
-            // State Logic for "Holding"
             if (currentStatus === 'HOLD_STILL') {
                 if (holdStartTimeRef.current === null) {
                     holdStartTimeRef.current = startTimeMs;
@@ -184,16 +186,17 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
                     if (elapsed >= HOLD_DURATION_MS) {
                         performCapture();
-                        return; // Stop loop
+                        return;
                     }
                 }
             } else {
-                // Reset if alignment is lost
+                // Smooth reset: If we lose alignment briefly, don't kill progress instantly? 
+                // No, industry standard is to reset to ensure clarity, but since we are 'forgiving' now, it's fine.
                 holdStartTimeRef.current = null;
                 setProgress(0);
             }
 
-            // Only update React state if status changes to avoid re-renders
+            // Update UI state only when needed
             if (currentStatus !== lastStatusRef.current) {
                 setStatus(currentStatus);
                 lastStatusRef.current = currentStatus;
@@ -217,27 +220,24 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
     if (!isOpen) return null;
 
-    // UI Helpers
     const getStatusColor = () => {
         switch (status) {
             case 'HOLD_STILL': return '#22c55e'; // Green
             case 'CAPTURING': return '#ffffff'; // White
+            case 'ALIGN_FACE': return '#eab308'; // Yellow
             case 'NO_FACE': return '#ef4444'; // Red
-            default: return '#eab308'; // Yellow/Warning
+            default: return '#eab308';
         }
     };
 
     const getInstructionText = () => {
         switch (status) {
-            case 'LOADING': return 'Starting camera...';
+            case 'LOADING': return 'Camera starting...';
             case 'NO_FACE': return 'Face not found';
-            case 'TOO_CLOSE': return 'Move back';
-            case 'TOO_FAR': return 'Move closer';
-            case 'CENTER_FACE': return 'Center your face';
-            case 'TILT_HEAD': return 'Straighten your head';
+            case 'ALIGN_FACE': return 'Align face';
             case 'HOLD_STILL': return 'Hold still...';
-            case 'CAPTURING': return 'Smile!';
-            default: return 'Align your face';
+            case 'CAPTURING': return 'Perfect!';
+            default: return 'Align face';
         }
     };
 
@@ -246,26 +246,20 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
             style={{ height: '100dvh' }}
         >
-            {/* Flash Overlay */}
             <div 
                 className={`absolute inset-0 z-[60] bg-white pointer-events-none transition-opacity duration-300 ${flashActive ? 'opacity-100' : 'opacity-0'}`}
             />
 
-            {/* Close Button - NOW MOBILE SAFE (Notch Friendly) */}
             <button
                 onClick={onClose}
                 className="absolute right-6 z-50 p-4 rounded-full bg-black/10 hover:bg-black/20 text-black transition-colors"
-                style={{ 
-                    // This is the magic line for iPhones:
-                    top: 'calc(1.5rem + env(safe-area-inset-top))' 
-                }}
+                style={{ top: 'calc(1.5rem + env(safe-area-inset-top))' }}
             >
                 <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" fill="none">
                     <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
             </button>
 
-            {/* Main Camera Container */}
             <div className="relative w-full max-w-lg aspect-[3/4] overflow-hidden rounded-2xl shadow-2xl bg-black">
                 <Webcam
                     ref={webcamRef}
@@ -280,28 +274,26 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     className="absolute inset-0 w-full h-full object-cover"
                 />
 
-                {/* Overlays */}
                 <div className="absolute inset-0 z-40 pointer-events-none">
-                    {/* Dark overlay with "Hole" for face (Vignette) */}
+                    {/* Simplified Vignette */}
                     <svg width="100%" height="100%" preserveAspectRatio="none">
                         <defs>
                             <mask id="face-mask">
                                 <rect width="100%" height="100%" fill="white" />
-                                <ellipse cx="50%" cy="50%" rx="35%" ry="45%" fill="black" />
+                                <ellipse cx="50%" cy="50%" rx="38%" ry="48%" fill="black" />
                             </mask>
                         </defs>
                         <rect width="100%" height="100%" fill="rgba(0,0,0,0.3)" mask="url(#face-mask)" />
                     </svg>
 
-                    {/* Active Guide Ring */}
+                    {/* Guide & Progress Ring */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div 
-                            className="relative w-[70%] h-[55%] transition-all duration-300 ease-out"
+                            className="relative w-[76%] h-[58%] transition-all duration-300 ease-out"
                             style={{
-                                transform: status === 'HOLD_STILL' ? 'scale(1.05)' : 'scale(1)',
+                                transform: status === 'HOLD_STILL' ? 'scale(1.02)' : 'scale(1)',
                             }}
                         >
-                            {/* The Oval Guide */}
                             <svg className="w-full h-full overflow-visible">
                                 <ellipse 
                                     cx="50%" 
@@ -310,13 +302,12 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                                     ry="50%" 
                                     fill="none" 
                                     stroke={getStatusColor()} 
-                                    strokeWidth="4"
-                                    strokeDasharray="10 5"
+                                    strokeWidth="3"
+                                    strokeDasharray="8 6"
                                     className="transition-colors duration-300"
-                                    opacity={0.7}
+                                    opacity={0.8}
                                 />
                                 
-                                {/* Progress Ring (Only shows when holding) */}
                                 {progress > 0 && (
                                     <ellipse 
                                         cx="50%" 
@@ -325,12 +316,12 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                                         ry="50%" 
                                         fill="none" 
                                         stroke="#22c55e" 
-                                        strokeWidth="6"
-                                        strokeDasharray={`${(progress / 100) * 1000} 1000`} // Approx circumference
+                                        strokeWidth="5"
+                                        strokeDasharray={`${(progress / 100) * 1000} 1000`} 
                                         strokeLinecap="round"
                                         pathLength="1000"
                                         className="transition-all duration-100 ease-linear"
-                                        transform="rotate(-90 50% 50%)" // Start from top
+                                        transform="rotate(-90 50% 50%)" 
                                         style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
                                     />
                                 )}
@@ -338,12 +329,12 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Status Text / Feedback */}
                     <div className="absolute bottom-12 inset-x-0 flex flex-col items-center text-center space-y-2">
                         <div 
-                            className="px-6 py-2 rounded-full backdrop-blur-md transition-colors duration-300 shadow-lg"
+                            className="px-6 py-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-lg"
                             style={{
-                                backgroundColor: status === 'HOLD_STILL' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                backgroundColor: status === 'HOLD_STILL' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+                                transform: status === 'HOLD_STILL' ? 'scale(1.1)' : 'scale(1)',
                             }}
                         >
                             <span 
@@ -355,11 +346,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                                 {getInstructionText()}
                             </span>
                         </div>
-                        {status === 'HOLD_STILL' && (
-                            <p className="text-white text-sm font-medium drop-shadow-md">
-                                Keep steady...
-                            </p>
-                        )}
                     </div>
                 </div>
             </div>
