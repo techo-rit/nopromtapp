@@ -14,10 +14,9 @@ type AlignmentStatus =
     | 'NO_FACE' 
     | 'TOO_CLOSE' 
     | 'TOO_FAR' 
-    | 'OFF_CENTER_X' // Too far left/right
-    | 'OFF_CENTER_Y' // Too far up/down
-    | 'TILTED'       // Head is crooked
-    | 'HOLD_STILL'   // Perfect!
+    | 'OFF_CENTER'
+    | 'TILTED'       
+    | 'HOLD_STILL'   
     | 'CAPTURING';
 
 export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
@@ -40,12 +39,12 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const lastStatusRef = useRef<AlignmentStatus>('LOADING');
 
     // --- INDUSTRY STANDARD CONFIGURATION ---
-    const HOLD_DURATION_MS = 800;        // 0.8s (Very snappy)
-    const FACE_WIDTH_MIN = 0.05;         // 5% (Detects even if very far)
-    const FACE_WIDTH_MAX = 0.95;         // 95% (Detects even if face fills screen)
-    const CENTER_TOLERANCE_X = 0.35;     // 35% deviation (Very forgiving horizontal)
-    const CENTER_TOLERANCE_Y = 0.40;     // 40% deviation (Very forgiving vertical)
-    const TILT_TOLERANCE_DEG = 45;       // 45 degrees (Allows casual head tilt)
+    const HOLD_DURATION_MS = 600;        // 0.6s (Extremely snappy)
+    const FACE_WIDTH_MIN = 0.15;         // 15% of VISIBLE screen
+    const FACE_WIDTH_MAX = 0.85;         // 85% of VISIBLE screen
+    const CENTER_TOLERANCE = 0.30;       // 30% deviation allowed
+    const TILT_TOLERANCE_DEG = 35;       // 35 degrees tilt allowed
+    const ASPECT_RATIO_CONTAINER = 3 / 4; // The aspect ratio of our UI Box
 
     useEffect(() => {
         if (!isOpen) return;
@@ -62,7 +61,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         delegate: 'GPU',
                     },
                     runningMode: 'VIDEO',
-                    minDetectionConfidence: 0.3, // High sensitivity
+                    minDetectionConfidence: 0.25, // Very high sensitivity for low light
                 });
                 if (isMounted) {
                     detectorRef.current = detector;
@@ -93,37 +92,63 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         const bbox = detection.boundingBox;
         if (!bbox || videoWidth === 0 || videoHeight === 0) return 'NO_FACE';
 
-        const { originX, originY, width, height } = bbox;
-        const centerX = originX + width / 2;
-        const centerY = originY + height / 2;
+        // --- CROP-AWARE MATH ENGINE ---
+        // We need to calculate what the user ACTUALLY sees in the 3:4 box
+        // object-cover usually crops the sides of a 16:9 video to fit 3:4
+        
+        let visibleWidth = videoWidth;
+        let visibleHeight = videoHeight;
+        
+        const videoAspect = videoWidth / videoHeight;
+        
+        if (videoAspect > ASPECT_RATIO_CONTAINER) {
+            // Video is wider than container (Landscape video, Portrait container)
+            // The sides are cropped out
+            visibleWidth = videoHeight * ASPECT_RATIO_CONTAINER;
+        } else {
+            // Video is taller than container (Rare on desktop, possible on mobile)
+            // The top/bottom are cropped out
+            visibleHeight = videoWidth / ASPECT_RATIO_CONTAINER;
+        }
 
-        // 1. Distance Check
-        const widthRatio = width / videoWidth;
+        // Calculate Face Metrics relative to the VISIBLE box
+        const faceWidth = bbox.width;
+        const faceCenterX = bbox.originX + (bbox.width / 2);
+        const faceCenterY = bbox.originY + (bbox.height / 2);
+
+        // 1. Distance Check (Relative to Visible Width)
+        const widthRatio = faceWidth / visibleWidth;
         if (widthRatio < FACE_WIDTH_MIN) return 'TOO_FAR';
         if (widthRatio > FACE_WIDTH_MAX) return 'TOO_CLOSE';
 
-        // 2. Centering Check
-        const devX = Math.abs(centerX - videoWidth / 2) / videoWidth;
-        const devY = Math.abs(centerY - videoHeight / 2) / videoHeight;
+        // 2. Centering Check (Relative to Center of Video)
+        // Since object-cover centers the crop, the video center IS the container center
+        const devX = Math.abs(faceCenterX - videoWidth / 2) / visibleWidth;
+        const devY = Math.abs(faceCenterY - videoHeight / 2) / visibleHeight;
         
-        if (devX > CENTER_TOLERANCE_X) return 'OFF_CENTER_X';
-        // Allow face to be a bit higher or lower, but not off screen
-        if (devY > CENTER_TOLERANCE_Y) return 'OFF_CENTER_Y';
+        if (devX > CENTER_TOLERANCE || devY > CENTER_TOLERANCE) return 'OFF_CENTER';
 
-        // 3. Tilt Check (Corrected Math)
+        // 3. Tilt Check (Robust Math)
         const keypoints = detection.keypoints;
         if (keypoints && keypoints.length >= 2) {
-            const rightEye = keypoints[0];
-            const leftEye = keypoints[1];
+            const rightEye = keypoints[0]; // MediaPipe Index 0
+            const leftEye = keypoints[1];  // MediaPipe Index 1
             
             if (rightEye && leftEye) {
-                // IMPORTANT: Scale normalized keypoints to pixels for correct angle
-                // MediaPipe keypoints are 0.0-1.0
                 const dy = (rightEye.y - leftEye.y) * videoHeight;
                 const dx = (rightEye.x - leftEye.x) * videoWidth;
-                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 
-                // If angle is excessive (e.g. > 45 degrees)
+                // Use slope to avoid 180-degree flip issues with atan2
+                // If face is vertical, dx is 0, angle is 90. 
+                // We want horizontal eyes. dy should be near 0.
+                
+                // Calculate angle in degrees
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                
+                // Normalize angle to -90 to 90 range (handling upside down/mirrored)
+                if (angle > 90) angle = 180 - angle;
+                if (angle < -90) angle = -180 - angle;
+                
                 if (Math.abs(angle) > TILT_TOLERANCE_DEG) {
                     return 'TILTED';
                 }
@@ -200,8 +225,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     }
                 }
             } else {
-                // If we lose status briefly, maybe don't reset instantly? 
-                // For now, reset to keep it responsive.
                 holdStartTimeRef.current = null;
                 setProgress(0);
             }
@@ -245,8 +268,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             case 'NO_FACE': return 'Face not found';
             case 'TOO_CLOSE': return 'Move back';
             case 'TOO_FAR': return 'Move closer';
-            case 'OFF_CENTER_X': return 'Center your face';
-            case 'OFF_CENTER_Y': return 'Center your face';
+            case 'OFF_CENTER': return 'Center your face';
             case 'TILTED': return 'Straighten head';
             case 'HOLD_STILL': return 'Hold still...';
             case 'CAPTURING': return 'Perfect!';
@@ -297,7 +319,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         <defs>
                             <mask id="face-mask">
                                 <rect width="100%" height="100%" fill="white" />
-                                <ellipse cx="50%" cy="50%" rx="40%" ry="50%" fill="black" />
+                                <ellipse cx="50%" cy="50%" rx="42%" ry="54%" fill="black" />
                             </mask>
                         </defs>
                         <rect width="100%" height="100%" fill="rgba(0,0,0,0.3)" mask="url(#face-mask)" />
@@ -306,7 +328,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     {/* Dynamic Guide Ring */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div 
-                            className="relative w-[80%] h-[60%] transition-all duration-300 ease-out"
+                            className="relative w-[84%] h-[68%] transition-all duration-300 ease-out"
                             style={{
                                 transform: status === 'HOLD_STILL' ? 'scale(1.05)' : 'scale(1)',
                             }}
