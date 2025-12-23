@@ -9,11 +9,11 @@ interface SmartSelfieModalProps {
 }
 
 // Granular statuses for precise, professional user feedback
-type AlignmentStatus = 
-    | 'LOADING' 
-    | 'NO_FACE' 
-    | 'TOO_CLOSE' 
-    | 'TOO_FAR' 
+type AlignmentStatus =
+    | 'LOADING'
+    | 'NO_FACE'
+    | 'TOO_CLOSE'
+    | 'TOO_FAR'
     | 'OFF_CENTER'
     | 'TILTED'       // Head is crooked (Roll)
     | 'TURN_LEFT'    // Head turned right (Yaw)
@@ -29,34 +29,36 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const webcamRef = useRef<Webcam>(null);
     const detectorRef = useRef<FaceDetector | null>(null);
     const animationFrameRef = useRef<number | null>(null);
-    
+
     // State
     const [status, setStatus] = useState<AlignmentStatus>('LOADING');
-    const [progress, setProgress] = useState(0); 
+    const [progress, setProgress] = useState(0);
     const [flashActive, setFlashActive] = useState(false);
     const [isDetectorReady, setIsDetectorReady] = useState(false);
 
     // Refs
     const holdStartTimeRef = useRef<number | null>(null);
     const lastStatusRef = useRef<AlignmentStatus>('LOADING');
+    const isCapturingRef = useRef(false); // NEW: Prevents race conditions between Auto & Manual
 
     // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    const HOLD_DURATION_MS = 1200;       // 1.2s Hold (Ensures stability)
-    const FACE_WIDTH_MIN = 0.15;         // Min size (15% of screen)
-    const FACE_WIDTH_MAX = 0.65;         // Max size (65% - preventing fisheye distortion)
-    const CENTER_TOLERANCE = 0.15;       // 15% deviation (Strict centering)
-    const TILT_TOLERANCE_DEG = 8;        // 8 degrees (Strict vertical alignment)
-    const YAW_TOLERANCE = 0.15;          // 15% symmetry deviation (Strict straight looking)
-    const ASPECT_RATIO_CONTAINER = 3 / 4; 
+    const HOLD_DURATION_MS = 1200;
+    const FACE_WIDTH_MIN = 0.15;
+    const FACE_WIDTH_MAX = 0.65;
+    const CENTER_TOLERANCE = 0.15;
+    const TILT_TOLERANCE_DEG = 8;
+    const YAW_TOLERANCE = 0.15;
+    const ASPECT_RATIO_CONTAINER = 3 / 4;
 
-    // --- 1. RESET STATE ON OPEN (Fixes the "White Screen" Bug) ---
+    // --- RESET STATE ON OPEN ---
     useEffect(() => {
         if (isOpen) {
-            setFlashActive(false); // <--- CRITICAL FIX: Turn off flash
+            setFlashActive(false);
             setStatus('LOADING');
             setProgress(0);
             holdStartTimeRef.current = null;
             lastStatusRef.current = 'LOADING';
+            isCapturingRef.current = false; // Reset capture lock
         }
     }, [isOpen]);
 
@@ -69,9 +71,8 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 const vision = await FilesetResolver.forVisionTasks(
                     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
                 );
-                // Check if unmounted during load
                 if (!isMounted) return;
-                
+
                 const detector = await FaceDetector.createFromOptions(vision, {
                     baseOptions: {
                         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
@@ -96,14 +97,13 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
         return () => {
             isMounted = false;
-            // CLEANUP: Stop loops and close detector
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             if (detectorRef.current) {
                 detectorRef.current.close();
                 detectorRef.current = null;
             }
             setIsDetectorReady(false);
-            setFlashActive(false); // Double safety
+            setFlashActive(false);
         };
     }, [isOpen]);
 
@@ -111,64 +111,61 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         const bbox = detection.boundingBox;
         if (!bbox || videoWidth === 0 || videoHeight === 0) return 'NO_FACE';
 
-        // --- VIEWPORT CALCULATIONS ---
-        // Adjust for "object-cover" cropping to know what user actually sees
         let visibleWidth = videoWidth;
         let visibleHeight = videoHeight;
         const videoAspect = videoWidth / videoHeight;
-        
+
         if (videoAspect > ASPECT_RATIO_CONTAINER) {
             visibleWidth = videoHeight * ASPECT_RATIO_CONTAINER;
         } else {
             visibleHeight = videoWidth / ASPECT_RATIO_CONTAINER;
         }
 
-        // --- BASIC METRICS ---
         const faceWidth = bbox.width;
         const faceCenterX = bbox.originX + (bbox.width / 2);
         const faceCenterY = bbox.originY + (bbox.height / 2);
 
-        // Check Distance
+        // Distance Check
         const widthRatio = faceWidth / visibleWidth;
         if (widthRatio < FACE_WIDTH_MIN) return 'TOO_FAR';
         if (widthRatio > FACE_WIDTH_MAX) return 'TOO_CLOSE';
 
-        // Check Centering
+        // Centering Check
         const devX = Math.abs(faceCenterX - videoWidth / 2) / visibleWidth;
         const devY = Math.abs(faceCenterY - videoHeight / 2) / visibleHeight;
-        
+
         if (devX > CENTER_TOLERANCE || devY > CENTER_TOLERANCE) return 'OFF_CENTER';
 
-        // --- ADVANCED GEOMETRY CHECKS ---
+        // Geometry Checks
         const keypoints = detection.keypoints;
         if (keypoints && keypoints.length >= 6) {
-            const rightEye = keypoints[0]; 
+            const rightEye = keypoints[0];
             const leftEye = keypoints[1];
             const nose = keypoints[2];
-            
-            // A. ROLL CHECK (Head Tilt)
+
+            // Roll Check
             const dy = (rightEye.y - leftEye.y) * videoHeight;
             const dx = (rightEye.x - leftEye.x) * videoWidth;
             let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            
+
             if (angle > 90) angle = 180 - angle;
             if (angle < -90) angle = -180 - angle;
-            
+
             if (Math.abs(angle) > TILT_TOLERANCE_DEG) {
                 return 'TILTED';
             }
 
-            // B. YAW CHECK (Looking Side-to-Side)
+            // Yaw Check
             const distToRightEye = Math.abs(nose.x - rightEye.x);
             const distToLeftEye = Math.abs(nose.x - leftEye.x);
-            
+
             if (distToRightEye > 0 && distToLeftEye > 0) {
                 const diff = distToRightEye - distToLeftEye;
                 const avg = (distToRightEye + distToLeftEye) / 2;
-                const yawRatio = diff / avg; 
+                const yawRatio = diff / avg;
 
-                if (yawRatio > YAW_TOLERANCE) return 'TURN_RIGHT'; 
-                if (yawRatio < -YAW_TOLERANCE) return 'TURN_LEFT'; 
+                if (yawRatio > YAW_TOLERANCE) return 'TURN_RIGHT';
+                if (yawRatio < -YAW_TOLERANCE) return 'TURN_LEFT';
             }
         }
 
@@ -176,10 +173,11 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     }, []);
 
     const performCapture = useCallback(() => {
-        if (!webcamRef.current) return;
-        
+        if (!webcamRef.current || isCapturingRef.current) return;
+
+        isCapturingRef.current = true; // Lock capture
         setStatus('CAPTURING');
-        setFlashActive(true); // FLASH ON
+        setFlashActive(true);
 
         setTimeout(() => {
             const imageSrc = webcamRef.current?.getScreenshot();
@@ -189,40 +187,44 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     .then(blob => {
                         const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
                         onCapture(file);
-                        // Wait for animation, but ensure we close
-                        setTimeout(onClose, 500); 
+                        setTimeout(onClose, 500);
                     })
                     .catch(() => {
                         setStatus('NO_FACE');
-                        setFlashActive(false); // Reset if failed
+                        setFlashActive(false);
+                        isCapturingRef.current = false; // Unlock on fail
                     });
             } else {
                 setStatus('NO_FACE');
                 setFlashActive(false);
+                isCapturingRef.current = false; // Unlock on fail
             }
         }, 150);
     }, [onCapture, onClose]);
 
     const detectFaces = useCallback(() => {
-        // --- 2. ZOMBIE LOOP FIX ---
-        // If detector is null, it means we closed the modal. STOP LOOPING.
-        if (!detectorRef.current) return; 
+        if (!detectorRef.current || isCapturingRef.current) {
+            // If capturing, keep loop alive but don't process to prevent state conflict
+            if (isCapturingRef.current) {
+                animationFrameRef.current = requestAnimationFrame(detectFaces);
+            }
+            return;
+        }
 
         if (!webcamRef.current?.video || webcamRef.current.video.readyState !== 4) {
-             animationFrameRef.current = requestAnimationFrame(detectFaces);
-             return;
+            animationFrameRef.current = requestAnimationFrame(detectFaces);
+            return;
         }
 
         const video = webcamRef.current.video;
         const startTimeMs = performance.now();
-        
+
         try {
             const detections = detectorRef.current.detectForVideo(video, startTimeMs);
-            
+
             let currentStatus: AlignmentStatus = 'NO_FACE';
 
             if (detections.detections.length > 0) {
-                // Prioritize largest face
                 const primaryFace = detections.detections.sort((a, b) => {
                     return (b.boundingBox?.width || 0) - (a.boundingBox?.width || 0);
                 })[0];
@@ -234,6 +236,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 );
             }
 
+            // Strict Hold Logic
             if (currentStatus === 'HOLD_STILL') {
                 if (holdStartTimeRef.current === null) {
                     holdStartTimeRef.current = startTimeMs;
@@ -245,7 +248,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
                     if (elapsed >= HOLD_DURATION_MS) {
                         performCapture();
-                        return; // Stop loop
+                        return;
                     }
                 }
             } else {
@@ -276,7 +279,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
     if (!isOpen) return null;
 
-    // UI Feedback Helpers
     const getStatusColor = () => {
         switch (status) {
             case 'HOLD_STILL': return '#22c55e'; // Green
@@ -294,8 +296,8 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             case 'TOO_FAR': return 'Move closer';
             case 'OFF_CENTER': return 'Center your face';
             case 'TILTED': return 'Straighten head';
-            case 'TURN_LEFT': return 'Turn head left';  
-            case 'TURN_RIGHT': return 'Turn head right'; 
+            case 'TURN_LEFT': return 'Turn head left';
+            case 'TURN_RIGHT': return 'Turn head right';
             case 'HOLD_STILL': return 'Hold still...';
             case 'CAPTURING': return 'Perfect!';
             default: return 'Align face';
@@ -303,27 +305,27 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     };
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
             style={{ height: '100dvh' }}
         >
-            {/* Flash / Brightness Layer - Now controlled safely */}
-            <div 
+            {/* Flash Layer */}
+            <div
                 className={`absolute inset-0 z-[60] bg-white pointer-events-none transition-opacity duration-300 ${flashActive ? 'opacity-100' : 'opacity-0'}`}
             />
 
-            {/* Close Button (Mobile Safe) */}
+            {/* Close Button */}
             <button
                 onClick={onClose}
                 className="absolute right-6 z-50 p-4 rounded-full bg-gray-100 hover:bg-gray-200 text-black transition-colors shadow-sm"
                 style={{ top: 'calc(1.5rem + env(safe-area-inset-top))' }}
             >
                 <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </button>
 
-            {/* Camera Preview */}
+            {/* Camera Viewport */}
             <div className="relative w-full max-w-lg aspect-[3/4] overflow-hidden rounded-2xl shadow-2xl bg-black">
                 <Webcam
                     ref={webcamRef}
@@ -339,53 +341,51 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 />
 
                 {/* Softbox / Ring Light Overlay */}
-                <div className="absolute inset-0 z-40 pointer-events-none">
-                    <svg width="100%" height="100%" preserveAspectRatio="none">
+                <div className="absolute inset-0 z-40">
+                    <svg width="100%" height="100%" preserveAspectRatio="none" className="pointer-events-none">
                         <defs>
                             <mask id="face-mask">
                                 <rect width="100%" height="100%" fill="white" />
                                 <ellipse cx="50%" cy="50%" rx="42%" ry="54%" fill="black" />
                             </mask>
                         </defs>
-                        {/* High brightness overlay (85% white opacity) */}
                         <rect width="100%" height="100%" fill="rgba(255,255,255,0.85)" mask="url(#face-mask)" />
                     </svg>
 
                     {/* Guide Ring */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div 
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div
                             className="relative w-[84%] h-[68%] transition-all duration-300 ease-out"
                             style={{
                                 transform: status === 'HOLD_STILL' ? 'scale(1.05)' : 'scale(1)',
                             }}
                         >
                             <svg className="w-full h-full overflow-visible">
-                                <ellipse 
-                                    cx="50%" 
-                                    cy="50%" 
-                                    rx="50%" 
-                                    ry="50%" 
-                                    fill="none" 
-                                    stroke={getStatusColor()} 
+                                <ellipse
+                                    cx="50%"
+                                    cy="50%"
+                                    rx="50%"
+                                    ry="50%"
+                                    fill="none"
+                                    stroke={getStatusColor()}
                                     strokeWidth={status === 'HOLD_STILL' ? "4" : "3"}
                                     strokeDasharray={status === 'HOLD_STILL' ? "0" : "8 6"}
                                     className="transition-colors duration-300 drop-shadow-md"
                                 />
-                                
                                 {progress > 0 && (
-                                    <ellipse 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        rx="50%" 
-                                        ry="50%" 
-                                        fill="none" 
-                                        stroke="#22c55e" 
+                                    <ellipse
+                                        cx="50%"
+                                        cy="50%"
+                                        rx="50%"
+                                        ry="50%"
+                                        fill="none"
+                                        stroke="#22c55e"
                                         strokeWidth="6"
-                                        strokeDasharray={`${(progress / 100) * 1000} 1000`} 
+                                        strokeDasharray={`${(progress / 100) * 1000} 1000`}
                                         strokeLinecap="round"
                                         pathLength="1000"
                                         className="transition-all duration-100 ease-linear drop-shadow-md"
-                                        transform="rotate(-90 50% 50%)" 
+                                        transform="rotate(-90 50% 50%)"
                                         style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
                                     />
                                 )}
@@ -393,9 +393,9 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Status Text */}
-                    <div className="absolute bottom-12 inset-x-0 flex flex-col items-center text-center space-y-2">
-                        <div 
+                    {/* Status Text - Moved Higher to accomodate button */}
+                    <div className="absolute bottom-32 inset-x-0 flex flex-col items-center text-center space-y-2 pointer-events-none">
+                        <div
                             className="px-8 py-3 rounded-full backdrop-blur-md transition-all duration-300 shadow-xl"
                             style={{
                                 backgroundColor: status === 'HOLD_STILL' ? 'rgba(34, 197, 94, 1)' : 'rgba(255, 255, 255, 0.95)',
@@ -403,7 +403,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                                 border: '1px solid rgba(0,0,0,0.05)'
                             }}
                         >
-                            <span 
+                            <span
                                 className="text-lg font-bold tracking-wide"
                                 style={{
                                     color: status === 'HOLD_STILL' ? '#ffffff' : '#1a1a1a'
@@ -413,11 +413,32 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                             </span>
                         </div>
                     </div>
+
+                    {/* Manual Capture Shutter Button */}
+                    {/* Manual Capture Shutter Button - Mobile Safe */}
+                    <div
+                        className="absolute inset-x-0 flex justify-center z-50"
+                        style={{
+                            bottom: 'calc(2rem + env(safe-area-inset-bottom))' // 2rem is approx bottom-8
+                        }}
+                    >
+                        <button
+                            onClick={performCapture}
+                            disabled={status === 'LOADING'}
+                            aria-label="Take Photo"
+                            className="relative group transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <div className="w-20 h-20 rounded-full border-[5px] border-white flex items-center justify-center shadow-lg bg-black/10 backdrop-blur-sm group-hover:bg-black/20 transition-colors">
+                                <div className="w-16 h-16 bg-white rounded-full transition-transform group-hover:scale-90" />
+                            </div>
+                        </button>
+                    </div>
+
                 </div>
             </div>
-            
+
             <p className="mt-6 text-gray-400 font-medium text-sm text-center px-6">
-                Please remove glasses or masks for best results
+                Auto-capture is active • Press button to capture manually
             </p>
         </div>
     );
