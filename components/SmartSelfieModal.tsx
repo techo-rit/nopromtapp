@@ -8,7 +8,16 @@ interface SmartSelfieModalProps {
     onCapture: (file: File) => void;
 }
 
-type CaptureStatus = 'loading' | 'align' | 'hold' | 'capturing';
+// Detailed status for better user feedback
+type AlignmentStatus = 
+    | 'LOADING' 
+    | 'NO_FACE' 
+    | 'TOO_CLOSE' 
+    | 'TOO_FAR' 
+    | 'CENTER_FACE' 
+    | 'TILT_HEAD' 
+    | 'HOLD_STILL' 
+    | 'CAPTURING';
 
 export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     isOpen,
@@ -18,19 +27,29 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const webcamRef = useRef<Webcam>(null);
     const detectorRef = useRef<FaceDetector | null>(null);
     const animationFrameRef = useRef<number | null>(null);
-    const alignedFramesRef = useRef<number>(0);
-    const [status, setStatus] = useState<CaptureStatus>('loading');
+    
+    // State
+    const [status, setStatus] = useState<AlignmentStatus>('LOADING');
+    const [progress, setProgress] = useState(0); // 0 to 100
+    const [flashActive, setFlashActive] = useState(false);
     const [isDetectorReady, setIsDetectorReady] = useState(false);
 
-    const ALIGNED_FRAMES_REQUIRED = 3;
-    const GUIDE_BOX_TOLERANCE = 0.15;
-    const NOSE_EYE_TOLERANCE = 0.05;
+    // Refs for logic (to avoid re-renders during high-speed loop)
+    const holdStartTimeRef = useRef<number | null>(null);
+    const lastStatusRef = useRef<AlignmentStatus>('LOADING');
 
+    // Constants
+    const HOLD_DURATION_MS = 1500; // Hold for 1.5 seconds
+    const FACE_WIDTH_RATIO_MIN = 0.20; // Min face size (20% of screen)
+    const FACE_WIDTH_RATIO_MAX = 0.55; // Max face size (55% of screen)
+    const CENTER_TOLERANCE = 0.15; // How close to center (15%)
+    const TILT_TOLERANCE = 5; // Degrees of tilt allowed
+
+    // Initialize MediaPipe
     useEffect(() => {
         if (!isOpen) return;
 
         let isMounted = true;
-
         const initializeDetector = async () => {
             try {
                 const vision = await FilesetResolver.forVisionTasks(
@@ -46,14 +65,11 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 if (isMounted) {
                     detectorRef.current = detector;
                     setIsDetectorReady(true);
-                    setStatus('align');
+                    setStatus('NO_FACE');
                 }
             } catch (error) {
                 console.error('Failed to initialize face detector:', error);
-                if (isMounted) {
-                    setStatus('align');
-                    setIsDetectorReady(false);
-                }
+                if (isMounted) setStatus('NO_FACE');
             }
         };
 
@@ -61,216 +77,296 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
         return () => {
             isMounted = false;
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             if (detectorRef.current) {
                 detectorRef.current.close();
                 detectorRef.current = null;
             }
             setIsDetectorReady(false);
-            setStatus('loading');
-            alignedFramesRef.current = 0;
+            setProgress(0);
         };
     }, [isOpen]);
 
-    const checkFaceAlignment = useCallback((detection: Detection, videoWidth: number, videoHeight: number): boolean => {
+    // Calculate alignment status
+    const checkAlignment = useCallback((detection: Detection, videoWidth: number, videoHeight: number): AlignmentStatus => {
         const bbox = detection.boundingBox;
-        if (!bbox) return false;
+        if (!bbox) return 'NO_FACE';
 
-        const guideBoxLeft = videoWidth * 0.2;
-        const guideBoxRight = videoWidth * 0.8;
-        const guideBoxTop = videoHeight * 0.15;
-        const guideBoxBottom = videoHeight * 0.75;
+        const { originX, originY, width, height } = bbox;
+        const centerX = originX + width / 2;
+        const centerY = originY + height / 2;
 
-        const tolerance = Math.min(videoWidth, videoHeight) * GUIDE_BOX_TOLERANCE;
+        // 1. Check Distance (Size of face relative to screen)
+        const widthRatio = width / videoWidth;
+        if (widthRatio < FACE_WIDTH_RATIO_MIN) return 'TOO_FAR';
+        if (widthRatio > FACE_WIDTH_RATIO_MAX) return 'TOO_CLOSE';
 
-        const faceLeft = bbox.originX;
-        const faceRight = bbox.originX + bbox.width;
-        const faceTop = bbox.originY;
-        const faceBottom = bbox.originY + bbox.height;
+        // 2. Check Centering (X and Y axis)
+        const devX = Math.abs(centerX - videoWidth / 2) / videoWidth;
+        const devY = Math.abs(centerY - videoHeight / 2) / videoHeight;
+        
+        // Allow slightly more vertical deviation downwards (natural selfie angle)
+        if (devX > CENTER_TOLERANCE || devY > (CENTER_TOLERANCE + 0.05)) return 'CENTER_FACE';
 
-        const isInsideBox = 
-            faceLeft >= guideBoxLeft - tolerance &&
-            faceRight <= guideBoxRight + tolerance &&
-            faceTop >= guideBoxTop - tolerance &&
-            faceBottom <= guideBoxBottom + tolerance;
-
-        if (!isInsideBox) return false;
-
+        // 3. Check Head Tilt (Roll) using Eye Keypoints
         const keypoints = detection.keypoints;
-        if (!keypoints || keypoints.length < 4) return true;
+        if (keypoints && keypoints.length >= 2) {
+            const rightEye = keypoints[0];
+            const leftEye = keypoints[1];
+            // Calculate angle in degrees
+            const dy = rightEye.y - leftEye.y;
+            const dx = rightEye.x - leftEye.x;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            if (Math.abs(angle) > TILT_TOLERANCE) return 'TILT_HEAD';
+        }
 
-        const rightEye = keypoints[0];
-        const leftEye = keypoints[1];
-        const noseTip = keypoints[2];
-
-        if (!leftEye || !rightEye || !noseTip) return true;
-
-        const eyeMidpointX = (leftEye.x + rightEye.x) / 2;
-        const eyeDistance = Math.abs(rightEye.x - leftEye.x);
-        const noseDeviation = Math.abs(noseTip.x - eyeMidpointX);
-        const deviationRatio = noseDeviation / eyeDistance;
-
-        return deviationRatio < NOSE_EYE_TOLERANCE;
+        return 'HOLD_STILL';
     }, []);
 
-    const capturePhoto = useCallback(() => {
+    const performCapture = useCallback(() => {
         if (!webcamRef.current) return;
-
-        setStatus('capturing');
-        const imageSrc = webcamRef.current.getScreenshot();
         
-        if (imageSrc) {
-            fetch(imageSrc)
-                .then(res => res.blob())
-                .then(blob => {
-                    const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                    onCapture(file);
-                    onClose();
-                })
-                .catch(err => {
-                    console.error('Failed to convert screenshot to file:', err);
-                    setStatus('align');
-                });
-        } else {
-            setStatus('align');
-        }
+        setStatus('CAPTURING');
+        setFlashActive(true); // Trigger white flash
+
+        // Short delay to allow flash to render
+        setTimeout(() => {
+            const imageSrc = webcamRef.current?.getScreenshot();
+            if (imageSrc) {
+                fetch(imageSrc)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const file = new File([blob], `smart-selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        onCapture(file);
+                        // Small delay before closing to show the "flash" effect
+                        setTimeout(onClose, 300);
+                    })
+                    .catch(() => setStatus('NO_FACE'));
+            } else {
+                setStatus('NO_FACE');
+                setFlashActive(false);
+            }
+        }, 150);
     }, [onCapture, onClose]);
 
     const detectFaces = useCallback(() => {
-        if (!isDetectorReady || !detectorRef.current || !webcamRef.current) {
+        if (!detectorRef.current || !webcamRef.current?.video || webcamRef.current.video.readyState !== 4) {
             animationFrameRef.current = requestAnimationFrame(detectFaces);
             return;
         }
 
         const video = webcamRef.current.video;
-        if (!video || video.readyState !== 4) {
-            animationFrameRef.current = requestAnimationFrame(detectFaces);
-            return;
-        }
-
+        const startTimeMs = performance.now();
+        
         try {
-            const detections = detectorRef.current.detectForVideo(video, performance.now());
+            const detections = detectorRef.current.detectForVideo(video, startTimeMs);
             
-            if (detections.detections.length === 1) {
-                const isAligned = checkFaceAlignment(
+            let currentStatus: AlignmentStatus = 'NO_FACE';
+
+            if (detections.detections.length > 0) {
+                // Use the first detected face
+                currentStatus = checkAlignment(
                     detections.detections[0],
                     video.videoWidth,
                     video.videoHeight
                 );
+            }
 
-                if (isAligned) {
-                    alignedFramesRef.current += 1;
-                    
-                    if (alignedFramesRef.current >= ALIGNED_FRAMES_REQUIRED) {
-                        capturePhoto();
-                        return;
-                    } else {
-                        setStatus('hold');
-                    }
+            // State Logic for "Holding"
+            if (currentStatus === 'HOLD_STILL') {
+                if (holdStartTimeRef.current === null) {
+                    holdStartTimeRef.current = startTimeMs;
+                    setProgress(0);
                 } else {
-                    alignedFramesRef.current = 0;
-                    setStatus('align');
+                    const elapsed = startTimeMs - holdStartTimeRef.current;
+                    const progressVal = Math.min((elapsed / HOLD_DURATION_MS) * 100, 100);
+                    setProgress(progressVal);
+
+                    if (elapsed >= HOLD_DURATION_MS) {
+                        performCapture();
+                        return; // Stop loop
+                    }
                 }
             } else {
-                alignedFramesRef.current = 0;
-                setStatus('align');
+                // Reset if alignment is lost
+                holdStartTimeRef.current = null;
+                setProgress(0);
             }
+
+            // Only update React state if status changes to avoid re-renders
+            if (currentStatus !== lastStatusRef.current) {
+                setStatus(currentStatus);
+                lastStatusRef.current = currentStatus;
+            }
+
         } catch (error) {
-            console.error('Detection error:', error);
+            console.error(error);
         }
 
         animationFrameRef.current = requestAnimationFrame(detectFaces);
-    }, [isDetectorReady, checkFaceAlignment, capturePhoto]);
+    }, [checkAlignment, performCapture]);
 
     useEffect(() => {
         if (isOpen && isDetectorReady) {
             animationFrameRef.current = requestAnimationFrame(detectFaces);
         }
-
         return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
     }, [isOpen, isDetectorReady, detectFaces]);
 
     if (!isOpen) return null;
 
-    const statusText = {
-        loading: 'Initializing camera...',
-        align: 'Align your face',
-        hold: 'Hold still...',
-        capturing: 'Capturing...',
+    // UI Helpers
+    const getStatusColor = () => {
+        switch (status) {
+            case 'HOLD_STILL': return '#22c55e'; // Green
+            case 'CAPTURING': return '#ffffff'; // White
+            case 'NO_FACE': return '#ef4444'; // Red
+            default: return '#eab308'; // Yellow/Warning
+        }
+    };
+
+    const getInstructionText = () => {
+        switch (status) {
+            case 'LOADING': return 'Starting camera...';
+            case 'NO_FACE': return 'Face not found';
+            case 'TOO_CLOSE': return 'Move back';
+            case 'TOO_FAR': return 'Move closer';
+            case 'CENTER_FACE': return 'Center your face';
+            case 'TILT_HEAD': return 'Straighten your head';
+            case 'HOLD_STILL': return 'Hold still...';
+            case 'CAPTURING': return 'Smile!';
+            default: return 'Align your face';
+        }
     };
 
     return (
         <div 
-            className="fixed inset-0 z-50 bg-black"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
             style={{ height: '100dvh' }}
         >
+            {/* Flash Overlay */}
+            <div 
+                className={`absolute inset-0 z-[60] bg-white pointer-events-none transition-opacity duration-300 ${flashActive ? 'opacity-100' : 'opacity-0'}`}
+            />
+
+            {/* Close Button - NOW MOBILE SAFE (Notch Friendly) */}
             <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-50 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-[#1a1a1a]/80 text-white hover:bg-[#2a2a2a] transition-colors"
-                aria-label="Close camera"
+                className="absolute right-6 z-50 p-4 rounded-full bg-black/10 hover:bg-black/20 text-black transition-colors"
+                style={{ 
+                    // This is the magic line for iPhones:
+                    top: 'calc(1.5rem + env(safe-area-inset-top))' 
+                }}
             >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" style={{ strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }}/>
+                <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
             </button>
 
-            <div className="relative w-full h-full flex flex-col items-center justify-center">
-                <div className="relative w-full h-full max-w-[600px] mx-auto">
-                    <Webcam
-                        ref={webcamRef}
-                        audio={false}
-                        screenshotFormat="image/jpeg"
-                        videoConstraints={{
-                            facingMode: 'user',
-                            width: { ideal: 720 },
-                            height: { ideal: 960 },
-                        }}
-                        mirrored={true}
-                        disablePictureInPicture={true}
-                        forceScreenshotSourceSize={false}
-                        imageSmoothing={true}
-                        screenshotQuality={0.92}
-                        onUserMedia={() => {}}
-                        onUserMediaError={() => {}}
-                        className="w-full h-full object-cover"
-                    />
+            {/* Main Camera Container */}
+            <div className="relative w-full max-w-lg aspect-[3/4] overflow-hidden rounded-2xl shadow-2xl bg-black">
+                <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                    }}
+                    mirrored={true}
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
 
-                    <div className="absolute inset-0 pointer-events-none">
+                {/* Overlays */}
+                <div className="absolute inset-0 z-40 pointer-events-none">
+                    {/* Dark overlay with "Hole" for face (Vignette) */}
+                    <svg width="100%" height="100%" preserveAspectRatio="none">
+                        <defs>
+                            <mask id="face-mask">
+                                <rect width="100%" height="100%" fill="white" />
+                                <ellipse cx="50%" cy="50%" rx="35%" ry="45%" fill="black" />
+                            </mask>
+                        </defs>
+                        <rect width="100%" height="100%" fill="rgba(0,0,0,0.3)" mask="url(#face-mask)" />
+                    </svg>
+
+                    {/* Active Guide Ring */}
+                    <div className="absolute inset-0 flex items-center justify-center">
                         <div 
-                            className="absolute border-2 rounded-3xl"
+                            className="relative w-[70%] h-[55%] transition-all duration-300 ease-out"
                             style={{
-                                left: '20%',
-                                right: '20%',
-                                top: '15%',
-                                bottom: '25%',
-                                borderColor: status === 'hold' ? '#c9a962' : status === 'capturing' ? '#22c55e' : '#ffffff',
-                                transition: 'border-color 0.2s ease',
+                                transform: status === 'HOLD_STILL' ? 'scale(1.05)' : 'scale(1)',
                             }}
-                        />
-
-                        <div className="absolute inset-0 flex flex-col items-center justify-end pb-[15%]">
-                            <div 
-                                className="px-6 py-3 rounded-full bg-black/60 backdrop-blur-sm"
-                            >
-                                <p 
-                                    className="text-lg font-medium"
-                                    style={{
-                                        color: status === 'hold' ? '#c9a962' : status === 'capturing' ? '#22c55e' : '#ffffff',
-                                    }}
-                                >
-                                    {statusText[status]}
-                                </p>
-                            </div>
+                        >
+                            {/* The Oval Guide */}
+                            <svg className="w-full h-full overflow-visible">
+                                <ellipse 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    rx="50%" 
+                                    ry="50%" 
+                                    fill="none" 
+                                    stroke={getStatusColor()} 
+                                    strokeWidth="4"
+                                    strokeDasharray="10 5"
+                                    className="transition-colors duration-300"
+                                    opacity={0.7}
+                                />
+                                
+                                {/* Progress Ring (Only shows when holding) */}
+                                {progress > 0 && (
+                                    <ellipse 
+                                        cx="50%" 
+                                        cy="50%" 
+                                        rx="50%" 
+                                        ry="50%" 
+                                        fill="none" 
+                                        stroke="#22c55e" 
+                                        strokeWidth="6"
+                                        strokeDasharray={`${(progress / 100) * 1000} 1000`} // Approx circumference
+                                        strokeLinecap="round"
+                                        pathLength="1000"
+                                        className="transition-all duration-100 ease-linear"
+                                        transform="rotate(-90 50% 50%)" // Start from top
+                                        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+                                    />
+                                )}
+                            </svg>
                         </div>
+                    </div>
+
+                    {/* Status Text / Feedback */}
+                    <div className="absolute bottom-12 inset-x-0 flex flex-col items-center text-center space-y-2">
+                        <div 
+                            className="px-6 py-2 rounded-full backdrop-blur-md transition-colors duration-300 shadow-lg"
+                            style={{
+                                backgroundColor: status === 'HOLD_STILL' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                            }}
+                        >
+                            <span 
+                                className="text-lg font-bold tracking-wide"
+                                style={{
+                                    color: status === 'HOLD_STILL' ? '#ffffff' : '#1a1a1a'
+                                }}
+                            >
+                                {getInstructionText()}
+                            </span>
+                        </div>
+                        {status === 'HOLD_STILL' && (
+                            <p className="text-white text-sm font-medium drop-shadow-md">
+                                Keep steady...
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
+            
+            <p className="mt-6 text-gray-500 font-medium text-sm">
+                Ensure you are in a well-lit area
+            </p>
         </div>
     );
 };
