@@ -49,6 +49,17 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const YAW_TOLERANCE = 0.15;          // 15% symmetry deviation (Strict straight looking)
     const ASPECT_RATIO_CONTAINER = 3 / 4; 
 
+    // --- 1. RESET STATE ON OPEN (Fixes the "White Screen" Bug) ---
+    useEffect(() => {
+        if (isOpen) {
+            setFlashActive(false); // <--- CRITICAL FIX: Turn off flash
+            setStatus('LOADING');
+            setProgress(0);
+            holdStartTimeRef.current = null;
+            lastStatusRef.current = 'LOADING';
+        }
+    }, [isOpen]);
+
     useEffect(() => {
         if (!isOpen) return;
 
@@ -58,6 +69,9 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 const vision = await FilesetResolver.forVisionTasks(
                     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
                 );
+                // Check if unmounted during load
+                if (!isMounted) return;
+                
                 const detector = await FaceDetector.createFromOptions(vision, {
                     baseOptions: {
                         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
@@ -66,6 +80,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     runningMode: 'VIDEO',
                     minDetectionConfidence: 0.5,
                 });
+
                 if (isMounted) {
                     detectorRef.current = detector;
                     setIsDetectorReady(true);
@@ -81,13 +96,14 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
         return () => {
             isMounted = false;
+            // CLEANUP: Stop loops and close detector
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             if (detectorRef.current) {
                 detectorRef.current.close();
                 detectorRef.current = null;
             }
             setIsDetectorReady(false);
-            setProgress(0);
+            setFlashActive(false); // Double safety
         };
     }, [isOpen]);
 
@@ -95,7 +111,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         const bbox = detection.boundingBox;
         if (!bbox || videoWidth === 0 || videoHeight === 0) return 'NO_FACE';
 
-        // --- 1. VIEWPORT CALCULATIONS ---
+        // --- VIEWPORT CALCULATIONS ---
         // Adjust for "object-cover" cropping to know what user actually sees
         let visibleWidth = videoWidth;
         let visibleHeight = videoHeight;
@@ -107,7 +123,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             visibleHeight = videoWidth / ASPECT_RATIO_CONTAINER;
         }
 
-        // --- 2. BASIC METRICS ---
+        // --- BASIC METRICS ---
         const faceWidth = bbox.width;
         const faceCenterX = bbox.originX + (bbox.width / 2);
         const faceCenterY = bbox.originY + (bbox.height / 2);
@@ -123,7 +139,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         
         if (devX > CENTER_TOLERANCE || devY > CENTER_TOLERANCE) return 'OFF_CENTER';
 
-        // --- 3. ADVANCED GEOMETRY CHECKS (The "Strict" Part) ---
+        // --- ADVANCED GEOMETRY CHECKS ---
         const keypoints = detection.keypoints;
         if (keypoints && keypoints.length >= 6) {
             const rightEye = keypoints[0]; 
@@ -143,20 +159,16 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             }
 
             // B. YAW CHECK (Looking Side-to-Side)
-            // We measure the distance from Nose to Left Eye vs Nose to Right Eye.
-            // In a perfectly straight face, these distances should be equal (ratio ~ 1.0).
             const distToRightEye = Math.abs(nose.x - rightEye.x);
             const distToLeftEye = Math.abs(nose.x - leftEye.x);
             
-            // Avoid divide by zero
             if (distToRightEye > 0 && distToLeftEye > 0) {
                 const diff = distToRightEye - distToLeftEye;
                 const avg = (distToRightEye + distToLeftEye) / 2;
-                const yawRatio = diff / avg; // Normalized deviation
+                const yawRatio = diff / avg; 
 
-                // Threshold check
-                if (yawRatio > YAW_TOLERANCE) return 'TURN_RIGHT'; // Nose is closer to left eye
-                if (yawRatio < -YAW_TOLERANCE) return 'TURN_LEFT'; // Nose is closer to right eye
+                if (yawRatio > YAW_TOLERANCE) return 'TURN_RIGHT'; 
+                if (yawRatio < -YAW_TOLERANCE) return 'TURN_LEFT'; 
             }
         }
 
@@ -169,7 +181,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         setStatus('CAPTURING');
         setFlashActive(true); // FLASH ON
 
-        // Capture after slight delay to ensure flash is fully white on screen
         setTimeout(() => {
             const imageSrc = webcamRef.current?.getScreenshot();
             if (imageSrc) {
@@ -178,9 +189,13 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     .then(blob => {
                         const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
                         onCapture(file);
-                        setTimeout(onClose, 500); // Wait for animation
+                        // Wait for animation, but ensure we close
+                        setTimeout(onClose, 500); 
                     })
-                    .catch(() => setStatus('NO_FACE'));
+                    .catch(() => {
+                        setStatus('NO_FACE');
+                        setFlashActive(false); // Reset if failed
+                    });
             } else {
                 setStatus('NO_FACE');
                 setFlashActive(false);
@@ -189,9 +204,13 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     }, [onCapture, onClose]);
 
     const detectFaces = useCallback(() => {
-        if (!detectorRef.current || !webcamRef.current?.video || webcamRef.current.video.readyState !== 4) {
-            animationFrameRef.current = requestAnimationFrame(detectFaces);
-            return;
+        // --- 2. ZOMBIE LOOP FIX ---
+        // If detector is null, it means we closed the modal. STOP LOOPING.
+        if (!detectorRef.current) return; 
+
+        if (!webcamRef.current?.video || webcamRef.current.video.readyState !== 4) {
+             animationFrameRef.current = requestAnimationFrame(detectFaces);
+             return;
         }
 
         const video = webcamRef.current.video;
@@ -215,9 +234,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 );
             }
 
-            // --- STRICT HOLD LOGIC ---
-            // If status is HOLD_STILL, increment progress.
-            // If status changes even for a frame, RESET progress immediately.
             if (currentStatus === 'HOLD_STILL') {
                 if (holdStartTimeRef.current === null) {
                     holdStartTimeRef.current = startTimeMs;
@@ -233,7 +249,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     }
                 }
             } else {
-                // STRICT RESET: User moved, reset timer completely
                 holdStartTimeRef.current = null;
                 setProgress(0);
             }
@@ -279,8 +294,8 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             case 'TOO_FAR': return 'Move closer';
             case 'OFF_CENTER': return 'Center your face';
             case 'TILTED': return 'Straighten head';
-            case 'TURN_LEFT': return 'Turn head left';  // Yaw correction
-            case 'TURN_RIGHT': return 'Turn head right'; // Yaw correction
+            case 'TURN_LEFT': return 'Turn head left';  
+            case 'TURN_RIGHT': return 'Turn head right'; 
             case 'HOLD_STILL': return 'Hold still...';
             case 'CAPTURING': return 'Perfect!';
             default: return 'Align face';
@@ -292,7 +307,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
             style={{ height: '100dvh' }}
         >
-            {/* Flash / Brightness Layer */}
+            {/* Flash / Brightness Layer - Now controlled safely */}
             <div 
                 className={`absolute inset-0 z-[60] bg-white pointer-events-none transition-opacity duration-300 ${flashActive ? 'opacity-100' : 'opacity-0'}`}
             />
