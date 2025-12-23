@@ -232,6 +232,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                         className={`flex flex-col md:flex-row justify-center items-start gap-8 mb-10`}
                     >
                         <div className="w-full max-w-md mx-auto">
+                            {/* 1. SELFIE UPLOAD ZONE */}
                             <UploadZone
                                 onFileChange={(file) => {
                                     if (!user) {
@@ -249,10 +250,13 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                                 file={selfieImage}
                                 onMouseEnter={() => setHoveredZone("selfie")}
                                 onMouseLeave={() => setHoveredZone(null)}
+                                // ADD THIS LINE: Explicitly use front camera for faces
+                                captureMode="user" 
                             />
                         </div>
                         {isFititStack && (
                             <div className="w-full max-w-md mx-auto">
+                                {/* 2. WEARABLE UPLOAD ZONE */}
                                 <UploadZone
                                     onFileChange={(file) => {
                                         if (!user) {
@@ -268,6 +272,8 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                                         setHoveredZone("wearable")
                                     }
                                     onMouseLeave={() => setHoveredZone(null)}
+                                    // ADD THIS LINE: Use back camera for clothes (Standard Industry Practice)
+                                    captureMode="environment"
                                 />
                             </div>
                         )}

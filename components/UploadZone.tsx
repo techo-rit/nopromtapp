@@ -1,7 +1,7 @@
-
 import React, { useState, useCallback, DragEvent, useId, useEffect, useRef } from 'react';
 import { UploadIcon } from './Icons';
 import { SmartSelfieModal } from './SmartSelfieModal';
+import { StandardCameraModal } from './StandardCameraModal'; // Import the new modal
 
 interface UploadZoneProps {
   onFileChange: (file: File | null) => void;
@@ -10,6 +10,8 @@ interface UploadZoneProps {
   file?: File | null;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  // New prop to determine camera behavior
+  captureMode?: 'user' | 'environment'; 
 }
 
 const CameraIcon: React.FC = () => (
@@ -25,15 +27,16 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   subtitle, 
   file, 
   onMouseEnter, 
-  onMouseLeave 
+  onMouseLeave,
+  captureMode = 'user' // Default to selfie mode
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [showSelfieModal, setShowSelfieModal] = useState(false);
+  const [showCamera, setShowCamera] = useState(false); // Generic state for any camera
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync preview with external file prop (e.g. from paste or parent state reset)
+  // Sync preview with external file prop
   useEffect(() => {
     if (file) {
       const reader = new FileReader();
@@ -83,7 +86,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-      e.preventDefault(); // Prevent text insertion
+      e.preventDefault();
       e.stopPropagation();
       
       let pastedFile: File | null = null;
@@ -107,24 +110,16 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-      // Allow Ctrl/Cmd + V
-      if (e.ctrlKey || e.metaKey) {
-          return;
-      }
-      // Trigger click on Enter or Space
+      if (e.ctrlKey || e.metaKey) return;
       if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           inputRef.current?.click();
           return;
       }
-      // Block typing characters
-      if (e.key.length === 1) {
-          e.preventDefault();
-      }
+      if (e.key.length === 1) e.preventDefault();
   };
 
   const handleClick = (e: React.MouseEvent) => {
-      // Manually trigger input click since contentEditable might consume the event
       if (e.target !== inputRef.current) {
           inputRef.current?.click();
       }
@@ -136,10 +131,13 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     }
   };
 
-  const handleSelfieCapture = (capturedFile: File) => {
+  const handleCameraCapture = (capturedFile: File) => {
     handleFile(capturedFile);
-    setShowSelfieModal(false);
+    setShowCamera(false);
   };
+
+  // Dynamically choose label based on mode
+  const buttonLabel = captureMode === 'user' ? "Capture your face" : "Take a photo";
 
   return (
     <div className="w-full" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
@@ -182,19 +180,28 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            setShowSelfieModal(true);
+            setShowCamera(true);
           }}
           className="mt-3 w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] font-medium hover:bg-[#2a2a2a] hover:border-[#c9a962]/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#c9a962]/50"
         >
           <CameraIcon />
-          <span>Capture your face</span>
+          <span>{buttonLabel}</span>
         </button>
 
-        <SmartSelfieModal
-          isOpen={showSelfieModal}
-          onClose={() => setShowSelfieModal(false)}
-          onCapture={handleSelfieCapture}
-        />
+        {/* Conditional Camera Rendering */}
+        {captureMode === 'user' ? (
+            <SmartSelfieModal
+              isOpen={showCamera}
+              onClose={() => setShowCamera(false)}
+              onCapture={handleCameraCapture}
+            />
+        ) : (
+            <StandardCameraModal
+              isOpen={showCamera}
+              onClose={() => setShowCamera(false)}
+              onCapture={handleCameraCapture}
+            />
+        )}
     </div>
   );
 };
