@@ -61,6 +61,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   }, [onFileChange]);
 
   // --- FIXED: Global Paste Listener (No contentEditable needed) ---
+  // This prevents the mobile keyboard from popping up when tapping the upload box
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       // Don't intercept if user is typing in a text field
@@ -142,7 +143,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <div
           role="button"
           tabIndex={0}
-          // FIXED: Removed contentEditable to prevent mobile keyboard glitches
+          // REMOVED contentEditable here to fix mobile keyboard bug
           onClick={handleClick}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
