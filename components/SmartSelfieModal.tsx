@@ -41,21 +41,20 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     // Refs
     const holdStartTimeRef = useRef<number | null>(null);
     const lastStatusRef = useRef<AlignmentStatus>('LOADING');
-    const isCapturingRef = useRef(false); // NEW: Prevents race conditions between Auto & Manual
+    const isCapturingRef = useRef(false);
 
     // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    const HOLD_DURATION_MS = 700; // Your updated speed
+    const HOLD_DURATION_MS = 700; 
     const FACE_WIDTH_MIN = 0.15;
     const FACE_WIDTH_MAX = 0.65;
-    const CENTER_TOLERANCE = 0.25; // Your updated tolerance
-    const TILT_TOLERANCE_DEG = 15; // Your updated tolerance
-    const YAW_TOLERANCE = 0.25;    // Your updated tolerance
+    const CENTER_TOLERANCE = 0.25; 
+    const TILT_TOLERANCE_DEG = 15; 
+    const YAW_TOLERANCE = 0.25;    
     const ASPECT_RATIO_CONTAINER = 3 / 4;
     
     // NEW: Controls vertical head tilt. 
-    // 0.20 is a good balance—not too strict, but keeps face parallel.
-    const PITCH_TOLERANCE = 0.20;
+    // Set to 0.12 (Approx 10-12 degrees) for strict parallel alignment.
+    const PITCH_TOLERANCE = 0.12;
 
     // --- RESET STATE ON OPEN ---
     useEffect(() => {
@@ -65,7 +64,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             setProgress(0);
             holdStartTimeRef.current = null;
             lastStatusRef.current = 'LOADING';
-            isCapturingRef.current = false; // Reset capture lock
+            isCapturingRef.current = false;
         }
     }, [isOpen]);
 
@@ -149,7 +148,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             const rightEye = keypoints[0];
             const leftEye = keypoints[1];
             const nose = keypoints[2];
-            // NEW: Get Ear landmarks for vertical check
             const rightEar = keypoints[4];
             const leftEar = keypoints[5];
 
@@ -165,12 +163,12 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 return 'TILTED';
             }
 
-            // --- 2. NEW: Pitch Check (Tilt Head Up/Down) ---
-            // We compare the vertical height (Y) of Ears vs Eyes.
-            const meanEyeY = (rightEye.y + leftEye.y) / 2;
-            const meanEarY = (rightEar.y + leftEar.y) / 2;
+            // --- 2. Pitch Check (Tilt Head Up/Down) ---
+            // FIX: Convert normalized coordinates (0-1) to pixels to match bbox.width
+            const meanEyeY = ((rightEye.y + leftEye.y) / 2) * videoHeight;
+            const meanEarY = ((rightEar.y + leftEar.y) / 2) * videoHeight;
             
-            // Calculate ratio relative to face width so distance doesn't matter
+            // Calculate vertical shift relative to face width (Pixels / Pixels)
             const pitchVal = (meanEarY - meanEyeY) / bbox.width;
 
             // If ears are higher than eyes (negative value), you are looking down
@@ -228,7 +226,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
     const detectFaces = useCallback(() => {
         if (!detectorRef.current || isCapturingRef.current) {
-            // If capturing, keep loop alive but don't process to prevent state conflict
             if (isCapturingRef.current) {
                 animationFrameRef.current = requestAnimationFrame(detectFaces);
             }
@@ -260,7 +257,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 );
             }
 
-            // Strict Hold Logic
             if (currentStatus === 'HOLD_STILL') {
                 if (holdStartTimeRef.current === null) {
                     holdStartTimeRef.current = startTimeMs;
@@ -305,10 +301,10 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
     const getStatusColor = () => {
         switch (status) {
-            case 'HOLD_STILL': return '#22c55e'; // Green
-            case 'CAPTURING': return '#ffffff'; // White
-            case 'NO_FACE': return '#ef4444'; // Red
-            default: return '#fbbf24'; // Amber/Yellow
+            case 'HOLD_STILL': return '#22c55e';
+            case 'CAPTURING': return '#ffffff';
+            case 'NO_FACE': return '#ef4444';
+            default: return '#fbbf24';
         }
     };
 
@@ -320,6 +316,8 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             case 'TOO_FAR': return 'Move closer';
             case 'OFF_CENTER': return 'Center your face';
             case 'TILTED': return 'Straighten head';
+            case 'TILT_UP': return 'Look down slightly';
+            case 'TILT_DOWN': return 'Look up slightly';
             case 'TURN_LEFT': return 'Turn head left';
             case 'TURN_RIGHT': return 'Turn head right';
             case 'HOLD_STILL': return 'Hold still...';
@@ -333,12 +331,10 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white"
             style={{ height: '100dvh' }}
         >
-            {/* Flash Layer */}
             <div
                 className={`absolute inset-0 z-[60] bg-white pointer-events-none transition-opacity duration-300 ${flashActive ? 'opacity-100' : 'opacity-0'}`}
             />
 
-            {/* Close Button */}
             <button
                 onClick={onClose}
                 className="absolute right-6 z-50 p-4 rounded-full bg-gray-100 hover:bg-gray-200 text-black transition-colors shadow-sm"
@@ -349,7 +345,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 </svg>
             </button>
 
-            {/* Camera Viewport */}
             <div className="relative w-full max-w-lg aspect-[3/4] overflow-hidden rounded-2xl shadow-2xl bg-black">
                 <Webcam
                     ref={webcamRef}
@@ -364,7 +359,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     className="absolute inset-0 w-full h-full object-cover"
                 />
 
-                {/* Softbox / Ring Light Overlay */}
                 <div className="absolute inset-0 z-40">
                     <svg width="100%" height="100%" preserveAspectRatio="none" className="pointer-events-none">
                         <defs>
@@ -376,7 +370,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         <rect width="100%" height="100%" fill="rgba(255,255,255,0.85)" mask="url(#face-mask)" />
                     </svg>
 
-                    {/* Guide Ring */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div
                             className="relative w-[84%] h-[68%] transition-all duration-300 ease-out"
@@ -417,7 +410,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Status Text - Moved Higher to accomodate button */}
                     <div className="absolute bottom-32 inset-x-0 flex flex-col items-center text-center space-y-2 pointer-events-none">
                         <div
                             className="px-8 py-3 rounded-full backdrop-blur-md transition-all duration-300 shadow-xl"
@@ -438,12 +430,10 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Manual Capture Shutter Button */}
-                    {/* Manual Capture Shutter Button - Mobile Safe */}
                     <div
                         className="absolute inset-x-0 flex justify-center z-50"
                         style={{
-                            bottom: 'calc(2rem + env(safe-area-inset-bottom))' // 2rem is approx bottom-8
+                            bottom: 'calc(2rem + env(safe-area-inset-bottom))'
                         }}
                     >
                         <button
