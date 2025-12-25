@@ -353,7 +353,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                                     alt={`Generated result ${index + 1}`}
                                     className="w-full h-auto aspect-[3/4] object-cover"
                                 />
-                                <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute bottom-3 right-3 flex items-center gap-2">
                                     <button
                                         onClick={() =>
                                             handleDownload(

@@ -42,11 +42,11 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const isCapturingRef = useRef(false); // NEW: Prevents race conditions between Auto & Manual
 
     // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    const HOLD_DURATION_MS = 1200;
+    const HOLD_DURATION_MS = 700;
     const FACE_WIDTH_MIN = 0.15;
     const FACE_WIDTH_MAX = 0.65;
-    const CENTER_TOLERANCE = 0.15;
-    const TILT_TOLERANCE_DEG = 8;
+    const CENTER_TOLERANCE = 0.25;
+    const TILT_TOLERANCE_DEG = 15;
     const YAW_TOLERANCE = 0.15;
     const ASPECT_RATIO_CONTAINER = 3 / 4;
 
