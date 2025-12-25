@@ -69,18 +69,18 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
             const screenWidth = window.innerWidth;
-            
+
             const firstCard = container.querySelector('[data-card-id]');
             let scrollAmount = 0;
 
             if (firstCard) {
-                 const cardWidth = firstCard.clientWidth;
-                 // Matches CSS gap: mobile 16px (gap-4), desktop 32px (gap-8)
-                 const gap = screenWidth < 768 ? 16 : 32; 
-                 const totalItemWidth = cardWidth + gap;
-                 scrollAmount = direction === "left" ? -totalItemWidth : totalItemWidth;
+                const cardWidth = firstCard.clientWidth;
+                // Matches CSS gap: mobile 16px (gap-4), desktop 32px (gap-8)
+                const gap = screenWidth < 768 ? 16 : 32;
+                const totalItemWidth = cardWidth + gap;
+                scrollAmount = direction === "left" ? -totalItemWidth : totalItemWidth;
             } else {
-                 scrollAmount = direction === "left" ? -300 : 300;
+                scrollAmount = direction === "left" ? -300 : 300;
             }
 
             container.scrollBy({
@@ -106,14 +106,16 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                 <div className="block">
                     <button
                         onClick={() => scroll("left")}
-                        className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-50 w-10 h-10 md:w-16 md:h-16 bg-black/30 backdrop-blur-sm border border-white/10 rounded-full flex items-center justify-center text-white/90 hover:bg-black/50 hover:scale-110 transition-all duration-300 active:scale-95"
+                        // Removed bg-black/30, backdrop-blur, and border to make it fully transparent
+                        className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-50 w-10 h-10 md:w-16 md:h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
                         aria-label="Scroll left"
                     >
                         <ChevronLeftIcon />
                     </button>
                     <button
                         onClick={() => scroll("right")}
-                        className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-50 w-10 h-10 md:w-16 md:h-16 bg-black/30 backdrop-blur-sm border border-white/10 rounded-full flex items-center justify-center text-white/90 hover:bg-black/50 hover:scale-110 transition-all duration-300 active:scale-95"
+                        // Removed bg-black/30, backdrop-blur, and border to make it fully transparent
+                        className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-50 w-10 h-10 md:w-16 md:h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
                         aria-label="Scroll right"
                     >
                         <ChevronRightIcon />
@@ -180,7 +182,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-90" />
 
                                     <div className="absolute inset-0 p-6 md:p-14 flex flex-col justify-end items-start">
-                                        <button 
+                                        <button
                                             className={`
                                                 relative overflow-hidden group/button
                                                 bg-white rounded-full font-bold tracking-wide 
@@ -197,7 +199,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                             <div className="absolute inset-0 z-0 bg-[#BFA770] translate-y-[101%] group-hover/button:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
                                         </button>
 
-                                        <h3 className="text-white text-[32px] md:text-[48px] lg:text-[64px] font-bold uppercase tracking-[-0.01em] md:leading-[1.0] drop-shadow-2xl mb-4 md:mb-6 max-w-[90%]" style={{fontFamily: 'var(--font-sans)'}}>
+                                        <h3 className="text-white text-[32px] md:text-[48px] lg:text-[64px] font-bold uppercase tracking-[-0.01em] md:leading-[1.0] drop-shadow-2xl mb-4 md:mb-6 max-w-[90%]" style={{ fontFamily: 'var(--font-sans)' }}>
                                             {template.name}
                                         </h3>
 
