@@ -31,9 +31,8 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
 
         const observerOptions = {
             root: container,
-            // UX IMPROVEMENT: Tighter margins to detect "focus" more accurately on center
             rootMargin: "-20% 0px -20% 0px",
-            threshold: [0.6, 0.7, 0.8],
+            threshold: [0.5, 0.6, 0.7, 0.8],
         };
 
         const handleIntersect: IntersectionObserverCallback = (entries) => {
@@ -71,19 +70,16 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
             const container = scrollContainerRef.current;
             const screenWidth = window.innerWidth;
             
-            // PRODUCTION FIX: Calculate real card width + gap dynamically
-            // This prevents the scroll from desyncing from the CSS grid
             const firstCard = container.querySelector('[data-card-id]');
             let scrollAmount = 0;
 
             if (firstCard) {
                  const cardWidth = firstCard.clientWidth;
-                 // Get gap from CSS style or estimate based on screen size (16px mobile / 32px desktop)
+                 // Matches CSS gap: mobile 16px (gap-4), desktop 32px (gap-8)
                  const gap = screenWidth < 768 ? 16 : 32; 
                  const totalItemWidth = cardWidth + gap;
                  scrollAmount = direction === "left" ? -totalItemWidth : totalItemWidth;
             } else {
-                 // Fallback if DOM not ready
                  scrollAmount = direction === "left" ? -300 : 300;
             }
 
@@ -105,18 +101,19 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
         <section className="bg-[#0a0a0a] pt-6 pb-6 md:py-16 relative overflow-hidden">
             <div className="w-full h-full relative group/section">
 
-                {/* Scroll Buttons (Hidden on mobile usually, but good to keep accessible) */}
-                <div className="hidden md:block">
+                {/* Scroll Buttons */}
+                {/* UX FIX: Arrows are visible on mobile but smaller to avoid overwhelming the card */}
+                <div className="block">
                     <button
                         onClick={() => scroll("left")}
-                        className="absolute left-6 top-1/2 -translate-y-1/2 z-40 w-16 h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
+                        className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-50 w-10 h-10 md:w-16 md:h-16 bg-black/30 backdrop-blur-sm border border-white/10 rounded-full flex items-center justify-center text-white/90 hover:bg-black/50 hover:scale-110 transition-all duration-300 active:scale-95"
                         aria-label="Scroll left"
                     >
                         <ChevronLeftIcon />
                     </button>
                     <button
                         onClick={() => scroll("right")}
-                        className="absolute right-6 top-1/2 -translate-y-1/2 z-40 w-16 h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
+                        className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-50 w-10 h-10 md:w-16 md:h-16 bg-black/30 backdrop-blur-sm border border-white/10 rounded-full flex items-center justify-center text-white/90 hover:bg-black/50 hover:scale-110 transition-all duration-300 active:scale-95"
                         aria-label="Scroll right"
                     >
                         <ChevronRightIcon />
@@ -131,10 +128,11 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                         gap-4 md:gap-8 
                         snap-x snap-mandatory 
                         scroll-smooth scrollbar-hide 
-                        px-4 md:px-[7.5vw] py-0 md:py-4 
                         items-center
-                        /* UX IMPROVEMENT: scroll-padding ensures snap aligns with the padding */
-                        scroll-pl-4 md:scroll-pl-[7.5vw]
+                        /* FIX: Padding matches exactly (100vw - 85vw) / 2 = 7.5vw */
+                        /* This ensures the first card starts exactly in the center */
+                        px-[7.5vw] 
+                        /* REMOVED: scroll-pl-* (This was causing the rightward shift) */
                     "
                 >
                     {templates.map((template) => {
@@ -146,7 +144,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                 key={template.id}
                                 ref={(el) => setCardRef(template.id, el)}
                                 data-card-id={template.id}
-                                // snap-always is crucial for 'one at a time'
+                                // snap-always ensures we stop on every card
                                 className="snap-center snap-always shrink-0 flex justify-center"
                             >
                                 <div
@@ -158,13 +156,13 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                     }
                                     aria-label={`Select trending template: ${template.name}`}
                                     className={`
+                                        /* FIX: Consistent 85vw on mobile matches the padding logic */
                                         w-[85vw] md:w-[85vw] max-w-[1600px]
                                         aspect-[4/5] md:aspect-[16/9]
                                         rounded-[24px] md:rounded-[40px] overflow-hidden
                                         relative cursor-pointer group
                                         transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
                                         bg-[#141414] border border-white/5 shadow-2xl
-                                        /* UX: Make focused card slightly more prominent on mobile */
                                         ${isFocused ? "scale-[1.02] md:scale-[1.01] border-white/20" : "scale-100 opacity-90 md:opacity-100"}
                                     `}
                                 >
@@ -179,7 +177,6 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                         `}
                                         loading="lazy"
                                     />
-                                    {/* Gradient Overlay */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-90" />
 
                                     <div className="absolute inset-0 p-6 md:p-14 flex flex-col justify-end items-start">
@@ -226,7 +223,6 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     );
 };
 
-// ... keep existing style injection code ...
 if (typeof document !== 'undefined' && !document.getElementById('scrollbar-hide-style')) {
     const style = document.createElement("style");
     style.id = 'scrollbar-hide-style';
