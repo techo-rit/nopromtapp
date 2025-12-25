@@ -118,12 +118,12 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                         const isFocused = focusedCardId === template.id;
                         const quote = getManifestationQuote(template.name);
 
+
                         return (
                             <div
                                 key={template.id}
                                 ref={(el) => setCardRef(template.id, el)}
                                 data-card-id={template.id}
-                                // FIXED: Added 'snap-always' to enforce stopping at one card
                                 className="snap-center snap-always shrink-0 flex justify-center"
                             >
                                 <div
@@ -135,87 +135,92 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                     }
                                     aria-label={`Select trending template: ${template.name}`}
                                     className={`
-                                        w-[90vw] md:w-[85vw] max-w-[1600px]
-                                        aspect-[4/5] md:aspect-[16/9]
-                                        rounded-[24px] md:rounded-[40px] overflow-hidden
-                                        relative cursor-pointer group
-                                        transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-                                        bg-[#141414] border border-white/5 shadow-2xl
-                                        hover:shadow-[0_30px_60px_rgba(0,0,0,0.6)]
-                                        md:hover:scale-[1.01]
-                                        ${isFocused ? "scale-[1.01]" : ""}
-                                    `}
+                        w-[90vw] md:w-[85vw] max-w-[1600px]
+                        aspect-[4/5] md:aspect-[16/9]
+                        rounded-[24px] md:rounded-[40px] overflow-hidden
+                        relative cursor-pointer group
+                        transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
+                        bg-[#141414] border border-white/5 shadow-2xl
+                        hover:shadow-[0_30px_60px_rgba(0,0,0,0.6)]
+                        md:hover:scale-[1.01]
+                        ${isFocused ? "scale-[1.01]" : ""}
+                    `}
                                 >
                                     <img
                                         src={template.imageUrl}
                                         alt={template.name}
-                                        decoding="async" // FIXED: Improves performance
+                                        decoding="async"
                                         className={`
-                                            w-full h-full object-cover object-top md:object-[center_15%]
-                                            transition-transform duration-[1.5s] ease-out group-hover:scale-105
-                                            ${isFocused ? "scale-105" : ""}
-                                        `}
+                            w-full h-full object-cover object-top md:object-[center_15%]
+                            transition-transform duration-[1.5s] ease-out group-hover:scale-105
+                            ${isFocused ? "scale-105" : ""}
+                        `}
                                         loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-90 transition-opacity duration-500" />
 
+
                                     <div className="absolute inset-0 p-6 md:p-14 flex flex-col justify-end items-start">
 
+
                                         {/* --- NEW "LIQUID FILL" LUXURY BUTTON --- */}
-                                        <button 
+                                        <button
                                             className={`
-                                                /* 1. Container Structure */
-                                                relative overflow-hidden group/button
-                                                bg-white
-                                                rounded-full font-bold tracking-wide 
-                                                flex items-center justify-center w-fit 
-                                                shadow-[0_0_20px_rgba(255,255,255,0.3)] 
-                                                mb-3 md:mb-6
-                                                /* Responsive Sizes */
-                                                px-6 py-2.5 text-sm md:px-10 md:py-4 md:text-lg 
-                                                /* Interaction */
-                                                active:scale-95 transition-all duration-300
-                                            `}
+                                /* 1. Container Structure */
+                                relative overflow-hidden group/button
+                                bg-white
+                                rounded-full font-bold tracking-wide 
+                                flex items-center justify-center w-fit 
+                                shadow-[0_0_20px_rgba(255,255,255,0.3)] 
+                                mb-3 md:mb-6
+                                /* Responsive Sizes */
+                                px-6 py-2.5 text-sm md:px-10 md:py-4 md:text-lg 
+                                /* Interaction */
+                                active:scale-95 transition-all duration-300
+                            `}
                                         >
                                             {/* 2. The Text Layer (Sits on top, changes color) */}
                                             <span className="relative z-10 text-black group-hover/button:text-white transition-colors duration-[600ms] ease-out">
                                                 Step into
                                             </span>
 
+
                                             {/* 3. The "Golden Liquid" Layer (Sits behind, fills up) */}
-                                            <div 
+                                            <div
                                                 className={`
-                                                    absolute inset-0 z-0
-                                                    /* UPDATED COLOR: Darker, richer Ivory Gold */
-                                                    bg-[#BFA770] 
-                                                    /* Initial state: pushed down out of view */
-                                                    translate-y-[101%] 
-                                                    /* Hover state: fills the space */
-                                                    group-hover/button:translate-y-0
-                                                    /* The "Slow Fill" Animation */
-                                                    transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]
-                                                `}
+                                    absolute inset-0 z-0
+                                    /* UPDATED COLOR: Darker, richer Ivory Gold */
+                                    bg-[#BFA770] 
+                                    /* Initial state: pushed down out of view */
+                                    translate-y-[101%] 
+                                    /* Hover state: fills the space */
+                                    group-hover/button:translate-y-0
+                                    /* The "Slow Fill" Animation */
+                                    transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]
+                                `}
                                             />
                                         </button>
 
-                                        <h3 
-                                          className="text-white text-[32px] md:text-[48px] lg:text-[64px] font-bold uppercase tracking-[-0.01em] md:tracking-[-0.015em] lg:tracking-[-0.02em] leading-[1.1] md:leading-[1.05] lg:leading-[1.0] drop-shadow-2xl mb-4 md:mb-6 max-w-[90%]" 
-                                          style={{fontFamily: 'var(--font-sans)'}}
+
+                                        <h3
+                                            className="text-white text-[32px] md:text-[48px] lg:text-[64px] font-bold uppercase tracking-[-0.01em] md:tracking-[-0.015em] lg:tracking-[-0.02em] leading-[1.1] md:leading-[1.05] lg:leading-[1.0] drop-shadow-2xl mb-4 md:mb-6 max-w-[90%]"
+                                            style={{ fontFamily: 'var(--font-sans)' }}
                                         >
                                             {template.name}
                                         </h3>
 
+
                                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 md:gap-8 w-full">
                                             <p className={`
-                                                text-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] 
-                                                font-normal md:font-medium 
-                                                italic
-                                                tracking-normal md:tracking-[0.01em] lg:tracking-[0.015em] 
-                                                leading-[1.4] lg:leading-[1.33]
-                                                transition-opacity duration-500 
-                                                ${isFocused ? 'opacity-100' : 'opacity-0'}
-                                                max-w-2xl
-                                            `}>
+                                text-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] 
+                                font-normal md:font-medium 
+                                italic
+                                tracking-normal md:tracking-[0.01em] lg:tracking-[0.015em] 
+                                leading-[1.4] lg:leading-[1.33]
+                                transition-opacity duration-500 
+                                ${isFocused ? 'opacity-100' : 'opacity-0'}
+                                max-w-2xl
+                            `}>
                                                 {quote}
                                             </p>
                                         </div>
@@ -225,6 +230,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                         );
                     })}
                 </div>
+
             </div>
         </section>
     );
