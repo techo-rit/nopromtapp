@@ -18,33 +18,36 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
     else cardRefs.current.delete(id);
   }, []);
 
-  // --- INDUSTRY STANDARD FOCUS ENGINE ---
-  // Replaces IntersectionObserver. Calculates the physical center of the card
-  // vs. the physical center of the scroll container. Deterministic and bug-free.
+  // --- INDUSTRY STANDARD FOCUS ENGINE (OPTIMIZED) ---
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
-    const container = containerRef.current;
     
-    // Calculate the precise center line of the visible area
-    const containerCenter = container.scrollTop + (container.clientHeight / 2);
+    // FIXED: Wrap in requestAnimationFrame for 60fps+ performance
+    window.requestAnimationFrame(() => {
+        const container = containerRef.current;
+        if (!container) return; // Re-check inside frame
 
-    let closestId = null;
-    let minDiff = Infinity;
+        // Calculate the precise center line of the visible area
+        const containerCenter = container.scrollTop + (container.clientHeight / 2);
 
-    // Find which card's center is closest to the container's center
-    cardRefs.current.forEach((el, id) => {
-      const cardCenter = el.offsetTop + (el.offsetHeight / 2);
-      const diff = Math.abs(containerCenter - cardCenter);
+        let closestId = null;
+        let minDiff = Infinity;
 
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestId = id;
-      }
+        // Find which card's center is closest to the container's center
+        cardRefs.current.forEach((el, id) => {
+          const cardCenter = el.offsetTop + (el.offsetHeight / 2);
+          const diff = Math.abs(containerCenter - cardCenter);
+
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestId = id;
+          }
+        });
+
+        if (closestId && closestId !== focusedCardId) {
+          setFocusedCardId(closestId);
+        }
     });
-
-    if (closestId && closestId !== focusedCardId) {
-      setFocusedCardId(closestId);
-    }
   }, [focusedCardId]);
 
   // Initial focus check on mount
@@ -62,6 +65,8 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
         /* FIX: Use 'svh' to lock height to the 'Small Viewport'. 
            This prevents the layout from jumping when the mobile address bar retracts. */
         h-[100svh] 
+        /* FIXED: Minimum height for landscape safety */
+        min-h-[600px]
 
         /* SCROLL ENGINE */
         overflow-y-scroll 
@@ -127,6 +132,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
                <img 
                  src={template.imageUrl} 
                  alt={template.name} 
+                 decoding="async" // FIXED: Improves performance
                  className={`
                    w-full h-full object-cover object-[center_30%] 
                    transition-transform duration-[1000ms] ease-out

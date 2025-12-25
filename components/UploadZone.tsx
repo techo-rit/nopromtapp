@@ -1,7 +1,7 @@
 import React, { useState, useCallback, DragEvent, useId, useEffect, useRef } from 'react';
 import { UploadIcon } from './Icons';
 import { SmartSelfieModal } from './SmartSelfieModal';
-import { StandardCameraModal } from './StandardCameraModal'; // Import the new modal
+import { StandardCameraModal } from './StandardCameraModal'; 
 
 interface UploadZoneProps {
   onFileChange: (file: File | null) => void;
@@ -10,7 +10,6 @@ interface UploadZoneProps {
   file?: File | null;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
-  // New prop to determine camera behavior
   captureMode?: 'user' | 'environment'; 
 }
 
@@ -28,11 +27,11 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   file, 
   onMouseEnter, 
   onMouseLeave,
-  captureMode = 'user' // Default to selfie mode
+  captureMode = 'user' 
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [showCamera, setShowCamera] = useState(false); // Generic state for any camera
+  const [showCamera, setShowCamera] = useState(false); 
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +60,38 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     }
   }, [onFileChange]);
 
+  // --- FIXED: Global Paste Listener (No contentEditable needed) ---
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Don't intercept if user is typing in a text field
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+          return;
+      }
+      
+      let pastedFile: File | null = null;
+      if (e.clipboardData?.files.length) {
+          pastedFile = e.clipboardData.files[0];
+      } else if (e.clipboardData?.items) {
+          for (let i = 0; i < e.clipboardData.items.length; i++) {
+              if (e.clipboardData.items[i].type.indexOf('image') !== -1) {
+                  const f = e.clipboardData.items[i].getAsFile();
+                  if (f) {
+                      pastedFile = f;
+                      break;
+                  }
+              }
+          }
+      }
+      
+      if (pastedFile) {
+          handleFile(pastedFile);
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [handleFile]);
+
   const handleDragEnter = (e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -85,40 +116,6 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      let pastedFile: File | null = null;
-      if (e.clipboardData.files.length > 0) {
-          pastedFile = e.clipboardData.files[0];
-      } else if (e.clipboardData.items) {
-          for (let i = 0; i < e.clipboardData.items.length; i++) {
-              if (e.clipboardData.items[i].type.indexOf('image') !== -1) {
-                  const f = e.clipboardData.items[i].getAsFile();
-                  if (f) {
-                      pastedFile = f;
-                      break;
-                  }
-              }
-          }
-      }
-      
-      if (pastedFile) {
-          handleFile(pastedFile);
-      }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          inputRef.current?.click();
-          return;
-      }
-      if (e.key.length === 1) e.preventDefault();
-  };
-
   const handleClick = (e: React.MouseEvent) => {
       if (e.target !== inputRef.current) {
           inputRef.current?.click();
@@ -136,7 +133,6 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     setShowCamera(false);
   };
 
-  // Dynamically choose label based on mode
   const buttonLabel = captureMode === 'user' ? "Capture your face" : "Take a photo";
 
   return (
@@ -146,15 +142,18 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <div
           role="button"
           tabIndex={0}
-          contentEditable
-          suppressContentEditableWarning
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
+          // FIXED: Removed contentEditable to prevent mobile keyboard glitches
           onClick={handleClick}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
+          onKeyDown={(e) => {
+             if (e.key === 'Enter' || e.key === ' ') {
+                 e.preventDefault();
+                 inputRef.current?.click();
+             }
+          }}
           className={`relative block w-full aspect-square border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-300 outline-none caret-transparent ${isDragging ? 'border-[#c9a962] bg-[#c9a962]/10' : 'border-[#2a2a2a] bg-[#141414]'} focus-within:ring-2 focus-within:ring-[#c9a962]/50 focus-within:border-[#c9a962]`}
         >
           <input
@@ -188,7 +187,6 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           <span>{buttonLabel}</span>
         </button>
 
-        {/* Conditional Camera Rendering */}
         {captureMode === 'user' ? (
             <SmartSelfieModal
               isOpen={showCamera}

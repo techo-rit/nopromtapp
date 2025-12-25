@@ -123,7 +123,8 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                 key={template.id}
                                 ref={(el) => setCardRef(template.id, el)}
                                 data-card-id={template.id}
-                                className="snap-center shrink-0 flex justify-center"
+                                // FIXED: Added 'snap-always' to enforce stopping at one card
+                                className="snap-center snap-always shrink-0 flex justify-center"
                             >
                                 <div
                                     role="button"
@@ -148,6 +149,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                     <img
                                         src={template.imageUrl}
                                         alt={template.name}
+                                        decoding="async" // FIXED: Improves performance
                                         className={`
                                             w-full h-full object-cover object-top md:object-[center_15%]
                                             transition-transform duration-[1.5s] ease-out group-hover:scale-105

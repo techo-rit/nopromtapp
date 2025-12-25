@@ -53,8 +53,8 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const ASPECT_RATIO_CONTAINER = 3 / 4;
     
     // NEW: Controls vertical head tilt. 
-    // Set to 0.12 (Approx 10-12 degrees) for strict parallel alignment.
-    const PITCH_TOLERANCE = 0.12;
+    // Set to 0.08 (Approx 7-8 degrees) for strict parallel alignment.
+    const PITCH_TOLERANCE = 0.08;
 
     // --- RESET STATE ON OPEN ---
     useEffect(() => {

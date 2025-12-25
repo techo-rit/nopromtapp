@@ -34,10 +34,23 @@ body {
   padding-bottom: var(--safe-area-bottom);
   padding-left: var(--safe-area-left);
   padding-right: var(--safe-area-right);
+  
+  /* FIXED: Native App Feel - prevents "pull to refresh" bounce on body */
+  overscroll-behavior-y: none;
   overscroll-behavior: none;
-  overscroll-behavior-y: contain;
+  
+  /* FIXED: Prevent text selection (makes it feel like an app, not a site) */
+  user-select: none;
+  -webkit-user-select: none;
+  
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Allow text selection in input fields */
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 @media (max-width: 768px) {
