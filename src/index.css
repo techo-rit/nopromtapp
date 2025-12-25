@@ -59,10 +59,7 @@ input, textarea {
     scroll-behavior: smooth;
   }
   
-  .snap-x {
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-  }
+ 
 }
 
 .font-serif {

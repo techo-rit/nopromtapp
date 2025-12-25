@@ -31,7 +31,8 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
 
         const observerOptions = {
             root: container,
-            rootMargin: "-15% 0px -15% 0px",
+            // UX IMPROVEMENT: Tighter margins to detect "focus" more accurately on center
+            rootMargin: "-20% 0px -20% 0px",
             threshold: [0.6, 0.7, 0.8],
         };
 
@@ -40,7 +41,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
             entries.forEach((entry) => {
                 const cardId = entry.target.getAttribute("data-card-id");
                 if (!cardId) return;
-                if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
                     if (
                         !mostVisibleCard ||
                         entry.intersectionRatio > mostVisibleCard.ratio
@@ -67,13 +68,26 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
 
     const scroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
             const screenWidth = window.innerWidth;
-            const cardWidth =
-                screenWidth < 768 ? screenWidth * 0.9 : screenWidth * 0.85;
-            const gap = 24;
-            const scrollAmount =
-                direction === "left" ? -(cardWidth + gap) : cardWidth + gap;
-            scrollContainerRef.current.scrollBy({
+            
+            // PRODUCTION FIX: Calculate real card width + gap dynamically
+            // This prevents the scroll from desyncing from the CSS grid
+            const firstCard = container.querySelector('[data-card-id]');
+            let scrollAmount = 0;
+
+            if (firstCard) {
+                 const cardWidth = firstCard.clientWidth;
+                 // Get gap from CSS style or estimate based on screen size (16px mobile / 32px desktop)
+                 const gap = screenWidth < 768 ? 16 : 32; 
+                 const totalItemWidth = cardWidth + gap;
+                 scrollAmount = direction === "left" ? -totalItemWidth : totalItemWidth;
+            } else {
+                 // Fallback if DOM not ready
+                 scrollAmount = direction === "left" ? -300 : 300;
+            }
+
+            container.scrollBy({
                 left: scrollAmount,
                 behavior: "smooth",
             });
@@ -91,18 +105,18 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
         <section className="bg-[#0a0a0a] pt-6 pb-6 md:py-16 relative overflow-hidden">
             <div className="w-full h-full relative group/section">
 
-                {/* Scroll Buttons */}
-                <div className="block">
+                {/* Scroll Buttons (Hidden on mobile usually, but good to keep accessible) */}
+                <div className="hidden md:block">
                     <button
                         onClick={() => scroll("left")}
-                        className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-40 w-12 h-12 md:w-16 md:h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
+                        className="absolute left-6 top-1/2 -translate-y-1/2 z-40 w-16 h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
                         aria-label="Scroll left"
                     >
                         <ChevronLeftIcon />
                     </button>
                     <button
                         onClick={() => scroll("right")}
-                        className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-40 w-12 h-12 md:w-16 md:h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
+                        className="absolute right-6 top-1/2 -translate-y-1/2 z-40 w-16 h-16 bg-transparent flex items-center justify-center text-white/80 hover:text-white hover:scale-110 transition-all duration-300 active:scale-95 drop-shadow-lg"
                         aria-label="Scroll right"
                     >
                         <ChevronRightIcon />
@@ -112,7 +126,16 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                 {/* Carousel Container */}
                 <div
                     ref={scrollContainerRef}
-                    className="flex overflow-x-auto gap-4 md:gap-8 snap-x snap-mandatory scroll-smooth scrollbar-hide px-4 md:px-[7.5vw] py-0 md:py-4 items-center"
+                    className="
+                        flex overflow-x-auto 
+                        gap-4 md:gap-8 
+                        snap-x snap-mandatory 
+                        scroll-smooth scrollbar-hide 
+                        px-4 md:px-[7.5vw] py-0 md:py-4 
+                        items-center
+                        /* UX IMPROVEMENT: scroll-padding ensures snap aligns with the padding */
+                        scroll-pl-4 md:scroll-pl-[7.5vw]
+                    "
                 >
                     {templates.map((template) => {
                         const isFocused = focusedCardId === template.id;
@@ -123,7 +146,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                 key={template.id}
                                 ref={(el) => setCardRef(template.id, el)}
                                 data-card-id={template.id}
-                                // --- SENIOR DEV FIX: 'snap-always' forces the stop ---
+                                // snap-always is crucial for 'one at a time'
                                 className="snap-center snap-always shrink-0 flex justify-center"
                             >
                                 <div
@@ -135,29 +158,29 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                     }
                                     aria-label={`Select trending template: ${template.name}`}
                                     className={`
-                                        w-[90vw] md:w-[85vw] max-w-[1600px]
+                                        w-[85vw] md:w-[85vw] max-w-[1600px]
                                         aspect-[4/5] md:aspect-[16/9]
                                         rounded-[24px] md:rounded-[40px] overflow-hidden
                                         relative cursor-pointer group
                                         transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
                                         bg-[#141414] border border-white/5 shadow-2xl
-                                        hover:shadow-[0_30px_60px_rgba(0,0,0,0.6)]
-                                        md:hover:scale-[1.01]
-                                        ${isFocused ? "scale-[1.01]" : ""}
+                                        /* UX: Make focused card slightly more prominent on mobile */
+                                        ${isFocused ? "scale-[1.02] md:scale-[1.01] border-white/20" : "scale-100 opacity-90 md:opacity-100"}
                                     `}
                                 >
                                     <img
                                         src={template.imageUrl}
                                         alt={template.name}
-                                        decoding="async" // Performance boost
+                                        decoding="async"
                                         className={`
                                             w-full h-full object-cover object-top md:object-[center_15%]
-                                            transition-transform duration-[1.5s] ease-out group-hover:scale-105
-                                            ${isFocused ? "scale-105" : ""}
+                                            transition-transform duration-[1.5s] ease-out 
+                                            ${isFocused ? "scale-105" : "scale-100"}
                                         `}
                                         loading="lazy"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-90 transition-opacity duration-500" />
+                                    {/* Gradient Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-90" />
 
                                     <div className="absolute inset-0 p-6 md:p-14 flex flex-col justify-end items-start">
                                         <button 
@@ -203,6 +226,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     );
 };
 
+// ... keep existing style injection code ...
 if (typeof document !== 'undefined' && !document.getElementById('scrollbar-hide-style')) {
     const style = document.createElement("style");
     style.id = 'scrollbar-hide-style';
