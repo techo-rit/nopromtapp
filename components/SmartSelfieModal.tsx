@@ -44,7 +44,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const isCapturingRef = useRef(false);
 
     // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    const HOLD_DURATION_MS = 700; 
+    const HOLD_DURATION_MS = 900; 
     const FACE_WIDTH_MIN = 0.15;
     const FACE_WIDTH_MAX = 0.65;
     const CENTER_TOLERANCE = 0.25; 
