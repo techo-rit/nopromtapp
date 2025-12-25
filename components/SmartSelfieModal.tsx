@@ -16,6 +16,8 @@ type AlignmentStatus =
     | 'TOO_FAR'
     | 'OFF_CENTER'
     | 'TILTED'       // Head is crooked (Roll)
+    | 'TILT_UP'      // NEW: Looking at ceiling 
+    | 'TILT_DOWN'    // NEW: Looking at floor
     | 'TURN_LEFT'    // Head turned right (Yaw)
     | 'TURN_RIGHT'   // Head turned left (Yaw)
     | 'HOLD_STILL'   // Perfect alignment
@@ -42,13 +44,18 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const isCapturingRef = useRef(false); // NEW: Prevents race conditions between Auto & Manual
 
     // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    const HOLD_DURATION_MS = 700;
+    // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
+    const HOLD_DURATION_MS = 700; // Your updated speed
     const FACE_WIDTH_MIN = 0.15;
     const FACE_WIDTH_MAX = 0.65;
-    const CENTER_TOLERANCE = 0.25;
-    const TILT_TOLERANCE_DEG = 15;
-    const YAW_TOLERANCE = 0.15;
+    const CENTER_TOLERANCE = 0.25; // Your updated tolerance
+    const TILT_TOLERANCE_DEG = 15; // Your updated tolerance
+    const YAW_TOLERANCE = 0.25;    // Your updated tolerance
     const ASPECT_RATIO_CONTAINER = 3 / 4;
+    
+    // NEW: Controls vertical head tilt. 
+    // 0.20 is a good balance—not too strict, but keeps face parallel.
+    const PITCH_TOLERANCE = 0.20;
 
     // --- RESET STATE ON OPEN ---
     useEffect(() => {
@@ -142,8 +149,11 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             const rightEye = keypoints[0];
             const leftEye = keypoints[1];
             const nose = keypoints[2];
+            // NEW: Get Ear landmarks for vertical check
+            const rightEar = keypoints[4];
+            const leftEar = keypoints[5];
 
-            // Roll Check
+            // --- 1. Roll Check (Tilt Head Left/Right) ---
             const dy = (rightEye.y - leftEye.y) * videoHeight;
             const dx = (rightEye.x - leftEye.x) * videoWidth;
             let angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -155,7 +165,21 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 return 'TILTED';
             }
 
-            // Yaw Check
+            // --- 2. NEW: Pitch Check (Tilt Head Up/Down) ---
+            // We compare the vertical height (Y) of Ears vs Eyes.
+            const meanEyeY = (rightEye.y + leftEye.y) / 2;
+            const meanEarY = (rightEar.y + leftEar.y) / 2;
+            
+            // Calculate ratio relative to face width so distance doesn't matter
+            const pitchVal = (meanEarY - meanEyeY) / bbox.width;
+
+            // If ears are higher than eyes (negative value), you are looking down
+            if (pitchVal < -PITCH_TOLERANCE) return 'TILT_DOWN';
+            
+            // If ears are lower than eyes (positive value), you are looking up
+            if (pitchVal > PITCH_TOLERANCE) return 'TILT_UP';
+
+            // --- 3. Yaw Check (Turn Head Left/Right) ---
             const distToRightEye = Math.abs(nose.x - rightEye.x);
             const distToLeftEye = Math.abs(nose.x - leftEye.x);
 
