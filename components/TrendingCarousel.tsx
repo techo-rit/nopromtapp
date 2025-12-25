@@ -98,7 +98,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     };
 
     return (
-        <section className="bg-[#0a0a0a] pt-6 pb-6 md:py-16 relative overflow-hidden">
+        <section className="bg-[#0a0a0a] pt-12 pb-6 md:py-16 relative overflow-hidden">
             <div className="w-full h-full relative group/section">
 
                 {/* Scroll Buttons */}
