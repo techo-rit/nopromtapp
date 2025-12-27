@@ -32,9 +32,6 @@ const HomeRoute = ({
   if (searchQuery.length > 0) {
       return (
           <div className="w-full max-w-[1440px] mx-auto px-4 pt-6">
-              <h2 className="text-xl text-[#a0a0a0] mb-6">
-                  {searchResults.length} results for <span className="text-[#f5f5f5]">"{searchQuery}"</span>
-              </h2>
               {searchResults.length > 0 ? (
                   <TemplateGrid
                       templates={searchResults}
