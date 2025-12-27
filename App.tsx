@@ -15,8 +15,7 @@ import { TemplateExecution } from "./components/TemplateExecution";
 import { authService } from "./services/authService";
 import type { Stack, Template, User } from "./types";
 import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
-
-// ... [Keep your Route Components (HomeRoute, StackRoute, TemplateRoute) exactly as they were] ...
+import { searchTemplates } from "./utils/searchLogic"; // <--- IMPORT SEARCH LOGIC
 
 // --- Main App Component ---
 
@@ -24,9 +23,33 @@ const HomeRoute = ({
   activeNav, 
   handleSelectStack, 
   handleSelectTemplate, 
-  trendingTemplates 
+  trendingTemplates,
+  searchQuery,      // <--- Prop for Search
+  searchResults     // <--- Prop for Search
 }: any) => {
-  // ... [Keep content exactly as provided in your original file] ...
+
+  // 1. SEARCH STATE ACTIVE: Show Results Grid
+  if (searchQuery.length > 0) {
+      return (
+          <div className="w-full max-w-[1440px] mx-auto px-4 pt-6">
+              <h2 className="text-xl text-[#a0a0a0] mb-6">
+                  {searchResults.length} results for <span className="text-[#f5f5f5]">"{searchQuery}"</span>
+              </h2>
+              {searchResults.length > 0 ? (
+                  <TemplateGrid
+                      templates={searchResults}
+                      onSelectTemplate={handleSelectTemplate}
+                  />
+              ) : (
+                  <div className="text-center py-20 text-[#6b6b6b]">
+                      No templates found. Try searching for "wedding", "office", or "party".
+                  </div>
+              )}
+          </div>
+      );
+  }
+
+  // 2. NORMAL FLOW ("Try on")
   if (activeNav === "Try on") {
     const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
     return (
@@ -39,6 +62,7 @@ const HomeRoute = ({
     );
   }
 
+  // 3. NORMAL FLOW ("Creators" / Home)
   const creatorsStackIds = [
     "flex", "aesthetics", "sceneries", "clothes", "monuments", "celebration", "fitit", "animation",
   ];
@@ -132,6 +156,24 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // --- SEARCH STATE ---
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // --- SEARCH LOGIC (Debounced/Memoized) ---
+  const searchResults = useMemo(() => {
+    return searchTemplates(searchQuery, TEMPLATES);
+  }, [searchQuery]);
+
+  // Handle Search Input Change
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    // If user types while inside a specific stack or template page,
+    // automatically bring them to the home page to show results
+    if (query.length > 0 && location.pathname !== '/') {
+        navigate('/');
+    }
+  };
+
   const trendingTemplates = useMemo(
     () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES.find((t) => t.id === id)).filter((t): t is Template => !!t),
     [],
@@ -141,23 +183,16 @@ const App: React.FC = () => {
     safeSetItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
-  // --- AUTH FIX START: STANDARD INDUSTRY PATTERN ---
+  // --- AUTH FIX START ---
   useEffect(() => {
     let mounted = true;
-
-    // 1. Initial Session Check (Optimistic UI)
-    // We check this immediately to see if we have data in localStorage
     authService.getCurrentUser().then((initialUser) => {
       if (mounted) {
         if (initialUser) setUser(initialUser);
-        // We do NOT set loading false here yet, we wait for the listener
-        // to confirm the state to avoid flashing "Logged Out" then "Logged In"
         setIsGlobalLoading(false); 
       }
     });
 
-    // 2. Real-time Subscription (The Single Source of Truth)
-    // This handles: Sign In, Sign Out, Token Refresh, and OAuth Redirects automatically
     const subscription = authService.onAuthStateChange((updatedUser) => {
       if (mounted) {
         setUser(updatedUser);
@@ -185,6 +220,10 @@ const App: React.FC = () => {
   }, [navigate]);
 
   const handleBack = useCallback(() => {
+    if (searchQuery) {
+        setSearchQuery(""); // Clear search if back is pressed
+        return;
+    }
     if (location.pathname.includes('/template/')) {
        navigate(-1); 
     } else if (location.pathname.includes('/stack/')) {
@@ -192,10 +231,11 @@ const App: React.FC = () => {
     } else {
       navigate('/');
     }
-  }, [location, navigate]);
+  }, [location, navigate, searchQuery]);
 
   const handleNavClick = useCallback((category: NavCategory) => {
     setActiveNav(category);
+    setSearchQuery(""); // Clear search when switching tabs
     navigate('/');
   }, [navigate]);
 
@@ -265,6 +305,9 @@ const App: React.FC = () => {
         isLoading={isGlobalLoading}
         isSecondaryPage={isSecondaryPage}
         onBack={handleBack}
+        // PASS SEARCH PROPS
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
       />
       <AuthModal
         isOpen={showAuthModal}
@@ -289,6 +332,9 @@ const App: React.FC = () => {
                 handleSelectStack={handleSelectStack}
                 handleSelectTemplate={handleSelectTemplate}
                 trendingTemplates={trendingTemplates}
+                // PASS SEARCH RESULTS TO HOME
+                searchQuery={searchQuery}
+                searchResults={searchResults}
               />
             } 
           />

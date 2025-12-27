@@ -11,6 +11,7 @@ export interface Template {
   imageUrl: string;
   prompt: string | Record<string, any>;  // ← Changed to accept JSON objects
   aspectRatio: string;
+  keywords?: string[];
 }
 
 export interface User {

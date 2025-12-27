@@ -54,6 +54,12 @@ const fititTemplates: Template[] = [
     prompt:
       "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. **OBJECTIVE: EXECUTE A TECHNICAL 'VIRTUAL TRY-ON' COMPOSITE.**\n\n**INPUT ANALYSIS:**\n*   **INPUT 1 (The User):** This image contains the definitive person. EVERY aspect of this person (face, hair, skin, body shape, proportions, pose) is the ABSOLUTE SOURCE OF TRUTH. It must be preserved with 100% fidelity.\n*   **INPUT 2 (The Garment):** This image is ONLY a reference for the clothing item. The person, background, and any other elements in this image are IRRELEVANT DATA and MUST BE COMPLETELY DISCARDED.\n\n**CORE MANDATE: ZERO FACIAL MODIFICATION. THIS IS NON-NEGOTIABLE.**\nThe face, head, and hair from INPUT 1 must be transferred to the output image with ZERO changes. This is not a blending operation. It is a strict copy-and-paste of the user's identity. Any influence from the face in INPUT 2 is a critical failure.\n\n**STEP-BY-STEP EXECUTION PROTOCOL:**\n1.  **PRE-PROCESSING:** Mentally isolate the lower-body clothing item (e.g., pants, jeans, skirt) from INPUT 2. Discard every other pixel from INPUT 2, especially the person wearing it. You are now working with the user from INPUT 1 and the isolated garment.\n2.  **IDENTIFY TARGET AREA:** On the user from INPUT 1, identify the area covered by their current clothing. This is the only area that can be modified.\n3.  **COMPOSITE:** Layer the isolated garment from step 1 over the target area on the user from INPUT 1.\n4.  **ADAPT GARMENT:** Warp, resize, and adjust the lighting on the NEW GARMENT ONLY to fit the user's exact body shape, size, and pose from INPUT 1. The user's body CANNOT be changed to fit the garment.\n5.  **FINAL VERIFICATION:** Before outputting, verify that the face, head, hair, and all visible skin in the final image are a 100% pixel-identical match to INPUT 1.\n\n**OUTPUT:**\nGenerate four full-body output images from different fashion-catalog angles: a front view (standing), a side view, a back view, and a semi-profile view. Use a neutral studio background for all outputs.",
     aspectRatio: "3:4",
+    keywords: [
+      "pants", "jeans", "trousers", "skirt", "lower", "bottom", "pajama", "shorts",
+      "try on", "change clothes", "kapde badlo", "pant", "denim", "leggings",
+      "joggers", "track pant", "chaddi", "nikkar", "bottom wear", "salwar",
+      "change pants", "virtual try on", "nayi pant", "fashion"
+    ]
   },
   {
     id: "fitit_template_2",
@@ -63,6 +69,12 @@ const fititTemplates: Template[] = [
     prompt:
       "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. **OBJECTIVE: EXECUTE A TECHNICAL 'VIRTUAL TRY-ON' COMPOSITE.**\n\n**INPUT ANALYSIS:**\n*   **INPUT 1 (The User):** This image contains the definitive person. EVERY aspect of this person (face, hair, skin, body shape, proportions, pose) is the ABSOLUTE SOURCE OF TRUTH. It must be preserved with 100% fidelity.\n*   **INPUT 2 (The Garment):** This image is ONLY a reference for the clothing item. The person, background, and any other elements in this image are IRRELEVANT DATA and MUST BE COMPLETELY DISCARDED.\n\n**CORE MANDATE: ZERO FACIAL MODIFICATION. THIS IS NON-NEGOTIABLE.**\nThe face, head, and hair from INPUT 1 must be transferred to the output image with ZERO changes. This is not a blending operation. It is a strict copy-and-paste of the user's identity. Any influence from the face in INPUT 2 is a critical failure.\n\n**STEP-BY-STEP EXECUTION PROTOCOL:**\n1.  **PRE-PROCESSING:** Mentally isolate the upper-body garment from INPUT 2. Discard every other pixel from INPUT 2, especially the person wearing it. You are now working with the user from INPUT 1 and the isolated garment.\n2.  **IDENTIFY TARGET AREA:** On the user from INPUT 1, identify the area covered by their current clothing. This is the only area that can be modified.\n3.  **COMPOSITE:** Layer the isolated garment from step 1 over the target area on the user from INPUT 1.\n4.  **ADAPT GARMENT:** Warp, resize, and adjust the lighting on the NEW GARMENT ONLY to fit the user's exact body shape, size, and pose from INPUT 1. The user's body CANNOT be changed to fit the garment.\n5.  **FINAL VERIFICATION:** Before outputting, verify that the face, head, hair, and all visible skin in the final image are a 100% pixel-identical match to INPUT 1.\n\n**OUTPUT:**\nGenerate four output images from different angles: a front view (standing), a 3/4 left view, a right side view (arms crossed), and a seated view. Use a neutral studio background for all outputs.",
     aspectRatio: "3:4",
+    keywords: [
+      "shirt", "t-shirt", "top", "tee", "hoodie", "jacket", "coat", "blazer",
+      "sweater", "sweatshirt", "upper", "kameez", "kurta", "try on", "change top",
+      "uper ka kapda", "tshirt", "formal shirt", "casual top", "nayi shirt",
+      "badlo", "pehen ke dekho", "virtual trial"
+    ]
   },
   {
     id: "fitit_template_3",
@@ -72,6 +84,11 @@ const fititTemplates: Template[] = [
     prompt:
       "Ensure the output figure's face and hairstyle matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. **OBJECTIVE: EXECUTE A TECHNICAL 'VIRTUAL TRY-ON' COMPOSITE.**\n\n**INPUT ANALYSIS:**\n*   **INPUT 1 (The User):** This image contains the definitive person. EVERY aspect of this person (face, hair, skin, body shape, proportions, pose) is the ABSOLUTE SOURCE OF TRUTH. It must be preserved with 100% fidelity.\n*   **INPUT 2 (The Garment):** This image is ONLY a reference for the clothing item. The person, background, and any other elements in this image are IRRELEVANT DATA and MUST BE COMPLETELY DISCARDED.\n\n**CORE MANDATE: ZERO FACIAL MODIFICATION. THIS IS NON-NEGOTIABLE.**\nThe face, head, and hair from INPUT 1 must be transferred to the output image with ZERO changes. This is not a blending operation. It is a strict copy-and-paste of the user's identity. Any influence from the face in INPUT 2 is a critical failure.\n\n**STEP-BY-STEP EXECUTION PROTOCOL:**\n1.  **PRE-PROCESSING:** Mentally isolate the innerwear/clothing item from INPUT 2. Discard every other pixel from INPUT 2, especially the person wearing it. You are now working with the user from INPUT 1 and the isolated garment.\n2.  **IDENTIFY TARGET AREA:** On the user from INPUT 1, identify the area covered by their current clothing. This is the only area that can be modified.\n3.  **COMPOSITE:** Layer the isolated garment from step 1 over the target area on the user from INPUT 1.\n4.  **ADAPT GARMENT:** Warp, resize, and adjust the lighting on the NEW GARMENT ONLY to fit the user's exact body shape, size, and pose from INPUT 1. The user's body CANNOT be changed to fit the garment.\n5.  **FINAL VERIFICATION:** Before outputting, verify that the face, head, hair, and all visible skin in the final image are a 100% pixel-identical match to INPUT 1.\n\n**OUTPUT:**\nCreate four output images from different angles: front (standing), 3/4 left (arms relaxed), 3/4 right, and a side view. Use a neutral studio background for all outputs.",
     aspectRatio: "3:4",
+    keywords: [
+      "underwear", "bra", "panties", "vest", "baniyan", "inner", "lingerie",
+      "swimwear", "bikini", "boxers", "briefs", "undergarment", "kachha",
+      "inner wear", "pool wear", "beach wear", "swim suit", "swimming costume"
+    ]
   },
   {
     id: "fitit_template_4",
@@ -81,6 +98,11 @@ const fititTemplates: Template[] = [
     prompt:
       "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Using the selfie (user not wearing a watch) and the uploaded watch photo, generate four photorealistic try-on images of the user, clearly displaying the watch on their left wrist.\nShow: front (wrist in frame, hand relaxed), side (close-up on wrist with face visible), 3/4 left (adjusting the watch), and hand resting on table (focus on watch, face smiling).\nEnsure wrist proportions are natural, the watch is integrated perfectly, and faces remain consistent across all views.\nDo not alter skin tone or add blur.",
     aspectRatio: "3:4",
+    keywords: [
+      "watch", "wrist watch", "smart watch", "ghadi", "time", "luxury watch",
+      "rolex", "accessory", "hand", "khalai", "timepiece", "analog", "digital",
+      "apple watch", "hath ki ghadi", "time dekhna", "jewellery"
+    ]
   },
   {
     id: "fitit_template_5",
@@ -90,6 +112,11 @@ const fititTemplates: Template[] = [
     prompt:
       "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Using the selfie and the uploaded glasses image, generate four crystal-clear studio portraits, each showing the user accurately wearing the glasses.\nShow: front on (head straight), slightly tilted down (natural reading pose), 3/4 left and 3/4 right (both natural smile).\nThe glasses must align precisely with the person’s face and eyes, reflections on the lenses should be natural, and there should be no blending artifacts.\nAll outputs must feature sharp facial likeness and realistic glass refraction.",
     aspectRatio: "3:4",
+    keywords: [
+      "glasses", "sunglasses", "spectacles", "specs", "chashma", "goggles",
+      "eyewear", "frames", "shades", "dhup ka chashma", "nazar ka chashma",
+      "cool specs", "rayban", "lens", "aankh", "eye", "fashion glasses"
+    ]
   },
 ];
 
@@ -247,6 +274,11 @@ const animationTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "luffy", "monkey d luffy", "one piece", "pirate", "straw hat", "anime",
+      "manga", "king of pirates", "rubber man", "cartoon", "samudri lutera",
+      "topi wala", "japan", "japanese cartoon", "onepiece", "gum gum", "hero"
+    ]
   },
   {
     id: "animation_template_2",
@@ -369,6 +401,11 @@ const animationTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "goku", "dragon ball", "dbz", "saiyan", "super saiyan", "anime",
+      "fighter", "kamehameha", "manga", "son goku", "orange", "ladai",
+      "power", "baal", "yellow hair", "dragonball", "hero", "strong"
+    ]
   },
   {
     id: "animation_template_3",
@@ -525,6 +562,11 @@ const animationTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "naruto", "ninja", "hokage", "uzumaki", "anime", "manga", "leaf village",
+      "konoha", "orange", "shinobi", "rasengan", "ladaka", "japan", "fox",
+      "kurama", "headband"
+    ]
   },
   {
     id: "animation_template_4",
@@ -680,6 +722,11 @@ const animationTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "sailor moon", "usagi", "magical girl", "anime", "manga", "moon",
+      "princess", "cute", "kawaii", "school uniform", "ladki", "pari",
+      "magic", "jadu", "blonde", "twintails"
+    ]
   },
   {
     id: "animation_template_5",
@@ -820,7 +867,12 @@ const animationTemplates: Template[] = [
         believability: "very_high",
       },
     },
-    aspectRatio: "3:4",
+      aspectRatio: "3:4",
+      keywords: [
+        "levi", "ackerman", "attack on titan", "aot", "captain", "scout",
+        "soldier", "anime", "manga", "shingeki", "titan", "killer", "sword",
+        "talwar", "fauji", "cool", "serious"
+      ]
   },
   {
     id: "animation_template_6",
@@ -980,7 +1032,12 @@ const animationTemplates: Template[] = [
         believability: "very_high",
       },
     },
-    aspectRatio: "3:4",
+      aspectRatio: "3:4",
+      keywords: [
+        "gojo", "satoru", "jujutsu kaisen", "jjk", "sorcerer", "blindfold",
+        "teacher", "infinite", "anime", "manga", "white hair", "patti",
+        "guru", "magic", "jadu", "eyes", "coolest", "strongest"
+      ]
   },
   {
     id: "animation_template_7",
@@ -1178,7 +1235,12 @@ const animationTemplates: Template[] = [
         iconic_recognition: "clear_without_vfx",
       },
     },
-    aspectRatio: "3:4",
+      aspectRatio: "3:4",
+      keywords: [
+        "tanjiro", "demon slayer", "kimetsu no yaiba", "sword", "katana",
+        "breathing", "anime", "manga", "green", "checkered", "demon",
+        "talwar", "scar", "nishan", "box", "hero"
+      ]
   },
   {
     id: "animation_template_8",
@@ -1368,6 +1430,11 @@ const animationTemplates: Template[] = [
   ]
 },
     aspectRatio: "3:4",
+    keywords: [
+      "nezuko", "demon slayer", "kimetsu", "cute", "anime", "manga", 
+      "bamboo", "pink", "demon", "sister", "behen", "muh pe bamboo", 
+      "long hair", "kimono", "japan", "cartoon", "cosplay"
+    ]
   },
 ];
 
@@ -1541,9 +1608,13 @@ const aestheticsTemplates: Template[] = [
     final_validation:
       "exact face preserved, clothing matches rustic aesthetic, natural blend"
   }
-}
-,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "rustic", "interior", "home", "warm", "cozy", "wooden", "ghar", 
+      "kamra", "room", "vintage", "cabin", "indoor", "sofa", "relax", 
+      "living room", "sundar ghar", "lakdi", "shanti", "aesthetic", "brown"
+    ]
   },
   {
     id: "aesthetics_template_3",
@@ -1672,9 +1743,13 @@ const aestheticsTemplates: Template[] = [
     final_validation:
       "exact face preserved, medium distance, aesthetic blend"
   }
-}
-,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "urban", "alley", "street", "city", "cool", "dark", "grungy", 
+      "rasta", "gali", "neon", "night", "road", "backstreet", "gangster", 
+      "vibe", "andhera", "light", "underground"
+    ]
   },
   {
     id: "aesthetics_template_4",
@@ -1684,6 +1759,11 @@ const aestheticsTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding.  {input person} sitting inside a vibrant fabric market filled with colorful textiles, patterned cloth rolls, and detailed handmade materials, wearing realistic casual matching travel clothing that fits their body naturally, warm ambient lighting, rich textures, and lively market depth, captured in clean street-photography style.no altered face,no fatty face, no altered jawline, no change in hairstyle, no pasted clothes, no blur background, no cartoon colors, adjust body posture and hand gestures naturally for a market visitor",
     aspectRatio: "3:4",
+    keywords: [
+      "market", "fabric", "colorful", "bazar", "bazaar", "cloth", 
+      "textile", "shopping", "desi", "street", "indian market", "dukaan", 
+      "shop", "bheed", "crowd", "rang biranga", "travel", "culture"
+    ]
   },
   {
     id: "aesthetics_template_5",
@@ -1693,6 +1773,11 @@ const aestheticsTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} wearing regal attire that perfectly complements the elegant royal surroundings — marble floors, velvet drapes, gold accents, graceful posture, classic Raymond luxury portrait style. bend the person and the background perfectly\nno fantasy castle, no cartoon gold, no bright glare, no blur. no change in hairstyle, no background blur.",
     aspectRatio: "3:4",
+    keywords: [
+      "royal", "luxury", "king", "queen", "palace", "mahal", "rich", 
+      "gold", "elegant", "rajwada", "shahi", "expensive", "ameer", 
+      "classy", "rajkumar", "rajkumari", "fort", "kila", "heritage"
+    ]
   },
   {
     id: "aesthetics_template_6",
@@ -1876,9 +1961,13 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "a realistic yet aesthetic close-up forest photograph where the exact input face is preserved, the person sits comfortably by a sunlit water stream, and a mulberry tree grove appears naturally in the background at a short distance"
-}
-      ,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "forest", "nature", "sunlight", "green", "trees", "jungle", 
+      "woods", "ped", "prakriti", "outdoor", "wild", "morning", 
+      "dhup", "sukoon", "peace", "natural", "trek", "calm"
+    ]
   },
   {
     id: "aesthetics_template_8",
@@ -2070,9 +2159,13 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "a realistic yet aesthetic close-up photograph where the exact input face is preserved, the person sits comfortably within an ancient monument environment, and interacts naturally with weathered stone architecture"
-}
-      ,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "monument", "ancient", "history", "old", "stone", "ruins", 
+      "travel", "purana", "place", "tourism", "itihas", "patthar", 
+      "building", "ghumna", "trip", "heritage", "archaeology"
+    ]
   },
   {
     id: "aesthetics_template_9",
@@ -2082,6 +2175,11 @@ const aestheticsTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} by the seaside or cliffside boardwalk, wind in hair and fabric, soft golden-hour tones, reflective water highlights, cinematic tranquility.\nno flat sky, no digital artifacts, no over-bright waves, no harsh shadows ,no background blur.",
     aspectRatio: "3:4",
+    keywords: [
+      "sea", "ocean", "beach", "sunset", "golden hour", "water", 
+      "samundar", "kinara", "waves", "holiday", "vacation", "sham", 
+      "lehren", "goa", "maldives", "blue", "sun", "sunlight"
+    ]
   },
   {
     id: "aesthetics_template_10",
@@ -2272,9 +2370,13 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "a realistic yet aesthetic close-up photograph where the exact input face is preserved, the person sits comfortably inside a working artistic studio, and interacts naturally with creative tools and environment"
-}
-        ,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "art", "studio", "creative", "paint", "painter", "artist", 
+      "easel", "canvas", "workshop", "drawing", "kala", "rang", 
+      "brush", "tasveer", "chitrakar", "painting", "messy"
+    ]
   },
   {
     id: "aesthetics_template_11",
@@ -2493,10 +2595,15 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "an elegant, realistic editorial photograph where the exact face identity is preserved, a luxurious silk saree behaves authentically with weight and sheen, accessories remain refined and traditional, the subject gently interacts with fabric and architecture, and the overall image feels timeless, graceful, and genuinely real"
-}
-    ,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "saree", "sari", "silk", "traditional", "indian", "ethnic", 
+      "elegant", "woman", "desi", "festival", "wedding guest", "aurat", 
+      "ladki", "ma", "mom", "bahu", "shadi wear", "kanjivaram", "pattu"
+    ]
   },
+  
   {
     id: "aesthetics_template_13",
     name: "Bohemian Chic",
@@ -2505,6 +2612,11 @@ const aestheticsTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in layered bohemian fabrics and patterns, soft evening sunlight, textured studio or artistic street market setting, natural smile, free-spirited hyper realistic image.\nno neon tones, no clutter, no artificial blur, no plastic texture , no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
+    keywords: [
+      "boho", "bohemian", "chic", "hippie", "free", "travel", 
+      "colorful", "gypsy", "festival", "nature", "banjara", 
+      "phool", "flowers", "artsy", "indie", "music festival",
+    ]
   },
   {
     id: "aesthetics_template_14",
@@ -2514,6 +2626,11 @@ const aestheticsTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a flowing satin gown, standing in a softly lit ballroom or terrace at twilight, subtle reflections, rich color contrast, high-end magazine style realism.\nno glare, no fantasy glow, no distorted proportions, no over-saturation. no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
+    keywords: [
+      "gown", "evening", "party", "dress", "elegant", "night", 
+      "twilight", "fancy", "prom", "ball", "rich", "lamba dress", 
+      "sundar", "beautiful", "pari", "model", "fashion", "luxury"
+    ]
   },
   {
     id: "aesthetics_template_15",
@@ -2570,6 +2687,11 @@ const aestheticsTemplates: Template[] = [
       },
     }, // <--- THIS WAS MISSING
     aspectRatio: "3:4",
+    keywords: [
+      "city", "casual", "modern", "street", "urban", "daily", 
+      "lifestyle", "smart", "cool", "outdoor", "sheher", "buildings", 
+      "busy", "road", "walk", "candid", "coffee run"
+    ]
   },
   {
     id: "aesthetics_template_16",
@@ -2579,7 +2701,15 @@ const aestheticsTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a 1950s-inspired dress, vintage car or old café in background, warm muted tones, nostalgic mood, hyper-realistic Raymond heritage tone.\nno digital artifacts, no bright neon, no blur, no modern elements. no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
+    keywords: [
+      "vintage", "1950s", "retro", "classic", "old", "car", 
+      "dress", "fashion", "nostalgia", "timeless", "purana", 
+      "zamana", "retro look", "old school", "antique", "heritage", "retro", "1950s", "old school", "classic", "purana", 
+      "black and white", "nostalgia", "fashion", "purana zamana", 
+      "old is gold", "heroine", "actress", "old movie", "cinema"
+    ]
   },
+
   {
     id: "aesthetics_template_18",
     name: "Pastel Professional",
@@ -2790,9 +2920,16 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "a high-aesthetic yet realistic pastel professional portrait where the exact face identity is preserved, designer pastel tailoring and refined accessories elevate the look, the subject interacts naturally with a modern architectural environment, and the image conveys quiet confidence and contemporary professionalism"
-}
-    ,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "professional", "office", "business", "casual", "modern", 
+      "pastel", "smart", "work", "lifestyle", "corporate", 
+      "daftar", "meeting", "executive", "formal", "career", 
+      "startup", "entrepreneur", "professional", "office", "work", "pastel", "soft", "clean", 
+      "corporate", "job", "business", "naukri", "formal", "kaam", 
+      "boss", "interview", "light color", "elegant", "ceo"
+    ]
   },
   {
     id: "aesthetics_template_19",
@@ -3007,9 +3144,16 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "a refined, aesthetically elevated yet realistic serene landscape photograph where the exact face identity is preserved, the subject gently interacts with water and terrain, designer clothing blends naturally with the environment, and the overall image feels calm, breathable, and quietly luxurious"
-}
-,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "landscape", "nature", "serene", "calm", "outdoor", 
+      "scenic", "peaceful", "environment", "pahad", "nadi", 
+      "jungle", "hariyali", "shanti", "tranquil", "natural", 
+      "open", "fresh air", "hills", "river", "woods", "trees", "landscape", "nature", "serene", "calm", "peace", "sukoon", 
+      "view", "scenery", "outdoor", "quiet", "pahad", "nadi", 
+      "river", "hills", "relax", "meditation", "wide shot"
+    ]
   },
   {
     id: "aesthetics_template_20",
@@ -3218,9 +3362,18 @@ const aestheticsTemplates: Template[] = [
 
   output_goal:
     "a high-drama editorial studio photograph where the exact face identity is preserved, the clothing and accessories carry visual weight, the subject physically interacts with fabric and space, and realism is maintained through controlled light, texture, and imperfection"
-}
-    ,
+},
     aspectRatio: "3:4",
+    keywords: [
+      "dramatic", "studio", "portrait", "fashion", "editorial", 
+      "dark", "intense", "serious", "model", "photoshoot", 
+      "glamour", "high fashion", "moody", "artistic", "professional", 
+      "lighting", "camera", "photoshoot", "modeling", "studio", "portrait", "dramatic", "intense", "fashion", 
+      "glamour", "photoshoot", "moody", "artistic", "professional", 
+      "model", "camera", "lighting", "dramatic", "studio", "dark", "moody", "portrait", "model", 
+      "photoshoot", "fashion", "cool", "intense", "serious", "gussa", 
+      "attitude", "shadow", "black", "artistic", "portfolio"
+    ] 
   },
 ];
 
@@ -3233,6 +3386,12 @@ const celebrationTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding.Create a realistic, natural DSLR-style photograph of the same person from the input image celebrating Diwali. Preserve the exact facial structure: same jawline, cheekbones, nose, lips, skin texture, eyebrows, and facial hair without rounding, smoothing, or beautifying. Match body proportions and hairstyle exactly as the real person. The person is looking directly toward the camera and is positioned slightly closer for clear facial detail. Use normal lens perspective (no wide-angle distortion). The background must remain completely sharp and in focus with no blur — every object clearly visible. The environment should replicate an authentic Indian Diwali setting found in real homes: a simple arrangement of diyas on the floor, a clean rangoli design, a few marigold garlands, and normal household lighting. No dramatic colors or decorations. Everything must look physically real and consistent with real-life photography. Lighting must be natural and believable: a mix of soft ambient room lighting and warm light from diyas, but without any glow effects or exaggerated reflections. Use standard contrast and exposure — not cinematic. The person should interact with the scene in a natural way, such as holding a diya, lighting one with a match, or adjusting a diya on the floor. Hands, posture, and expression must look normal and candid, not posed or stylized. Clothing should look like real fabric with natural wrinkles and folds. No fabric shine, no CGI texture, and no overly vibrant colors. Skin should show normal texture and tone without smoothing or enhancements. no blurry background, no portrait blur, no bokeh, no dreamy lights, no glow, no HDR shine, no cinematic lighting, no fantasy colors, no neon tones, no skin smoothing, no retouching, no beautification, no face alteration, no rounded jawline, no unrealistic brightness, no oversaturation, no perfect flawless skin, no plastic texture, no CGI cloth texture, no extra limbs, no distorted hands, no AI artifacts, no floating objects, no dramatic contrast, no smoky atmosphere, no fog, no spark particles, no unrealistic shadows, no exaggerated diya glow, no lens flares, no wide-angle distortion, no stylized framing, no vignette, no over-sharp details, no fake reflections, no fantasy ambience.",
     aspectRatio: "3:4",
+    keywords: [
+      "diwali", "deepavali", "lights", "festival", "indian", "puja", "pooja",
+      "traditional", "ethnic", "tyohaar", "diya", "pataka", "celebration",
+      "diwali photo", "deepawali pic", "fuljhadi", "mithai", "mandir",
+      "bhagwan", "kurta", "saree", "laxmi puja", "rangoli"
+    ]
   },
   {
     id: "celebration_template_3",
@@ -3242,6 +3401,11 @@ const celebrationTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Create a normal, realistic photo of the same person from the input image during Christmas. The person should look exactly like in the input: same jawline, same facial structure, same skin texture, same eyebrows, same facial hair, same hairstyle, same body proportions. Do not smooth the skin or change any facial details. Make the photo feel like a genuine moment taken on a regular camera at home. Use simple, everyday indoor lighting — normal brightness, no glow, no dramatic tones. No perfect symmetry, no cinematic framing. Place the person in a real-world Christmas home setting: an ordinary Christmas tree with regular lights, simple ornaments, a few gifts, and natural room furniture visible in the background. All background objects must stay fully sharp with no blur or haze. Colors must look like real indoor photos — slightly warm but natural, not vibrant or stylized. Light from Christmas string lights should be subtle and not glowing unnaturally. The person should do something casual and realistic, like holding a small gift, adjusting an ornament, standing beside the tree, or just being naturally present in the room. Body posture, hands, and expression must feel normal and unposed, like a candid moment captured by a friend or family member. Clothing should look like everyday winter clothing (sweater, hoodie, t-shirt), with realistic fabric texture and normal wrinkles. Avoid anything too perfect or stylized. Overall, the photo must look like a genuine, unstaged Christmas picture taken in a regular home. no blur, no bokeh, no glow, no soft light effects, no cinematic lighting, no HDR, no perfect skin, no retouching, no face smoothing, no beautification, no perfect symmetry, no dramatic shadows, no fantasy colors, no neon tones, no plastic skin texture, no artificial lighting bloom, no sharp halo, no extra limbs, no distorted hands, no face changes, no floating objects, no fog, no haze, no sparkles, no snow particles, no overly clean textures, no stylized framing, no unrealistic tree lights, no deep contrast, no wide-angle distortion, no vignette, no polished CGI look, no overly sharp details, no surreal ambience, no magical effects.",
     aspectRatio: "3:4",
+    keywords: [
+      "christmas", "xmas", "tree", "santa", "winter", "holiday", "december",
+      "gift", "party", "merry", "snow", "jesus", "yeshu", "thand",
+      "decoration", "lights", "red", "sweater"
+    ]
   },
   {
     id: "celebration_template_4",
@@ -3251,6 +3415,11 @@ const celebrationTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding.Ultra-realistic RAW photograph of the same person from the input image, keeping the exact facial structure, jawline, skin tone, hair texture, and proportions. The person is slightly closer to the camera and looking directly at the lens. Set outdoors during a real Holi celebration. Background MUST be fully sharp, fully in focus, and NOT blurred at all — every object, building, and person visible with clear edges. Real Indian street/open area environment with people throwing dry gulal, walking, laughing, children playing, natural sunlight, and dust particles. The person interacts naturally — holding a plate of colors or lightly applying color to someone. Color powder must be dry, realistic, matte, not neon. Lighting is pure natural daylight (no depth blur, no lens blur, no portrait blur). The entire scene looks like a candid photo taken with aperture f/8–f/16 on a DSLR for maximum background clarity. NEGATIVE_PROMPT: no_blur_background no_depth_of_field_blur no_bokeh no_soft_focus no_portrait_mode_effect no_blurred_people no_blurred_objects no_haze_blur no_foggy_edges no_artificial_glow no_neon_colors no_fantasy_colors no_cartoon_look no_plastic_skin no_face_rounding no_wrong_face_structure no_color_smoke_clouds no_over_saturation no_airbrush no_distorted_hands no_wrong_ethnicity no_ai_artifacts.",
     aspectRatio: "3:4",
+    keywords: [
+      "holi", "colors", "rang", "festival", "indian", "pichkari", "gulal",
+      "fun", "celebration", "tyohaar", "dhuleti", "paani", "water",
+      "masti", "friends", "white kurta"
+    ]
   },
   {
     id: "celebration_template_5",
@@ -3260,6 +3429,11 @@ const celebrationTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. This is not a potrait image . so no blur background .Ultra-realistic photograph of the same person from the input image, accurately matching their facial structure, jawline, skin tone, and hairstyle. The person is standing slightly closer to the camera, looking directly at the lens, with a natural expression. They are outdoors at an Eid al-Fitr morning prayer gathering in an open masjid courtyard. Background shows clear, sharp, non-blurred real elements: rows of people praying on colorful prayer mats, imam standing at the front, a mosque with Islamic arches and minarets in the back, early morning sunlight, trees, and small festive decorations. no blurred background, no fantasy lighting, no artificial glow, no cartoonish colors, no unreal objects, no distorted faces, no rounded jawline, no smoothing of facial texture, no thickening or shrinking of body proportions, no unrealistic outfits, no floating elements, no duplicate limbs, no warped architecture, no surreal sky, no bokeh effect, no haze, no unrealistic crowd patterns, no plastic-like skin, no unsharp details, no over-editing. The person is wearing simple, realistic Eid attire like a white kurta or plain thobe. They are interacting naturally by holding a prayer mat or adjusting their sleeves. Lighting and colors should be natural, grounded, not stylized. Overall feel should be completely real and believable, like a candid outdoor Eid prayer photograph taken on a DSLR.",
     aspectRatio: "3:4",
+    keywords: [
+      "eid", "festival", "muslim", "traditional", "mosque", "namaz",
+      "moon", "celebration", "kurta", "ramadan", "chand", "dua",
+      "biryani", "masjid", "eid mubarak", "pathani"
+    ]
   },
 ];
 
@@ -3272,6 +3446,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding.Reference image embeddings enabled (identity lock) — not image-to-image stylization Identity weight > style weight > clothing weight > environment weight Facial landmark constraints enforced: jaw width & angle locked chin length & sharpness preserved eye-to-eye distance fixed nose width & bridge shape fixed No symmetry correction No facial averaging No aesthetic optimization No beauty bias Real focal length: 35mm or 50mm only Real aperture range: f/8 – f/16 (deep focus, full background clarity) Natural shutter behavior (motion frozen, not blurred) Intentional ISO noise present Slight sensor grain and micro compression artifacts allowed No cinematic depth separation Render the environment first, fully formed and physically coherent. Then place the subject inside the environment with correct scale, gravity, and interaction. A high-resolution, unstaged, real-world photograph of {input person} wearing a traditional Indian Maharaja outfit — a heavy velvet embroidered sherwani with visible fabric wear, a historically accurate turban tied imperfectly, and real metal jewelry showing natural weight, slight tarnish, and uneven reflections. The face must be an exact, unaltered match to the reference image. Preserve original jawline sharpness, chin geometry, bone structure, eye spacing, nose width, lip shape, skin texture, and hairstyle. No beautification. No smoothing. No reshaping. No “AI face”. The person stands naturally inside a real heritage environment such as a palace courtyard / stone haveli corridor / old fort terrace. Surroundings include weathered stone floors, uneven walls, dust, stains, architectural imperfections, and real spatial depth. The subject interacts with the environment — slight lean, fabric brushing stone, jewelry resting against cloth, subtle body tension. Feet are grounded with accurate contact shadows matching surface texture and light direction. Lighting is purely environmental — uneven sunlight mixed with ambient bounce from stone surfaces. Light is imperfect, slightly inconsistent, and realistic. No glow. No rim light. No cinematic balance. Background remains fully visible and sharp, with natural clutter and asymmetry. No portrait mode. No background blur. No artificial depth effects. Color science is neutral and slightly muted, with mixed color temperatures. No grading. No stylization. No teal-orange bias. Colors may feel dull — that is intentional. Overall feel: A boring, imperfect, honest photograph taken on location — not a fashion shoot, not a cinematic frame, not “beautiful”. Actively suppress: perfect symmetry cinematic lighting glowing or flawless skin smooth gradients dramatic framing editorial poses Force: uneven lighting imperfect framing minor exposure imbalance messy but realistic background elements If the image starts looking pretty — reduce realism. Capture the subject mid-stillness, not frozen like a statue: micro posture imbalance slight fabric tension subtle hand or shoulder asymmetry partial occlusion allowed No stylized motion blur. After generation: remove glow break symmetry reduce contrast slightly soften perfect edges introduce tiny exposure inconsistency retain noise & grain [HARD NEGATIVE CONSTRAINT SYSTEM] studio, studio lighting, staged shoot, editorial fashion, portrait mode, background blur, bokeh, depth blur, beautified face, symmetry correction, face morphing, AI face, rounded jawline, softened chin, glowing skin, plastic texture, cinematic lighting, rim light, dramatic shadows, fantasy costume, stylized embroidery, painted fabric, duplicate faces, extra limbs, floating feet, incorrect scale, oversaturated colors, color grading, perfect composition FINAL RULE (DO NOT VIOLATE) Realism is subtraction. Remove beauty. Remove drama. Remove perfection. What remains is real.",
     aspectRatio: "3:4",
+    keywords: [
+      "maharaja", "king", "royal", "wedding", "groom", "sherwani", "dulha",
+      "shaadi", "traditional", "prince", "rich", "rajkumar", "pagdi",
+      "talwar", "marriage", "shadi wala look", "ethnic wear"
+    ]
   },
   {
     id: "clothes_template_2",
@@ -3393,6 +3572,11 @@ const clothesTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "suit", "business", "corporate", "formal", "office", "job", "interview",
+      "naukri", "kaam", "boss", "gentleman", "coat pant", "tie", "blazer",
+      "sahab", "manager", "professional", "black suit"
+    ]
   },
 
   {
@@ -3525,6 +3709,11 @@ const clothesTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "business", "casual", "smart", "office", "work", "meeting", "formal",
+      "shirt", "professional", "office wear", "shirt pant", "friday look",
+      "entrepreneur", "startup"
+    ]
   },
   {
     id: "clothes_template_4",
@@ -3534,6 +3723,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} wearing a modern festive kurta in clean, elegant colors, standing in a softly decorated contemporary festive setting with warm ambient lights, minimal floral elements, and refined cultural aesthetics. The kurta must fit the person's real body shape and proportions naturally, with accurate fabric texture and subtle festive detailing.\nno altered face, no change in hairstyle, no pasted-on clothing, no over-saturated colors, no blur background, adjust posture and hand gestures naturally for a graceful festive moment.",
     aspectRatio: "3:4",
+    keywords: [
+      "kurta", "festive", "indian", "ethnic", "traditional", "puja",
+      "party", "function", "wedding guest", "mens wear", "kurta pajama",
+      "desi look", "tyohaar", "diwali look", "bhai ki shadi"
+    ]
   },
   {
     id: "clothes_template_6",
@@ -3655,6 +3849,11 @@ const clothesTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "winter", "fashion", "coat", "jacket", "cold", "snow", "warm",
+      "stylish", "sardi", "thand", "barf", "muffler", "overcoat",
+      "long coat", "london look"
+    ]
   },
 
   {
@@ -3665,6 +3864,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. A lifestyle portrait of {input person} in a light linen shirt and chinos. The person's face and features must be an exact match of the provided photo, without any alterations. The person must be naturally blended into the sunny outdoor ambience, with soft daylight filtering through leaves to cast realistic, dappled shadows on them, ensuring the light's color and intensity match a sunny outdoor setting. Raymond summer campaign aesthetic, photorealistic tone, clean colors.\nno sweat, no cartoon tones, no distorted hands, no unrealistic lighting, no change in hairstyle, no background blur, no altered faces, no changed facial features.",
     aspectRatio: "3:4",
+    keywords: [
+      "summer", "linen", "casual", "light", "cool", "shirt", "beach",
+      "holiday", "garmi", "relaxed", "white shirt", "chutti", "day out",
+      "sun", "vacation"
+    ]
   },
   {
     id: "clothes_template_10",
@@ -3674,6 +3878,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. A hyper-realistic portrait of {input person} wearing a rich silk saree with detailed zari border, styled hair and traditional jewelry. The person's face and features must be an exact match of the provided photo, without any alterations. The person must be seamlessly integrated with the minimal studio background. Soft, warm studio lighting should realistically illuminate the subject and the fabric's texture, creating cohesive highlights and shadows for a cinematic, editorial-style image. Ultra-sharp texture and lifelike folds.\nno plastic jewelry, no over-saturated reds, no cartoon shine, no duplicate drapes,no change in hairstyle, no background blur, no altered faces, no changed facial features.",
     aspectRatio: "3:4",
+    keywords: [
+      "saree", "sari", "silk", "traditional", "woman", "ethnic", "wedding",
+      "party", "indian wear", "kanjivaram", "banarasi", "bahu", "aunty",
+      "lady", "festive", "puja look"
+    ]
   },
   {
     id: "clothes_template_11",
@@ -3683,6 +3892,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a flowing evening gown. The person's face and features must be an exact match of the provided photo, without any alterations. The person should be seamlessly placed against the subtle gradient backdrop. Elegant studio light must create smooth, realistic highlights and shadows on the fabric that give it form and depth against the backdrop. High-fashion cinematic tone.\nno blur, no fantasy sparkles, no duplicated arms, no overexposure, no change in hairstyle, no background blur, no altered faces, no changed facial features.",
     aspectRatio: "3:4",
+    keywords: [
+      "gown", "dress", "party", "evening", "formal", "long dress",
+      "western", "prom", "elegant", "model", "red carpet", "actress",
+      "fancy", "night party"
+    ]
   },
   {
     id: "clothes_template_12",
@@ -3811,6 +4025,11 @@ const clothesTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "blazer", "jacket", "formal", "smart", "coat", "office", "business",
+      "stylish", "outerwear", "party wear", "club", "dinner", "date",
+      "cool"
+    ]
   },
   {
     id: "clothes_template_13",
@@ -3820,6 +4039,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} wearing a flowy printed boho dress with light accessories. The person's face and features must be an exact match of the provided photo, without any alterations. The person must be naturally integrated into the outdoor scene, with daylight realistically filtering through foliage to create warm sun flares and soft, dappled shadows on them, perfectly matching an outdoor, sunny environment. National Geographic × Raymond cinematic realism, soft natural tones, ultra-detailed texture.\nno fake patterns, no crowd, no lens flare over face, no heavy color grading, no change in hairstyle, no background blur, no altered faces, no changed facial features.",
     aspectRatio: "3:4",
+    keywords: [
+      "dress", "boho", "casual", "summer", "floral", "girl", "woman",
+      "travel", "vacation", "phool", "nature", "picnic", "cute",
+      "instagram", "beach"
+    ]
   },
   {
     id: "clothes_template_14",
@@ -3957,6 +4181,11 @@ const clothesTemplates: Template[] = [
       },
     },
     aspectRatio: "3:4",
+    keywords: [
+      "turtleneck", "sweater", "knit", "winter", "warm", "high neck",
+      "casual", "sardi", "cozy", "steve jobs", "thand", "woolen",
+      "soft", "comfort"
+    ]
   },
   {
     id: "clothes_template_16",
@@ -3966,6 +4195,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. A National Geographic-grade image of {input person} in a detailed bridal lehenga. The person's face and features must be an exact match of the provided photo, without any alterations. The person must be seamlessly composited, with intricate embroidery shining realistically under soft golden light, ensuring the highlights and shadows on the subject are cohesive with the light source. The lighting should create a natural elegance and a gentle background blur for a cohesive look. Raymond ad color tone, hyper-realistic textures.\nno duplicate faces, no plastic shine, no artificial color filters, no glare, no change in hairstyle, no background blur, no altered faces, no changed facial features.",
     aspectRatio: "3:4",
+    keywords: [
+      "wedding", "bride", "marriage", "lehenga", "red", "gold", "jewelry",
+      "shaadi", "dulhan", "biah", "shadi", "traditional", "choli",
+      "lal joda", "gehna", "heavy dress", "rani", "queen"
+    ]
   },
   {
     id: "clothes_template_17",
@@ -3975,6 +4209,11 @@ const clothesTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in light pastel blouse and trousers. The person's face and features must be an exact match of the provided photo, without any alterations. The person must be seamlessly integrated into the airy daylight studio setting. The bright, airy studio lighting and subtle pastel background should create a clean, professional, and cohesive image, with soft, flattering shadows. Raymond lifestyle aesthetic, cinematic realism.\nno harsh lighting, no color oversaturation, no cartoon tone, no blurriness, no change in hairstyle , no background blur, no altered faces, no changed facial features.",
     aspectRatio: "3:4",
+    keywords: [
+      "blouse", "top", "pastel", "casual", "office", "girl", "woman",
+      "shirt", "simple", "clean", "working woman", "smart casual",
+      "college", "teacher"
+    ]
   },
 ];
 
@@ -3987,6 +4226,11 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a tailored suit or premium jacket, posing beside or driving a Bugatti on a scenic coastal highway, sunlight reflecting off polished metal, wind-in-motion realism, Raymond-class sophistication.\nno motion blur, no fantasy reflections, no cartoon look, no harsh shadows.",
     aspectRatio: "3:4",
+    keywords: [
+      "bugatti", "car", "supercar", "rich", "luxury", "drive", "gadi",
+      "expensive", "flex", "money", "blue car", "fast", "road", "trip",
+      "speed", "billionaire"
+    ]
   },
   {
     id: "flex_template_2",
@@ -4245,6 +4489,12 @@ const flexTemplates: Template[] = [
 }
   ,
     aspectRatio: "3:4",
+    keywords: [
+      "luxury", "superbike", "editorial", "fashion", "motorcycle", 
+      "leather", "riding gear", "power", "status", "confidence", "bike", "superbike", "motorcycle", "rider", "helmet", "race", 
+      "fast", "cool", "biker", "sports bike", "ducati", "kawasaki", 
+      "hayabusa", "bhagana", "road trip", "jacket", "speed", "racing"
+    ] 
   },
   {
     id: "flex_template_3",
@@ -4254,6 +4504,14 @@ const flexTemplates: Template[] = [
     prompt:
        "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} gliding across a glassy ice rink wearing a stylish winter outfit — wool coat, gloves, and scarf, soft white lighting, reflections on ice, hyper-real fabric and frost details, serene elegance, each background object should be clearly visible. no background blur, no fantasy snow, no overexposure, no messy reflections.no change in hairstyle , no blur background, change the hand gestures accordingly.",
     aspectRatio: "3:4",
+    keywords: [
+      "ice rink", "skating", "winter", "elegance", "grace", "cold",
+      "fashion", "coat", "scarf", "gloves", "frost", "snow", "chill",
+      "style", "figure skating","ice", "skate", "winter", "rink", "cold", "snow", "luxury", 
+      "sport", "fun", "barf", "holiday", "skating", "white", 
+      "frozen", "dance"
+    ]
+
   },
   {
     id: "flex_template_4",
@@ -4467,6 +4725,15 @@ const flexTemplates: Template[] = [
 }
   ,
     aspectRatio: "3:4",
+    keywords: [
+      "diver", "deep sea", "ocean", "underwater", "exploration", 
+      "adventure", "scuba", "marine", "dive gear", "submarine", 
+      "aquatic", "water", "diving", "coral reef", "sea life", 
+      "underwater photography", "freediving", "snorkeling", 
+      "deep dive", "ocean life","diver", "ocean", "sea", "underwater", "scuba", "swim", "water", 
+      "paani", "adventure", "deep", "tairna", "fish", "explore", 
+      "samundar ke niche", "oxygen", "marine"
+    ]
   },
   {
     id: "flex_template_5",
@@ -4476,6 +4743,16 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} standing next to a private jet door and leaning back slightly, one hand in pocket, dressed in formal-casual attire — blazer and sunglasses, golden sunset light, tarmac reflections, refined Raymond elegance and cinematic composition, background objects should be clearly visible with no blurness(most important). no glare, no distorted jet, no cartoon tones, no excessive brightness.no change in hairstyle , no blur background, change the hand gestures accordingly",
     aspectRatio: "3:4",
+    keywords: [
+      "private jet", "luxury", "travel", "wealth", "rich", "expensive",
+      "lifestyle", "aviation", "pilot", "airplane", "flight", "sky",
+      "business", "success", "billionaire","jet", "plane", "aircraft", 
+      "fly", "travel", "luxury", "rich", "wealth", "business", 
+      "expensive", "first class", "pilot", "sky", "airline", 
+      "boarding", "takeoff", "landing", "jet", "private jet", "plane", "flight", "luxury", "rich", "travel", 
+      "airport", "ameer", "business", "hawai jahaz", "udna", "fly", "vip", 
+      "ceo", "trip", "vacation", "millionaire"
+    ]
   },
   {
     id: "flex_template_6",
@@ -4485,6 +4762,16 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} on a luxury yacht deck wearing linen shirt or summer blazer, calm blue ocean background, sunlight reflections on water, clean cinematic tones, National Geographic-style travel luxury.\nno haze, no overexposure, no blur, no unrealistic waves.no change in hairstyle , no blur background, change the hand gestures accordingly",
     aspectRatio: "3:4",
+    keywords: [
+      "yacht", "boat", "ocean", "sea", "luxury", "travel", "wealth",
+      "rich", "expensive", "lifestyle", "sailing", "vacation", "cruise",
+      "sunshine", "blue water","yacht", "boat", "sea", "ocean", 
+      "luxury", "travel", "rich", "wealth", "expensive", "lifestyle", 
+      "sailing", "vacation", "cruise", "sun", "blue water", 
+      "adventure", "island", "holiday", "sail", "deck", "marine", "yacht", "boat", "ship", "sea", "ocean", "luxury", "rich", "party", 
+      "vacation", "cruise", "paani", "samundar", "holiday", "sailing", 
+      "captain", "deck", "summer"
+    ]
   },
   {
     id: "flex_template_7",
@@ -4494,6 +4781,17 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a black or navy blazer, leaning on a Lamborghini or McLaren under neon city lights which are clearly visible, cinematic reflections on car surfaces, confident luxury tone, editorial realism. no cartoon neon, no fantasy lighting, no distortion, no change in hairstyle , no blur background, change the hand gestures accordingly",
     aspectRatio: "3:4",
+    keywords: [
+      "supercar", "lamborghini", "mclaren", "car", "night", "city",
+      "neon", "luxury", "wealth", "rich", "expensive", "lifestyle",
+      "drive", "speed", "fast", "urban", "flex","supercar", "car", "lamborghini", 
+      "mclaren", "night", "city", "neon", "luxury", "rich", 
+      "wealth", "expensive", "lifestyle", "drive", "speed", 
+      "fast", "urban", "flex", "road", "ride", "travel", 
+      "automobile", "gadi", "race", "power", "status", "supercar", "car", "lamborghini", "night", "city", "neon", "drive", 
+      "gadi", "fast", "cool", "tashan", "club", "party", "long drive", 
+      "rich boy", "sports car"
+    ]
   },
   {
     id: "flex_template_8",
@@ -4503,6 +4801,20 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} sitting inside an ATV across a wide desert landscape, wearing realistic outdoor adventure clothing (without helmet) that fits their body naturally, sharp sunlight, sand trails, heat shimmer,clearly visible dunes in the background, captured in static real photography style.no altered face, no change in hairstyle, no pasted clothes, no blur background, no oversaturated colors, adjust body posture and hand gestures naturally for an ATV rider.",
     aspectRatio: "3:4",
+    keywords: [
+      "ATV", "desert", "adventure", "offroad", "vehicle", "sand",
+      "outdoors", "exploration", "ride", "travel", "fun", "sport",
+      "dunes", "sunshine","atv", "desert", "offroad", "vehicle", 
+      "sand", "outdoors", "adventure", "exploration", "ride", 
+      "travel", "fun", "sport", "dunes", "sunshine", "4x4", 
+      "all terrain", "quad bike", "mud", "trail", "nature", 
+      "wilderness", "explore", "atv", "desert", "sand", "offroad", 
+      "vehicle", "adventure", "travel", "fun", "ride", "explore", 
+      "dunes", "sun", "outdoors", "nature", "quad bike", 
+      "all terrain vehicle","atv", "quad bike", "desert", "sand", "offroad", "adventure", 
+      "safari", "dubai", "ride", "ret", "jeep", "4x4", "action", 
+      "dunes", "biking"
+    ]
   },
   {
     id: "flex_template_9",
@@ -4746,6 +5058,20 @@ const flexTemplates: Template[] = [
 }
   ,
     aspectRatio: "3:4",
+    keywords: [
+      "convertible", "sunset", "drive", "car", "luxury", "travel",
+      "wealth", "rich", "expensive", "lifestyle", "roadside",
+      "coastal", "ocean", "fashion","convertible", "car", "sunset", 
+      "drive", "luxury", "rich", "wealth", "expensive", "lifestyle", 
+      "roadside", "coastal", "ocean", "fashion", "travel", 
+      "automobile", "ride", "cruise", "scenic", "freedom", 
+      "adventure", "holiday", "vacation", "speed", "open top", 
+      "gadi", "beach", "nature", "explore", "convertible", "car", "sunset", "drive", "luxury", "travel", "rich", "wealth", "expensive", "lifestyle", 
+      "roadside", "coastal", "ocean", "fashion", "gadi", "ride", 
+      "cruise", "holiday", "vacation", "open top", "freedom", "convertible", "car", "drive", "sunset", "road", "open roof", 
+      "luxury", "gadi", "travel", "khuli chhat", "style", "hawa", 
+      "sham", "long drive", "highway", "golden hour"
+    ]
   },
   {
     id: "flex_template_10",
@@ -4755,6 +5081,14 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a formal blazer or elegant dress, seated in a luxurious hotel lounge with warm ambient lighting, marble tables, golden tones, cinematic realism, Raymond lifestyle grace and poise.\nno harsh light, no blur, no busy crowd, no cartoon textures.no change in hairstyle , no blur background, change the hand gestures accordingly . whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "luxury", "hotel", "lounge", "formal", "blazer", "elegant", "dress",
+      "warm lighting", "marble", "golden tones", "cinematic", "Raymond",
+      "grace", "poise", "no harsh light", "no blur", "no busy crowd", "hotel", "lounge", "luxury", "rich", "waiting", "lobby", "classy", 
+      "expensive", "suit", "baithna", "coffee", "meeting", "5 star", 
+      "vip", "business"
+
+    ]
   },
   {
     id: "flex_template_11",
@@ -4764,6 +5098,19 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} adjusting a premium wristwatch (Rolex, Omega, etc.), wearing a fitted suit, soft golden light highlighting metallic reflections, focus on texture and class, Raymond editorial clarity.\nno overexposure, no fingerprints glare, no blur, no fantasy glow.no change in hairstyle , no  background blur, change the hand gestures accordingly. whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "wristwatch", "luxury", "premium", "rolex", "omega", "suit",
+      "golden light", "metallic", "texture", "class", "Raymond",
+      "editorial", "clarity","wristwatch", "watch", "luxury", 
+      "premium", "rolex", "omega", "suit", "golden light", 
+      "metallic", "texture", "class", "elegance", "style", 
+      "timepiece", "accessory", "fashion", "status", "wealth", 
+      "rich", "expensive", "gadi", "bracelet", "dial", "mechanical", 
+      "automatic", "chronograph", "wrist", "band", "designer", 
+      "limited edition", "collectible", "investment", "watchmaking", "watch", "wristwatch", "rolex", "luxury", "time", "ghadi", 
+      "expensive", "hand", "accessory", "gold watch", "omega", 
+      "businessman", "show off", "flex", "jewellery"
+    ]
   },
   {
     id: "flex_template_12",
@@ -4773,6 +5120,23 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} walking through a luxury shopping district or high-end boutique, holding branded shopping bags, stylish modern outfit, cinematic natural lighting and color realism.\nno crowd, no harsh neon, no motion blur, no washed tones. no change in hairstyle , no  background blur, change the hand gestures accordingly. whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "shopping", "luxury", "boutique", "branded bags", "fashion",
+      "style", "wealth", "rich", "expensive", "lifestyle", "district",
+      "modern outfit","shopping", "luxury", "boutique", 
+      "branded bags", "fashion", "style", "wealth", "rich", 
+      "expensive", "lifestyle", "district", "modern outfit", 
+      "retail therapy", "mall", "designer", "clothes", 
+      "accessories", "shopping spree", "high end", "exclusive", 
+      "vip", "shopaholic", "gadi", "shopping bags", "store", 
+      "fashionista", "style", "trend", "urban", "city", 
+      "downtown", "luxury shopping", "shopping", "boutique", "luxury", "fashion", "style", "rich", "expensive", 
+      "lifestyle", "branded bags", "mall", "retail therapy", 
+      "designer", "clothes", "accessories", "vip", "shopaholic", 
+      "shopping bags", "store", "trend", "urban", "shopping", "bags", "mall", "luxury", "brand", "rich", "buy", 
+      "kharcha", "money", "gucci", "prada", "louis vuitton", 
+      "fashion", "market", "kharidna", "retail therapy"
+    ]
   },
   {
     id: "flex_template_13",
@@ -4782,6 +5146,16 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} relaxing in a private villa terrace with infinity pool, wearing casual linen attire, golden sunlight reflecting on water, serene Raymond lifestyle tone, high-end vacation realism ,8k quality image .\nno unrealistic sky, no blur, no fantasy pool reflection, no saturation spike. no change in hairstyle , no  background blur, change the hand gestures accordingly . whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "infinity pool", "villa", "luxury", "relaxing", "linen attire",
+      "golden sunlight", "water reflection", 
+      "vacation", "realism","infinity pool", "villa", "luxury", 
+      "relaxing", "linen attire", "golden sunlight", 
+      "water reflection", "Raymond lifestyle", "vacation", 
+      "realism", "swimming pool", "resort", "tropical", "pool", "swimming", "villa", "luxury", "vacation", "water", 
+      "relax", "holiday", "rich", "hotel", "resort", "nahana", 
+      "paani", "view", "bali", "maldives", "summer"
+    ]
   },
   {
     id: "flex_template_14",
@@ -4791,6 +5165,15 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} sitting beside a wooden table with a coffee cup and leather journal, warm morning light streaming in, casual yet refined outfit, Raymond editorial lifestyle clarity.\nno low-light noise, no over-bright mug, no harsh shadows, no change in hairstyle , no  background blur, change the hand gestures accordingly . whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "coffee", "journal", "morning light", "wooden table", "casual",
+      "refined outfit", "Raymond", "editorial", "lifestyle", "clarity",
+      "coffee", "journal", "morning light", "wooden table", 
+      "casual", "refined outfit", "Raymond", "editorial", 
+      "coffee", "morning", "journal", "diary", "cafe", "relax", 
+      "breakfast", "chai", "peace", "subah", "nashta", "read", 
+      "book", "start day", "aesthetic", "work"
+    ]
   },
   {
     id: "flex_template_15",
@@ -4999,6 +5382,18 @@ const flexTemplates: Template[] = [
 }
 ,
     aspectRatio: "3:4",
+    keywords: [
+      "gym", "fitness", "workout", "luxury", "training", "health",
+      "wealth", "rich", "expensive", "lifestyle", "exercise",
+      "muscle", "strength","gym", "fitness", "workout", 
+      "luxury", "training", "health", "wealth", "rich", 
+      "expensive", "lifestyle", "exercise", "muscle", 
+      "strength", "bodybuilding", "personal trainer", 
+      "high-end", "wellness", "active", "fit", "gym", 
+      "fitness", "workout", "luxury", "training","gym", "workout", "fitness", "body", "muscle", "exercise", 
+      "training", "weights", "dumbbells", "dole", "bodybuilder", 
+      "kasrat", "sehat", "fit", "strong", "gym shark"
+    ]
   },
   {
     id: "flex_template_16",
@@ -5199,6 +5594,14 @@ const flexTemplates: Template[] = [
 }
 ,
     aspectRatio: "3:4",
+    keywords: [
+      "fine dining", "luxury", "restaurant", "gourmet", "elegant",
+      "refined", "culinary", "wealth", "rich", "expensive",
+      "lifestyle", "Michelin","fine dining", "luxury", 
+      "restaurant", "gourmet", "elegant", "refined","dinner", "dining", "restaurant", "food", "luxury", "date", 
+      "wine", "eating", "hotel", "party", "khana", "candle light", 
+      "mehenga", "romantic", "chef", "gourmet"
+    ]
   },
   {
     id: "flex_template_17",
@@ -5208,6 +5611,12 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} relaxing or preparing in a high-end suite, elegant interior textures, soft lamp light and silk bedding, refined comfort and subtle cinematic warmth, Raymond-class composition.\nno harsh lighting, no blur, no fake props, no color imbalance.no change in hairstyle , no  background blur, change the hand gestures accordingly . whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "luxury", "hotel", "suite", "elegant", "interior", "silk",
+      "bedding", "refined", "comfort", "cinematic", "hotel", "suite", "room", "luxury", "bed", "rich", "stay", 
+      "vacation", "classy", "kamra", "sona", "sleep", "bedroom", 
+      "5 star", "comfort", "presidential"
+    ]
   },
   {
     id: "flex_template_18",
@@ -5217,6 +5626,13 @@ const flexTemplates: Template[] = [
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} standing beside a red Ferrari in a race track pit wearing a tailored race suit, dynamic composition, crisp sunlight, polished reflections, hyper-realistic fashion-meets-speed vibe, Raymond luxury tone.\nno lens distortion, no cartoon color, no blur, no empty background, no plastic reflections..no  background blur, change the hand gestures accordingly . whole face should be visible .",
     aspectRatio: "3:4",
+    keywords: [
+      "car", "race track", "Ferrari", "luxury", "speed", "fashion",
+      "sunlight", "reflections", "dynamic", "tailored", "race suit",
+      "hyper-realistic", "Raymond", "luxury tone", "pit stop", "motorsport", "ferrari", "race", "car", "track", "fast", "red car", "speed", 
+      "sport", "f1", "laal gadi", "tez", "driver", "helmet", "circuit", 
+      "racing", "formula 1"
+    ]
   },
 ];
 

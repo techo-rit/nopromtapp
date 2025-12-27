@@ -11,9 +11,12 @@ interface HeaderProps {
     onSignIn: () => void;
     onLogout: () => void;
     isLoading?: boolean;
-    // New props for the secondary navigation
     isSecondaryPage?: boolean;
     onBack?: () => void;
+    
+    // NEW SEARCH PROPS
+    searchQuery: string;
+    onSearchChange: (query: string) => void;
 }
 
 const SearchIcon: React.FC = () => (
@@ -43,6 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
     isLoading = false,
     isSecondaryPage = false,
     onBack,
+    searchQuery,      // <--- Destructure
+    onSearchChange,   // <--- Destructure
 }) => {
     const navItems: NavCategory[] = ["Creators", "Try on"];
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -74,7 +79,9 @@ export const Header: React.FC<HeaderProps> = ({
                             <input
                                 ref={mobileSearchRef}
                                 type="text"
-                                placeholder="desire for..."
+                                value={searchQuery} // <--- Controlled Input
+                                onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
+                                placeholder="Search styles, vibes, or hinglish..."
                                 className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] focus:outline-none"
                             />
                         </div>
@@ -110,7 +117,9 @@ export const Header: React.FC<HeaderProps> = ({
                             <input
                                 ref={mobileSearchRef}
                                 type="text"
-                                placeholder="desire for..."
+                                value={searchQuery} // <--- Controlled Input
+                                onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
+                                placeholder="Search styles..."
                                 className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#6b6b6b] focus:outline-none"
                             />
                         </div>
@@ -226,7 +235,9 @@ export const Header: React.FC<HeaderProps> = ({
                                 <input
                                     ref={desktopSearchRef}
                                     type="text"
-                                    placeholder="desire for..."
+                                    value={searchQuery} // <--- Controlled Input
+                                    onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
+                                    placeholder="Search styles, vibes, or hinglish..."
                                     className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#6b6b6b] focus:outline-none"
                                 />
                             </div>
