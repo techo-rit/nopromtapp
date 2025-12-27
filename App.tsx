@@ -13,9 +13,10 @@ import { StackGrid } from "./components/StackGrid";
 import { TemplateGrid } from "./components/TemplateGrid";
 import { TemplateExecution } from "./components/TemplateExecution";
 import { authService } from "./services/authService";
-import type { Stack, Template, User } from "./types";
+import { searchTemplates } from "./utils/searchLogic";
+import type { Stack, Template, User, NavCategory } from "./types";
 import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
-import { searchTemplates } from "./utils/searchLogic"; // <--- IMPORT SEARCH LOGIC
+
 
 // --- Main App Component ---
 
@@ -24,22 +25,24 @@ const HomeRoute = ({
   handleSelectStack, 
   handleSelectTemplate, 
   trendingTemplates,
-  searchQuery,      // <--- Prop for Search
-  searchResults     // <--- Prop for Search
+  searchQuery,
+  searchResults
 }: any) => {
 
   // 1. SEARCH STATE ACTIVE: Show Results Grid
   if (searchQuery.length > 0) {
       return (
-          <div className="w-full max-w-[1440px] mx-auto px-4 pt-6">
+          // FIX: Full height container for the grid
+          <div className="w-full h-full bg-[#0a0a0a]">
               {searchResults.length > 0 ? (
                   <TemplateGrid
                       templates={searchResults}
                       onSelectTemplate={handleSelectTemplate}
                   />
               ) : (
-                  <div className="text-center py-20 text-[#6b6b6b]">
-                      No templates found. Try searching for "wedding", "office", or "party".
+                  <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] px-4">
+                      <p>No templates found.</p>
+                      <p className="text-sm mt-2">Try searching for "wedding", "office", or "party".</p>
                   </div>
               )}
           </div>
@@ -50,7 +53,7 @@ const HomeRoute = ({
   if (activeNav === "Try on") {
     const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
     return (
-      <div className="w-full max-w-[1440px] mx-auto">
+      <div className="w-full h-full bg-[#0a0a0a]">
         <TemplateGrid
           templates={fititTemplates}
           onSelectTemplate={handleSelectTemplate}
@@ -68,7 +71,9 @@ const HomeRoute = ({
     .filter((s): s is Stack => !!s);
 
   return (
-    <>
+    // FIX: This section needs its own scroll container because it's content-heavy
+    // pb-24 ensures the last item isn't hidden behind the BottomNav visuals
+    <div className="w-full h-full overflow-y-auto scrollbar-hide pb-24 bg-[#0a0a0a]">
       <div>
         <TrendingCarousel
           templates={trendingTemplates}
@@ -84,7 +89,7 @@ const HomeRoute = ({
           onSelectStack={handleSelectStack}
         />
       </div>
-    </>
+    </div>
   );
 };
 
@@ -92,8 +97,9 @@ const StackRoute = ({ onSelectTemplate }: { onSelectTemplate: (t: Template) => v
   const { stackId } = useParams();
   const selectedStack = STACKS.find((s) => s.id === stackId);
   if (!selectedStack) return <Navigate to="/" replace />;
+  // FIX: h-full allows TemplateGrid to take available space
   return (
-    <div className="w-full h-screen overflow-hidden bg-[#0a0a0a]">
+    <div className="w-full h-full overflow-hidden bg-[#0a0a0a]">
       <TemplateGrid
         templates={TEMPLATES.filter((t) => t.stackId === selectedStack.id)}
         onSelectTemplate={onSelectTemplate}
@@ -127,9 +133,8 @@ const TemplateRoute = ({
   );
 };
 
-type NavCategory = "Try on" | "Creators";
+// Storage Helpers
 const STORAGE_KEY_NAV = "nopromt_nav";
-
 const safeGetItem = (key: string): string | null => {
   try { return localStorage.getItem(key); } catch { return null; }
 };
@@ -156,16 +161,12 @@ const App: React.FC = () => {
   // --- SEARCH STATE ---
   const [searchQuery, setSearchQuery] = useState("");
 
-  // --- SEARCH LOGIC (Debounced/Memoized) ---
   const searchResults = useMemo(() => {
     return searchTemplates(searchQuery, TEMPLATES);
   }, [searchQuery]);
 
-  // Handle Search Input Change
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    // If user types while inside a specific stack or template page,
-    // automatically bring them to the home page to show results
     if (query.length > 0 && location.pathname !== '/') {
         navigate('/');
     }
@@ -180,7 +181,6 @@ const App: React.FC = () => {
     safeSetItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
-  // --- AUTH FIX START ---
   useEffect(() => {
     let mounted = true;
     authService.getCurrentUser().then((initialUser) => {
@@ -194,7 +194,6 @@ const App: React.FC = () => {
       if (mounted) {
         setUser(updatedUser);
         setIsGlobalLoading(false);
-        console.log("Auth state synced:", updatedUser?.email);
       }
     });
 
@@ -205,7 +204,6 @@ const App: React.FC = () => {
       }
     };
   }, []);
-  // --- AUTH FIX END ---
 
   // Navigation Handlers
   const handleSelectStack = useCallback((stack: Stack) => {
@@ -218,7 +216,7 @@ const App: React.FC = () => {
 
   const handleBack = useCallback(() => {
     if (searchQuery) {
-        setSearchQuery(""); // Clear search if back is pressed
+        setSearchQuery("");
         return;
     }
     if (location.pathname.includes('/template/')) {
@@ -232,7 +230,7 @@ const App: React.FC = () => {
 
   const handleNavClick = useCallback((category: NavCategory) => {
     setActiveNav(category);
-    setSearchQuery(""); // Clear search when switching tabs
+    setSearchQuery("");
     navigate('/');
   }, [navigate]);
 
@@ -291,21 +289,28 @@ const App: React.FC = () => {
 
   const isSecondaryPage = location.pathname !== '/';
 
+  // --- APP SHELL LAYOUT ---
+  // We use 100dvh (Dynamic Viewport Height) to properly handle mobile browser bars.
+  // The layout is a flex column: Header (fixed height) + Main (flexible) + Footer (fixed height).
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#f5f5f5] font-sans selection:bg-[#c9a962] selection:text-[#0a0a0a]">
-      <Header
-        activeNav={activeNav}
-        onNavClick={handleNavClick}
-        user={user}
-        onSignIn={() => setShowAuthModal(true)}
-        onLogout={handleLogout}
-        isLoading={isGlobalLoading}
-        isSecondaryPage={isSecondaryPage}
-        onBack={handleBack}
-        // PASS SEARCH PROPS
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-      />
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
+      
+      {/* 1. Header (Static at top) */}
+      <div className="shrink-0 z-50">
+        <Header
+          activeNav={activeNav}
+          onNavClick={handleNavClick}
+          user={user}
+          onSignIn={() => setShowAuthModal(true)}
+          onLogout={handleLogout}
+          isLoading={isGlobalLoading}
+          isSecondaryPage={isSecondaryPage}
+          onBack={handleBack}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+        />
+      </div>
+
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => {
@@ -319,7 +324,9 @@ const App: React.FC = () => {
         error={authError}
       />
       
-      <main className="pb-[80px] md:pb-0">
+      {/* 2. Main Content (Scrollable Area) */}
+      {/* flex-1 makes it fill all remaining space. overflow-hidden prevents body scroll. */}
+      <main className="flex-1 relative w-full h-full overflow-hidden">
         <Routes>
           <Route 
             path="/" 
@@ -329,7 +336,6 @@ const App: React.FC = () => {
                 handleSelectStack={handleSelectStack}
                 handleSelectTemplate={handleSelectTemplate}
                 trendingTemplates={trendingTemplates}
-                // PASS SEARCH RESULTS TO HOME
                 searchQuery={searchQuery}
                 searchResults={searchResults}
               />
@@ -353,13 +359,16 @@ const App: React.FC = () => {
         </Routes>
       </main>
 
-      <BottomNav
-        activeNav={activeNav}
-        onNavClick={handleNavClick}
-        user={user}
-        onSignIn={() => setShowAuthModal(true)}
-        onLogout={handleLogout}
-      />
+      {/* 3. Bottom Nav (Static at bottom) */}
+      <div className="shrink-0 z-50">
+        <BottomNav
+          activeNav={activeNav}
+          onNavClick={handleNavClick}
+          user={user}
+          onSignIn={() => setShowAuthModal(true)}
+          onLogout={handleLogout}
+        />
+      </div>
     </div>
   );
 };

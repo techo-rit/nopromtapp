@@ -1,3 +1,7 @@
+// types.ts
+
+export type NavCategory = "Try on" | "Creators"; // <--- Add this line
+
 export interface Stack {
   id: string;
   name: string;
@@ -9,7 +13,7 @@ export interface Template {
   name: string;
   stackId: string;
   imageUrl: string;
-  prompt: string | Record<string, any>;  // ← Changed to accept JSON objects
+  prompt: string | Record<string, any>;
   aspectRatio: string;
   keywords?: string[];
 }

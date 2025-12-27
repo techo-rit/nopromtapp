@@ -18,22 +18,19 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
     else cardRefs.current.delete(id);
   }, []);
 
-  // --- INDUSTRY STANDARD FOCUS ENGINE (OPTIMIZED) ---
+  // --- INDUSTRY STANDARD FOCUS ENGINE ---
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     
-    // FIXED: Wrap in requestAnimationFrame for 60fps+ performance
     window.requestAnimationFrame(() => {
         const container = containerRef.current;
-        if (!container) return; // Re-check inside frame
+        if (!container) return;
 
-        // Calculate the precise center line of the visible area
         const containerCenter = container.scrollTop + (container.clientHeight / 2);
 
         let closestId = null;
         let minDiff = Infinity;
 
-        // Find which card's center is closest to the container's center
         cardRefs.current.forEach((el, id) => {
           const cardCenter = el.offsetTop + (el.offsetHeight / 2);
           const diff = Math.abs(containerCenter - cardCenter);
@@ -50,7 +47,6 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
     });
   }, [focusedCardId]);
 
-  // Initial focus check on mount
   useEffect(() => {
     handleScroll();
   }, [templates, handleScroll]);
@@ -62,12 +58,10 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
       className="
         /* CONTAINER LAYOUT */
         w-full 
-        /* FIX: Use 'svh' to lock height to the 'Small Viewport'. 
-           This prevents the layout from jumping when the mobile address bar retracts. */
-        h-[100svh] 
-        /* FIXED: Minimum height for landscape safety */
-        min-h-[600px]
-
+        /* FIX: Changed from 100svh to h-full. 
+           It now fills the flex parent provided by App.tsx */
+        h-full
+        
         /* SCROLL ENGINE */
         overflow-y-scroll 
         snap-y snap-mandatory 
@@ -81,9 +75,11 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
         flex flex-col items-center 
         gap-8 
 
-        /* PADDING - Calculated for perfect centering */
-        /* (100svh - 68svh) / 2 = 16svh padding top/bottom */
-        py-[16svh]
+        /* PADDING FIX: 
+           Reduced from 16svh to 8vh. 
+           This fixes 'starting from a lot lower' and ensures proper centering 
+           within the remaining space under the header. */
+        py-[8vh]
         
         /* HIDE SCROLLBAR */
         scrollbar-hide
@@ -104,14 +100,13 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               snap-always
               shrink-0
 
-              /* LAYOUT & CENTERING FIXES */
-              /* FIX: Added 'mx-auto' to force centering on Desktop if Flexbox fails */
+              /* LAYOUT */
               mx-auto
               relative 
               w-full max-w-[1000px] md:max-w-[1200px] lg:max-w-[1400px]
 
-              /* DIMENSIONS - LOCKED TO SVH */
-              /* 68svh ensures the card size never changes during scroll */
+              /* DIMENSIONS */
+              /* Kept relative to viewport height to ensure consistency across devices */
               h-[68svh] md:h-[500px] lg:h-[550px]
 
               /* VISUAL STYLING */
@@ -132,7 +127,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
                <img 
                  src={template.imageUrl} 
                  alt={template.name} 
-                 decoding="async" // FIXED: Improves performance
+                 decoding="async"
                  className={`
                    w-full h-full object-cover object-[center_30%] 
                    transition-transform duration-[1000ms] ease-out
