@@ -13,8 +13,6 @@ interface HeaderProps {
     isLoading?: boolean;
     isSecondaryPage?: boolean;
     onBack?: () => void;
-    
-    // NEW SEARCH PROPS
     searchQuery: string;
     onSearchChange: (query: string) => void;
 }
@@ -26,6 +24,7 @@ const SearchIcon: React.FC = () => (
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className="shrink-0"
     >
         <circle cx="11" cy="11" r="8" stroke="#6b6b6b" strokeWidth="2" />
         <path
@@ -46,100 +45,83 @@ export const Header: React.FC<HeaderProps> = ({
     isLoading = false,
     isSecondaryPage = false,
     onBack,
-    searchQuery,      // <--- Destructure
-    onSearchChange,   // <--- Destructure
+    searchQuery,
+    onSearchChange,
 }) => {
     const navItems: NavCategory[] = ["Creators", "Try on"];
     const [showUserMenu, setShowUserMenu] = useState(false);
     const mobileSearchRef = useRef<HTMLInputElement>(null);
     const desktopSearchRef = useRef<HTMLInputElement>(null);
 
-    // 1. SECONDARY NAV (Used on Stack/Template pages)
+    // Common Input Styling to fix the "Bold/Big" issue
+    const inputClasses = "flex-1 min-w-0 bg-transparent text-sm md:text-base text-[#f5f5f5] placeholder-[#E4C085]/60 font-normal italic focus:outline-none";
+
+    // 1. SECONDARY NAV
     if (isSecondaryPage) {
         return (
             <header className="sticky top-0 z-50 w-full bg-[#0a0a0a] border-b border-[#2a2a2a] h-[60px]">
-                <div className="w-full h-full max-w-[1440px] mx-auto px-4 flex items-center justify-between gap-3">
-
-                    {/* Left: Back Arrow */}
+                <div className="w-full h-full max-w-[1440px] mx-auto px-4 flex items-center justify-between gap-2">
                     <button 
                         onClick={onBack}
-                        className="p-2 -ml-2 text-[#f5f5f5] hover:text-[#c9a962] transition-colors"
+                        className="p-2 -ml-2 text-[#f5f5f5] hover:text-[#c9a962] transition-colors shrink-0"
                         aria-label="Go back"
                     >
                         <ArrowLeftIcon />
                     </button>
 
-                    {/* Middle: Search Bar (Flex-1 to take available space) */}
-                    <div className="flex-1 max-w-[720px]">
-                        <div
-                            className="flex items-center gap-2 h-[40px] px-4 bg-transparent cursor-text w-full"
-                            onClick={() => mobileSearchRef.current?.focus()}
-                        >
-                            <SearchIcon />
-                            <input
-                                ref={mobileSearchRef}
-                                type="text"
-                                value={searchQuery} // <--- Controlled Input
-                                onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
-                                placeholder="desire for..."
-                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] 
-                  italic focus:outline-none"
-                            />
-                        </div>
+                    <div className="flex-1 max-w-[720px] flex items-center gap-2 h-[40px] px-3 bg-[#1a1a1a]/50 rounded-lg">
+                        <SearchIcon />
+                        <input
+                            ref={mobileSearchRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            placeholder="desire for..."
+                            className={inputClasses}
+                        />
                     </div>
 
-                    {/* Right: 12 days pill (kept for balance, optional) */}
-                    <div className="shrink-0 flex items-center px-4 py-2 bg-transparent border border-[#3a3a3a] rounded-full hidden sm:flex">
-                        <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
-                            12 days
-                        </span>
+                    <div className="shrink-0 hidden sm:flex items-center px-4 py-2 border border-[#3a3a3a] rounded-full">
+                        <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">12 days</span>
                     </div>
                 </div>
             </header>
         );
     }
 
-    // 2. MAIN HEADER (Home Screen: Create / Changing Room)
     return (
         <>
             {/* MOBILE TOP BAR */}
-            <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] z-50">
-                <div className="w-full h-full px-4 flex items-center gap-3">
-                    <span className="text-[#E4C085] text-[17px] font-medium tracking-normal whitespace-nowrap">
+            <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50">
+                <div className="w-full h-full px-4 flex items-center gap-2">
+                    {/* Hidden on very small screens to save space */}
+                    <span className="text-[#E4C085] text-sm font-medium whitespace-nowrap hidden min-[350px]:block">
                         Manifesting
                     </span>
 
-                    <div className="flex-1 min-w-0">
-                        <div
-                            className="flex items-center gap-2 h-[40px] px-4 bg-transparent cursor-text"
-                            onClick={() => mobileSearchRef.current?.focus()}
-                        >
-                            <SearchIcon />
-                            <input
-                                ref={mobileSearchRef}
-                                type="text"
-                                value={searchQuery} // <--- Controlled Input
-                                onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
-                                placeholder="desire for..."
-                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] italic focus:outline-none"
-                            />
-                        </div>
+                    <div className="flex-1 min-w-0 flex items-center gap-2 h-[38px] px-3 bg-[#1a1a1a] rounded-md">
+                        <SearchIcon />
+                        <input
+                            ref={mobileSearchRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            placeholder="desire for..."
+                            className={inputClasses}
+                        />
                     </div>
 
-                    <div className="shrink-0 flex items-center px-4 py-2 bg-transparent border border-[#3a3a3a] rounded-full">
-                        <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
-                            12 days
-                        </span>
+                    <div className="shrink-0 flex items-center px-3 py-1.5 border border-[#3a3a3a] rounded-full">
+                        <span className="text-xs font-medium text-[#f5f5f5] whitespace-nowrap">12d</span>
                     </div>
                 </div>
             </header>
 
             {/* DESKTOP HEADER */}
             <header className="hidden md:block relative w-full bg-[#0a0a0a] z-50">
-                {/* Main Nav Row */}
-                <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-8 h-[80px] flex items-center justify-between">
-                    <div className="flex items-center gap-6 sm:gap-12">
-                        <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5]">
+                <div className="w-full max-w-[1440px] mx-auto px-8 h-[80px] flex items-center justify-between">
+                    <div className="flex items-center gap-12">
+                        <div className="flex items-center gap-2 text-xl font-bold text-[#f5f5f5]">
                             <RemixLogoIcon />
                             <span>nopromt.ai</span>
                         </div>
@@ -148,11 +130,8 @@ export const Header: React.FC<HeaderProps> = ({
                                 <button
                                     key={item}
                                     onClick={() => onNavClick(item)}
-                                    aria-label={`Maps to ${item} page`}
-                                    className={`min-h-[44px] px-5 py-2.5 text-base font-medium rounded-full transition-all duration-200 ease-in-out focus:outline-none ${
-                                        activeNav === item
-                                            ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]"
-                                            : "text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a]"
+                                    className={`min-h-[44px] px-5 py-2.5 text-base font-medium rounded-full transition-all ${
+                                        activeNav === item ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]" : "text-[#a0a0a0] hover:text-[#f5f5f5]"
                                     }`}
                                 >
                                     {item}
@@ -161,56 +140,22 @@ export const Header: React.FC<HeaderProps> = ({
                         </nav>
                     </div>
 
-                    {/* Right side - Auth Button, User Menu */}
                     <div className="flex items-center gap-4">
-                        {isLoading ? (
-                            <div className="flex items-center gap-3 animate-pulse">
-                                <div className="w-8 h-8 bg-[#2a2a2a] rounded-full"></div>
-                                <div className="h-4 w-20 bg-[#2a2a2a] rounded hidden sm:block"></div>
-                            </div>
-                        ) : !user ? (
-                            <button
-                                onClick={onSignIn}
-                                className="min-h-[44px] px-6 py-2.5 bg-[#1a1a1a] text-[#f5f5f5] font-medium rounded-full border border-[#3a3a3a] hover:bg-[#2a2a2a] hover:border-[#c9a962]/30 transition-all duration-200 focus:outline-none"
-                            >
+                        {!user ? (
+                            <button onClick={onSignIn} className="min-h-[44px] px-6 py-2.5 bg-[#1a1a1a] text-[#f5f5f5] rounded-full border border-[#3a3a3a] hover:bg-[#2a2a2a]">
                                 Sign In
                             </button>
                         ) : (
                             <div className="relative">
-                                <button
-                                    onClick={() =>
-                                        setShowUserMenu(!showUserMenu)
-                                    }
-                                    className="min-h-[44px] flex items-center gap-2 px-4 py-2 rounded-full hover:bg-[#1a1a1a] transition-all focus:outline-none"
-                                >
+                                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-[#1a1a1a]">
                                     <div className="w-8 h-8 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm">
-                                        {user?.name?.charAt(0)?.toUpperCase() ||
-                                            "A"}
+                                        {user?.name?.charAt(0)?.toUpperCase()}
                                     </div>
-                                    <span className="text-sm font-medium text-[#a0a0a0] hidden sm:block">
-                                        {user?.name?.split(" ")[0] || "User"}
-                                    </span>
+                                    <span className="text-sm font-medium text-[#a0a0a0] hidden lg:block">{user?.name?.split(" ")[0]}</span>
                                 </button>
-
                                 {showUserMenu && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2 z-50">
-                                        <div className="px-4 py-3 border-b border-[#2a2a2a]">
-                                            <p className="text-sm font-medium text-[#f5f5f5]">
-                                                {user.name}
-                                            </p>
-                                            <p className="text-xs text-[#6b6b6b]">
-                                                {user.email}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                onLogout();
-                                                setShowUserMenu(false);
-                                            }}
-                                            className="w-full min-h-[44px] text-left px-4 py-3 text-sm text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors"
-                                        >
-                                            Log Out
-                                        </button>
+                                    <div className="absolute right-0 mt-2 w-48 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2">
+                                        <button onClick={onLogout} className="w-full text-left px-4 py-3 text-sm text-[#a0a0a0] hover:bg-[#1a1a1a]">Log Out</button>
                                     </div>
                                 )}
                             </div>
@@ -221,33 +166,20 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Manifesting Search Row - Desktop */}
                 <div className="w-full border-t border-[#2a2a2a]">
                     <div className="max-w-[720px] mx-auto h-[56px] flex items-center justify-center gap-5">
-                        <span className="text-[#E4C085] text-base font-medium tracking-wide whitespace-nowrap">
-                            Manifesting
-                        </span>
-
-                        <div className="w-[280px]">
-                            <div
-                                className="flex items-center gap-2 h-[40px] px-4 bg-transparent cursor-text"
-                                onClick={() =>
-                                    desktopSearchRef.current?.focus()
-                                }
-                            >
-                                <SearchIcon />
-                                <input
-                                    ref={desktopSearchRef}
-                                    type="text"
-                                    value={searchQuery} // <--- Controlled Input
-                                    onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
-                                    placeholder="desire for..."
-                                    className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] italic focus:outline-none"
-                                />
-                            </div>
+                        <span className="text-[#E4C085] text-base font-medium">Manifesting</span>
+                        <div className="w-[320px] flex items-center gap-2 h-[40px] px-4 bg-[#1a1a1a] rounded-lg">
+                            <SearchIcon />
+                            <input
+                                ref={desktopSearchRef}
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => onSearchChange(e.target.value)}
+                                placeholder="desire for..."
+                                className={inputClasses}
+                            />
                         </div>
-
-                        <div className="flex items-center px-4 py-2 bg-transparent border border-[#3a3a3a] rounded-full">
-                            <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
-                                12 days
-                            </span>
+                        <div className="flex items-center px-4 py-2 border border-[#3a3a3a] rounded-full">
+                            <span className="text-sm font-medium text-[#f5f5f5]">12 days</span>
                         </div>
                     </div>
                 </div>
