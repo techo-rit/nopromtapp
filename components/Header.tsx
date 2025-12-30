@@ -53,10 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
     const mobileSearchRef = useRef<HTMLInputElement>(null);
     const desktopSearchRef = useRef<HTMLInputElement>(null);
 
-    // UNIFORM TYPOGRAPHY: 
-    // - text-[15px] for everything on mobile (bigger than before).
-    // - font-normal for standard weight.
-    // - leading-none to ensure identical line heights.
+    // TYPOGRAPHY: Uniform text-[15px] and font-normal
     const commonTextClasses = "text-[15px] font-normal leading-none text-[#f5f5f5]";
     const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none`;
 
@@ -72,7 +69,6 @@ export const Header: React.FC<HeaderProps> = ({
                         <ArrowLeftIcon />
                     </button>
 
-                    {/* Centered Search for Secondary Page */}
                     <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 h-[40px] px-2 bg-transparent cursor-text w-[140px]">
                         <SearchIcon />
                         <input
@@ -80,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
                             type="text"
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
+                            placeholder="desired for" 
                             className={`${inputClasses} w-full text-center`}
                         />
                     </div>
@@ -100,13 +96,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="w-full h-full px-3 flex items-center justify-between relative">
                     
                     {/* 1. Left: Manifesting */}
-                    {/* z-10 ensures it stays clickable/visible if overlaps occur */}
                     <span className={`${commonTextClasses} text-[#E4C085] z-10`}>
                         Manifesting
                     </span>
 
                     {/* 2. Middle: Search Bar (ABSOLUTE POSITIONED) */}
-                    {/* This guarantees it is EXACTLY in the middle of the screen */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-1.5 h-[40px] z-0">
                         <SearchIcon />
                         <input
@@ -114,9 +108,9 @@ export const Header: React.FC<HeaderProps> = ({
                             type="text"
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire..."
-                            // Decreased width to 120px to fit in the middle without hitting sides
-                            className={`${inputClasses} w-[80px] min-[350px]:w-[100px] text-center`}
+                            placeholder="desired for"
+                            // Width fixed to fit "desired for" while centered
+                            className={`${inputClasses} w-[100px] text-center`}
                         />
                     </div>
 
@@ -183,7 +177,8 @@ export const Header: React.FC<HeaderProps> = ({
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                placeholder="desire for..."
+                                placeholder="desired for"
+                                // w-[11ch] fits "desired for" exactly (11 characters)
                                 className={`${inputClasses} w-[11ch] text-left`}
                             />
                         </div>
