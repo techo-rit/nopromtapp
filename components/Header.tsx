@@ -81,8 +81,9 @@ export const Header: React.FC<HeaderProps> = ({
                                 type="text"
                                 value={searchQuery} // <--- Controlled Input
                                 onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
-                                placeholder="Search styles, vibes, or hinglish..."
-                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] focus:outline-none"
+                                placeholder="desire for..."
+                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] 
+                  italic focus:outline-none"
                             />
                         </div>
                     </div>
@@ -119,8 +120,8 @@ export const Header: React.FC<HeaderProps> = ({
                                 type="text"
                                 value={searchQuery} // <--- Controlled Input
                                 onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
-                                placeholder="Search styles..."
-                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#6b6b6b] focus:outline-none"
+                                placeholder="desire for..."
+                                className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] italic focus:outline-none"
                             />
                         </div>
                     </div>
@@ -237,8 +238,8 @@ export const Header: React.FC<HeaderProps> = ({
                                     type="text"
                                     value={searchQuery} // <--- Controlled Input
                                     onChange={(e) => onSearchChange(e.target.value)} // <--- Handler
-                                    placeholder="Search styles, vibes, or hinglish..."
-                                    className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#6b6b6b] focus:outline-none"
+                                    placeholder="desire for..."
+                                    className="flex-1 min-w-0 bg-transparent text-sm text-[#f5f5f5] placeholder-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] italic focus:outline-none"
                                 />
                             </div>
                         </div>
