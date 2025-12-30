@@ -24,7 +24,7 @@ const SearchIcon: React.FC = () => (
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="shrink-0"
+        className="shrink-0 cursor-pointer"
     >
         <circle cx="11" cy="11" r="8" stroke="#6b6b6b" strokeWidth="2" />
         <path
@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
                                 <button
                                     key={item}
                                     onClick={() => onNavClick(item)}
-                                    className={`min-h-[44px] px-5 py-2.5 text-base font-medium rounded-full transition-all ${
+                                    className={`min-h-[44px] px-5 py-2.5 cursor-pointer text-base font-medium rounded-full transition-all ${
                                         activeNav === item ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]" : "text-[#a0a0a0] hover:text-[#f5f5f5]"
                                     }`}
                                 >
