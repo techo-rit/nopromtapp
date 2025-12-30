@@ -55,7 +55,11 @@ export const Header: React.FC<HeaderProps> = ({
 
     // TYPOGRAPHY: Uniform text-[15px] and font-normal
     const commonTextClasses = "text-[15px] font-normal leading-none text-[#f5f5f5]";
-    const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none`;
+    
+    // INPUT STYLING:
+    // - text-left: Ensures text starts right next to the icon
+    // - w-[11ch]: "desired for" is 11 chars. This sets width exactly to text length.
+    const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none w-[11ch] text-left`;
 
     // 1. SECONDARY NAV
     if (isSecondaryPage) {
@@ -69,15 +73,15 @@ export const Header: React.FC<HeaderProps> = ({
                         <ArrowLeftIcon />
                     </button>
 
-                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 h-[40px] px-2 bg-transparent cursor-text w-[140px]">
+                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 h-[40px] px-2 bg-transparent cursor-text">
                         <SearchIcon />
                         <input
                             ref={mobileSearchRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desired for" 
-                            className={`${inputClasses} w-full text-center`}
+                            placeholder="desire for..." 
+                            className={inputClasses}
                         />
                     </div>
 
@@ -91,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
 
     return (
         <>
-            {/* MOBILE TOP BAR - STRICT CENTER ALIGNMENT */}
+            {/* MOBILE TOP BAR */}
             <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50 overflow-hidden">
                 <div className="w-full h-full px-3 flex items-center justify-between relative">
                     
@@ -101,16 +105,16 @@ export const Header: React.FC<HeaderProps> = ({
                     </span>
 
                     {/* 2. Middle: Search Bar (ABSOLUTE POSITIONED) */}
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-1.5 h-[40px] z-0">
+                    {/* gap-1 (4px) ensures icon is visibly attached to the text */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-1 h-[40px] z-0">
                         <SearchIcon />
                         <input
                             ref={mobileSearchRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desired for"
-                            // Width fixed to fit "desired for" while centered
-                            className={`${inputClasses} w-[100px] text-center`}
+                            placeholder="desire for..."
+                            className={inputClasses}
                         />
                     </div>
 
@@ -170,16 +174,16 @@ export const Header: React.FC<HeaderProps> = ({
                         <span className="text-[#E4C085] text-base font-medium whitespace-nowrap">
                             Manifesting
                         </span>
-                        <div className="flex items-center gap-2 h-[40px] px-2 bg-transparent">
+                        {/* Desktop Search: Icon attached with gap-1 and text-left */}
+                        <div className="flex items-center gap-1 h-[40px] px-2 bg-transparent">
                             <SearchIcon />
                             <input
                                 ref={desktopSearchRef}
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                placeholder="desired for"
-                                // w-[11ch] fits "desired for" exactly (11 characters)
-                                className={`${inputClasses} w-[11ch] text-left`}
+                                placeholder="desire for..."
+                                className={inputClasses}
                             />
                         </div>
                         <div className="shrink-0 flex items-center px-4 py-2 border border-[#3a3a3a] rounded-full">
