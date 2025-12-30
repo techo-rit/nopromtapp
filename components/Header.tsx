@@ -53,9 +53,10 @@ export const Header: React.FC<HeaderProps> = ({
     const mobileSearchRef = useRef<HTMLInputElement>(null);
     const desktopSearchRef = useRef<HTMLInputElement>(null);
 
-    // FIX: Standardized typography to prevent "bold/big" look
-    // Removed the large text classes and ensured font-normal
-    const inputClasses = "flex-1 min-w-0 bg-transparent text-[15px] md:text-base text-[#f5f5f5] placeholder-[#E4C085] font-normal italic focus:outline-none py-1";
+    // FIX: Typography Refinement
+    // Changed to 'font-light' for industry standard sleekness
+    // Added opacity to placeholder color for subtlety
+    const inputClasses = "bg-transparent text-[15px] md:text-base text-[#f5f5f5] placeholder-[#E4C085]/70 font-light italic focus:outline-none py-1";
 
     // 1. SECONDARY NAV
     if (isSecondaryPage) {
@@ -77,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             placeholder="desire for..."
-                            className={inputClasses}
+                            className={`${inputClasses} flex-1 min-w-0`}
                         />
                     </div>
 
@@ -94,11 +95,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* MOBILE TOP BAR - Optimized for 325px */}
             <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50">
                 <div className="w-full h-full px-2 flex items-center justify-between gap-1.5">
-                    {/* Keep text, but slightly smaller on ultra-mobile to fit */}
+                    
+                    {/* 1. Manifesting Text: Kept visible, small font for fit */}
                     <span className="text-[#E4C085] text-[13px] min-[375px]:text-[15px] font-medium tracking-tight whitespace-nowrap shrink-0">
                         Manifesting
                     </span>
 
+                    {/* 2. Search Bar: Flexible width */}
                     <div className="flex-1 min-w-0 flex items-center gap-1.5 h-[40px] px-1 bg-transparent cursor-text">
                         <SearchIcon />
                         <input
@@ -107,10 +110,11 @@ export const Header: React.FC<HeaderProps> = ({
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             placeholder="desire for..."
-                            className={inputClasses}
+                            className={`${inputClasses} flex-1 min-w-0`}
                         />
                     </div>
 
+                    {/* 3. Pill: Kept visible */}
                     <div className="shrink-0 flex items-center px-2 py-1 bg-transparent border border-[#3a3a3a] rounded-full">
                         <span className="text-[11px] font-medium text-[#f5f5f5] whitespace-nowrap">
                             12 days
@@ -162,11 +166,15 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Manifesting Search Row - Desktop */}
                 <div className="w-full border-t border-[#2a2a2a]">
-                    <div className="max-w-[720px] mx-auto h-[56px] flex items-center justify-center gap-5">
+                    {/* FIX: Equal spacing using 'gap-8' and 'justify-center' */}
+                    <div className="max-w-[720px] mx-auto h-[56px] flex items-center justify-center gap-8">
+                        
                         <span className="text-[#E4C085] text-base font-medium whitespace-nowrap">
                             Manifesting
                         </span>
-                        <div className="w-[300px] flex items-center gap-2 h-[40px] px-2 bg-transparent">
+
+                        {/* FIX: "Perfect Width" Logic using 'w-[11ch]' */}
+                        <div className="flex items-center gap-2 h-[40px] px-2 bg-transparent">
                             <SearchIcon />
                             <input
                                 ref={desktopSearchRef}
@@ -174,9 +182,11 @@ export const Header: React.FC<HeaderProps> = ({
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
                                 placeholder="desire for..."
-                                className={inputClasses}
+                                // 'w-[11ch]' forces the input to be exactly the width of ~11 characters
+                                className={`${inputClasses} w-[11ch]`}
                             />
                         </div>
+
                         <div className="shrink-0 flex items-center px-4 py-2 border border-[#3a3a3a] rounded-full">
                             <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">12 days</span>
                         </div>
