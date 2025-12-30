@@ -53,16 +53,18 @@ export const Header: React.FC<HeaderProps> = ({
     const mobileSearchRef = useRef<HTMLInputElement>(null);
     const desktopSearchRef = useRef<HTMLInputElement>(null);
 
-    // FIX: Typography Refinement
-    // Changed to 'font-light' for industry standard sleekness
-    // Added opacity to placeholder color for subtlety
-    const inputClasses = "bg-transparent text-[15px] md:text-base text-[#f5f5f5] placeholder-[#E4C085]/70 font-light italic focus:outline-none py-1";
+    // UNIFORM TYPOGRAPHY: 
+    // - text-[15px] for everything on mobile (bigger than before).
+    // - font-normal for standard weight.
+    // - leading-none to ensure identical line heights.
+    const commonTextClasses = "text-[15px] font-normal leading-none text-[#f5f5f5]";
+    const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none`;
 
     // 1. SECONDARY NAV
     if (isSecondaryPage) {
         return (
             <header className="sticky top-0 z-50 w-full bg-[#0a0a0a] border-b border-[#2a2a2a] h-[60px]">
-                <div className="w-full h-full max-w-[1440px] mx-auto px-3 flex items-center justify-between gap-1">
+                <div className="w-full h-full max-w-[1440px] mx-auto px-3 flex items-center justify-between">
                     <button 
                         onClick={onBack}
                         className="p-2 -ml-1 text-[#f5f5f5] hover:text-[#c9a962] transition-colors shrink-0"
@@ -70,7 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
                         <ArrowLeftIcon />
                     </button>
 
-                    <div className="flex-1 max-w-[720px] flex items-center gap-2 h-[40px] px-2 bg-transparent cursor-text">
+                    {/* Centered Search for Secondary Page */}
+                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 h-[40px] px-2 bg-transparent cursor-text w-[140px]">
                         <SearchIcon />
                         <input
                             ref={mobileSearchRef}
@@ -78,12 +81,12 @@ export const Header: React.FC<HeaderProps> = ({
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             placeholder="desire for..."
-                            className={`${inputClasses} flex-1 min-w-0`}
+                            className={`${inputClasses} w-full text-center`}
                         />
                     </div>
 
-                    <div className="shrink-0 flex items-center px-3 py-1.5 border border-[#3a3a3a] rounded-full sm:px-4 sm:py-2">
-                        <span className="text-[11px] sm:text-sm font-medium text-[#f5f5f5] whitespace-nowrap">12 days</span>
+                    <div className="shrink-0 flex items-center px-3 py-1.5 border border-[#3a3a3a] rounded-full">
+                        <span className={commonTextClasses}>12 days</span>
                     </div>
                 </div>
             </header>
@@ -92,31 +95,34 @@ export const Header: React.FC<HeaderProps> = ({
 
     return (
         <>
-            {/* MOBILE TOP BAR - Optimized for 325px */}
-            <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50">
-                <div className="w-full h-full px-2 flex items-center justify-between gap-1.5">
+            {/* MOBILE TOP BAR - STRICT CENTER ALIGNMENT */}
+            <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50 overflow-hidden">
+                <div className="w-full h-full px-3 flex items-center justify-between relative">
                     
-                    {/* 1. Manifesting Text: Kept visible, small font for fit */}
-                    <span className="text-[#E4C085] text-[13px] min-[375px]:text-[15px] font-medium tracking-tight whitespace-nowrap shrink-0">
+                    {/* 1. Left: Manifesting */}
+                    {/* z-10 ensures it stays clickable/visible if overlaps occur */}
+                    <span className={`${commonTextClasses} text-[#E4C085] z-10`}>
                         Manifesting
                     </span>
 
-                    {/* 2. Search Bar: Flexible width */}
-                    <div className="flex-1 min-w-0 flex items-center gap-1.5 h-[40px] px-1 bg-transparent cursor-text">
+                    {/* 2. Middle: Search Bar (ABSOLUTE POSITIONED) */}
+                    {/* This guarantees it is EXACTLY in the middle of the screen */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-1.5 h-[40px] z-0">
                         <SearchIcon />
                         <input
                             ref={mobileSearchRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
-                            className={`${inputClasses} flex-1 min-w-0`}
+                            placeholder="desire..."
+                            // Decreased width to 120px to fit in the middle without hitting sides
+                            className={`${inputClasses} w-[80px] min-[350px]:w-[100px] text-center`}
                         />
                     </div>
 
-                    {/* 3. Pill: Kept visible */}
-                    <div className="shrink-0 flex items-center px-2 py-1 bg-transparent border border-[#3a3a3a] rounded-full">
-                        <span className="text-[11px] font-medium text-[#f5f5f5] whitespace-nowrap">
+                    {/* 3. Right: 12 days Pill */}
+                    <div className="shrink-0 flex items-center px-3 py-1.5 bg-transparent border border-[#3a3a3a] rounded-full z-10">
+                        <span className={commonTextClasses}>
                             12 days
                         </span>
                     </div>
@@ -166,14 +172,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Manifesting Search Row - Desktop */}
                 <div className="w-full border-t border-[#2a2a2a]">
-                    {/* FIX: Equal spacing using 'gap-8' and 'justify-center' */}
                     <div className="max-w-[720px] mx-auto h-[56px] flex items-center justify-center gap-8">
-                        
                         <span className="text-[#E4C085] text-base font-medium whitespace-nowrap">
                             Manifesting
                         </span>
-
-                        {/* FIX: "Perfect Width" Logic using 'w-[11ch]' */}
                         <div className="flex items-center gap-2 h-[40px] px-2 bg-transparent">
                             <SearchIcon />
                             <input
@@ -182,11 +184,9 @@ export const Header: React.FC<HeaderProps> = ({
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
                                 placeholder="desire for..."
-                                // 'w-[11ch]' forces the input to be exactly the width of ~11 characters
-                                className={`${inputClasses} w-[11ch]`}
+                                className={`${inputClasses} w-[11ch] text-left`}
                             />
                         </div>
-
                         <div className="shrink-0 flex items-center px-4 py-2 border border-[#3a3a3a] rounded-full">
                             <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">12 days</span>
                         </div>
