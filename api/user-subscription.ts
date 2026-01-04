@@ -3,6 +3,7 @@
  * GET /api/user-subscription
  * 
  * Returns the current user's subscription and credits info.
+ * SECURITY: Now requires authentication - user can only access their own data.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -25,18 +26,30 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Get user ID from query params
-    const userId = req.query.userId;
-
-    if (!userId) {
-      return res.status(400).json({ 
+    // SECURITY: Verify authentication
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ 
         success: false, 
-        error: 'Missing userId parameter' 
+        error: 'Unauthorized - missing auth token' 
       });
     }
 
-    // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify the JWT and get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized - invalid session' 
+      });
+    }
+
+    // SECURITY: User can only access their own data
+    const userId = user.id;
 
     // Get user profile with credits
     const { data: profile, error: profileError } = await supabase

@@ -1,8 +1,10 @@
 // services/geminiService.ts
 // Backwards-compatible client wrapper.
 // Exports two functions:
-//  - generateRemixOnServer(imageFile, templateId, templateOptions)
-//  - generateImage(template, selfieFile, wearableFile?)  <-- this preserves your old UI calls
+//  - generateRemixOnServer(imageFile, templateId, templateOptions, wearableFile, accessToken)
+//  - generateImage(template, selfieFile, wearableFile?, accessToken?)  <-- this preserves your old UI calls
+
+import { supabase } from '../lib/supabase';
 
 async function fileToDataUrl(file: File | null) {
   if (!file) return null;
@@ -12,6 +14,14 @@ async function fileToDataUrl(file: File | null) {
     reader.onerror = () => reject(new Error('Failed reading image'));
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Get the current session's access token for API authentication
+ */
+async function getAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
 }
 
 /**
@@ -30,6 +40,12 @@ export async function generateRemixOnServer(
   const imageData = await fileToDataUrl(imageFile);
   const wearableData = await fileToDataUrl(wearableFile ?? null);
 
+  // Get auth token for authenticated API call
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    throw new Error('Not authenticated - please log in');
+  }
+
   const payload = {
     imageData,
     wearableData,
@@ -39,7 +55,10 @@ export async function generateRemixOnServer(
 
   const resp = await fetch('/api/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`
+    },
     body: JSON.stringify(payload),
   });
 

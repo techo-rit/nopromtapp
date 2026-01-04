@@ -1,5 +1,60 @@
 // api/generate.ts
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
+
+// Helper to verify user authentication and check credits
+async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { error: string; status: number }> {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader?.startsWith('Bearer ')) {
+        return { error: 'Unauthorized - missing auth token', status: 401 };
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { error: 'Server misconfiguration: database not configured', status: 500 };
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace('Bearer ', '');
+
+    // Verify the JWT token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+        return { error: 'Unauthorized - invalid session', status: 401 };
+    }
+
+    // Check user has credits
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+
+    if (profileError || !profile) {
+        return { error: 'User profile not found', status: 404 };
+    }
+
+    if (profile.credits < 1) {
+        return { error: 'Insufficient credits', status: 403 };
+    }
+
+    // Deduct credit before generation
+    const { error: deductError } = await supabase.rpc('deduct_credits', {
+        p_user_id: user.id,
+        p_amount: 1
+    });
+
+    if (deductError) {
+        console.error('Credit deduction failed:', deductError);
+        return { error: 'Failed to deduct credits', status: 500 };
+    }
+
+    return { userId: user.id };
+}
 
 export default async function handler(req: any, res: any) {
     const AI_MODEL = 'gemini-2.5-flash-image';
@@ -9,6 +64,14 @@ export default async function handler(req: any, res: any) {
             res.status(405).json({ error: 'Method not allowed' });
             return;
         }
+
+        // SECURITY: Verify authentication and deduct credits BEFORE processing
+        const authResult = await verifyAuthAndCredits(req);
+        if ('error' in authResult) {
+            res.status(authResult.status).json({ error: authResult.error });
+            return;
+        }
+        // authResult.userId is now available for logging if needed
 
         const body = req.body || {};
         const { imageData, wearableData, templateId, templateOptions } = body;

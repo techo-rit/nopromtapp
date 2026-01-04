@@ -114,11 +114,148 @@ VITE_SUPABASE_ANON_KEY=your_anon_key
 ## Key Files Reference
 
 - [App.tsx](App.tsx) - Root component, routing, auth state
-- [constants.ts](constants.ts) - All templates/stacks (5800+ lines)
+- [constants.ts](constants.ts) - All templates/stacks/pricing (5800+ lines)
 - [api/generate.ts](api/generate.ts) - Serverless function for AI generation
+- [api/create-order.ts](api/create-order.ts) - Razorpay order creation
+- [api/verify-payment.ts](api/verify-payment.ts) - Payment verification & credit update
+- [api/webhook.ts](api/webhook.ts) - Razorpay webhook handler
 - [services/geminiService.ts](services/geminiService.ts) - Client wrapper for API calls
+- [services/paymentService.ts](services/paymentService.ts) - Payment flow orchestration
 - [types.ts](types.ts) - Core TypeScript interfaces
 - [components/TemplateExecution.tsx](components/TemplateExecution.tsx) - Main execution view with upload + generation logic
+- [lib/supabase.ts](lib/supabase.ts) - Supabase client configuration
+
+## API Endpoints Structure
+
+All API routes are Vercel serverless functions in `api/` directory:
+
+**`/api/generate` (POST)**:
+- Input: `{ imageData, wearableData?, templateId, templateOptions }`
+- Converts data URLs → base64 inline data for Gemini API
+- Returns: `{ success, imageUrl }` or `{ error }`
+- Model: `gemini-2.5-flash-image`
+
+**`/api/create-order` (POST)**:
+- Input: `{ planId, userId, userEmail, userName? }`
+- Validates plan, checks rate limits, creates Razorpay order
+- Returns: `{ orderId, amount, currency, keyId, prefill }`
+
+**`/api/verify-payment` (POST)**:
+- Input: `{ razorpayOrderId, razorpayPaymentId, razorpaySignature, userId }`
+- Verifies signature, updates credits in Supabase
+- Returns: `{ success, creditsAdded, subscriptionId }`
+
+**`/api/webhook` (POST)**:
+- Razorpay webhook for async payment events
+- Validates signature, handles `payment.captured` events
+- Idempotency protected via `idempotency_keys` table
+
+**`/api/user-subscription` (GET)**:
+- Query param: `userId`
+- Returns user subscription history and current credits
+
+## Credit System
+
+**Credit Deduction Flow**:
+1. Check user credits before generation (client-side guard in TemplateExecution)
+2. Call `/api/generate` (no credit deduction on server - handled separately)
+3. After successful generation, deduct 1 credit via Supabase RPC
+4. Update local user state to reflect new balance
+
+**Database Functions** (in migration `001_payment_schema.sql`):
+- `add_credits(user_id, amount)` - Adds credits to profile
+- `deduct_credits(user_id, amount)` - Removes credits (with balance check)
+- RLS policies ensure users can only modify their own credits
+
+**Pricing Plans** (constants.ts):
+```typescript
+essentials: { price: 12900, credits: 20 }  // ₹129
+ultimate: { price: 74900, credits: 135 }   // ₹749
+```
+
+## Error Handling Patterns
+
+**API Routes**:
+- Always return JSON with `{ success: boolean, error?: string }`
+- Use try-catch and log errors to console
+- Return appropriate HTTP status codes (400, 401, 405, 500)
+
+**Client Components**:
+- Toast notifications for user-facing errors (not implemented - use alerts)
+- Loading states prevent double-submissions
+- Auth checks before expensive operations
+
+**Payment-Specific**:
+- Idempotency keys prevent duplicate charges
+- Webhook signature verification prevents spoofing
+- Rate limiting prevents abuse
+
+## Payment System (Razorpay Integration)
+
+**Architecture**: Client initiates → Server creates order → Razorpay checkout → Webhook verification → Credit update
+
+**Payment Flow**:
+1. User selects plan from [components/PaymentModal.tsx](components/PaymentModal.tsx) → `PRICING_PLANS` from constants
+2. Client calls `/api/create-order` → Creates Razorpay order with idempotency check
+3. Razorpay checkout modal (loaded via [services/paymentService.ts](services/paymentService.ts))
+4. After payment → `/api/verify-payment` verifies signature & updates credits
+5. Webhook `/api/webhook` handles async payment confirmations
+
+**Database Schema** (Supabase):
+- `profiles.credits` - User credit balance
+- `subscriptions` - Payment records (with Razorpay IDs)
+- `payment_logs` - Audit trail
+- `idempotency_keys` - Prevents duplicate charges
+
+**Key Implementation Details**:
+- Rate limiting: 10 orders/minute per user (in-memory, use Redis for production)
+- Signature verification: HMAC-SHA256 with `RAZORPAY_KEY_SECRET`
+- Script loading: Preload Razorpay SDK when modal opens (`loadRazorpayScript()`)
+- Environment: Test mode (`rzp_test_*`) vs Live mode (`rzp_live_*`)
+
+See [PAYMENT_SETUP_GUIDE.md](PAYMENT_SETUP_GUIDE.md) for complete setup instructions.
+
+## MediaPipe Face Detection
+
+**Smart Selfie Feature** in [components/SmartSelfieModal.tsx](components/SmartSelfieModal.tsx):
+- Real-time face alignment guidance using MediaPipe BlazeFace model
+- Validates: face size (15-65% of frame), centering, yaw/pitch/roll angles
+- Status states: `NO_FACE`, `TOO_CLOSE`, `TOO_FAR`, `TILTED`, `TURN_LEFT`, `TURN_RIGHT`, `HOLD_STILL`
+- Auto-capture after 900ms of perfect alignment (`HOLD_DURATION_MS`)
+- GPU-accelerated detection via WebAssembly (loads from CDN)
+
+**Configuration constants** (tuning thresholds):
+- `FACE_WIDTH_MIN/MAX`: Size bounds (0.15-0.65)
+- `TILT_TOLERANCE_DEG`: Roll angle limit (15°)
+- `PITCH_TOLERANCE`: Vertical head tilt limit (0.08 ≈ 7-8°)
+- `YAW_TOLERANCE`: Horizontal turn limit (0.25)
+
+## Deployment & Environment
+
+**Vercel Configuration** ([vercel.json](vercel.json)):
+- API routes: `/api/*` → Serverless functions in `api/` directory
+- SPA fallback: All other routes → `index.html` (React Router handles client-side routing)
+- Automatically deploys from `main` branch
+
+**Required Environment Variables**:
+```bash
+# Client-side (VITE_ prefix)
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGci...
+
+# Server-side (API routes only)
+GEMINI_API_KEY=AIzaSy...
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...  # Bypasses RLS
+RAZORPAY_KEY_ID=rzp_test_xxx
+RAZORPAY_KEY_SECRET=xxx
+RAZORPAY_WEBHOOK_SECRET=whsec_xxx
+```
+
+**Build Process**:
+- `npm run dev` → Vite dev server on `localhost:5173` with HMR
+- `npm run build` → Production build to `dist/` (Vercel auto-builds)
+- `npm run preview` → Preview production build locally
 
 ## Common Pitfalls
 
@@ -127,3 +264,6 @@ VITE_SUPABASE_ANON_KEY=your_anon_key
 3. **Don't call Gemini from client** - always go through `/api/generate` endpoint
 4. **Don't forget auth checks** - block generation/uploads if `!user`
 5. **Mobile testing required** - paste, camera, and touch interactions behave differently on mobile
+6. **Don't expose service role key** - only use in API routes, never in client components
+7. **Razorpay signature verification** - always verify payment signatures server-side before crediting
+8. **MediaPipe initialization** - detector must be ready (`isDetectorReady`) before processing frames
