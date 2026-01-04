@@ -8,6 +8,7 @@ import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "re
 import { Header } from "./components/Header";
 import { BottomNav } from "./components/BottomNav";
 import { AuthModal } from "./components/AuthModal";
+import { PaymentModal } from "./components/PaymentModal";
 import { TrendingCarousel } from "./components/TrendingCarousel";
 import { StackGrid } from "./components/StackGrid";
 import { TemplateGrid } from "./components/TemplateGrid";
@@ -155,6 +156,7 @@ const App: React.FC = () => {
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -238,6 +240,25 @@ const App: React.FC = () => {
     if (!user) setShowAuthModal(true);
   }, [user]);
 
+  // Payment Modal Handler
+  const handleUpgrade = useCallback(() => {
+    if (!user) {
+      // Open auth modal first, then payment after login
+      setShowAuthModal(true);
+    } else {
+      setShowPaymentModal(true);
+    }
+  }, [user]);
+
+  // Handle payment success - refresh user credits
+  const handlePaymentSuccess = useCallback(async (creditsAdded: number) => {
+    // Refresh user data to get updated credits
+    const updatedUser = await authService.getCurrentUser();
+    if (updatedUser) {
+      setUser(updatedUser);
+    }
+  }, []);
+
   // Auth Handlers
   const handleSignUp = async (email: string, password: string, name: string) => {
     setAuthLoading(true);
@@ -303,6 +324,7 @@ const App: React.FC = () => {
           user={user}
           onSignIn={() => setShowAuthModal(true)}
           onLogout={handleLogout}
+          onUpgrade={handleUpgrade}
           isLoading={isGlobalLoading}
           isSecondaryPage={isSecondaryPage}
           onBack={handleBack}
@@ -323,6 +345,16 @@ const App: React.FC = () => {
         isLoading={authLoading}
         error={authError}
       />
+
+      {/* Payment Modal */}
+      {user && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          user={user}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
       
       {/* 2. Main Content (Scrollable Area) */}
       {/* flex-1 makes it fill all remaining space. overflow-hidden prevents body scroll. */}

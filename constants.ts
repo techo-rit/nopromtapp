@@ -1,4 +1,44 @@
-import type { Stack, Template } from "./types";
+import type { Stack, Template, PricingPlan } from "./types";
+
+// ==========================================
+// PRICING PLANS
+// ==========================================
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "essentials",
+    name: "Essentials",
+    description: "Perfect for getting started",
+    price: 12900, // ₹129 in paise
+    displayPrice: "₹129",
+    currency: "INR",
+    credits: 20,
+    features: [
+      "20 creations per month",
+      "100% refund of unused creations anytime",
+      "Be a part of the Innercircle to manifest",
+      "Standard support",
+    ],
+    isPopular: false,
+  },
+  {
+    id: "ultimate",
+    name: "Ultimate",
+    description: "For power users",
+    price: 74900, // ₹749 in paise
+    displayPrice: "₹749",
+    currency: "INR",
+    credits: 135,
+    features: [
+      "135 creations per month",
+      "100% refund of unused creations anytime",
+      "Be a part of the Innercircle to manifest",
+      "24/7 priority support",
+      "Early access to premium features",
+    ],
+    isPopular: true,
+    badge: "Premium",
+  },
+];
 
 export const TRENDING_TEMPLATE_IDS: string[] = [
   "flex_template_5", // Private Jet Lifestyle

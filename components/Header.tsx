@@ -10,6 +10,7 @@ interface HeaderProps {
     user: User | null;
     onSignIn: () => void;
     onLogout: () => void;
+    onUpgrade?: () => void;
     isLoading?: boolean;
     isSecondaryPage?: boolean;
     onBack?: () => void;
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
     user,
     onSignIn,
     onLogout,
+    onUpgrade,
     isLoading = false,
     isSecondaryPage = false,
     onBack,
@@ -85,9 +87,17 @@ export const Header: React.FC<HeaderProps> = ({
                         />
                     </div>
 
-                    <div className="shrink-0 flex items-center px-3 py-1.5 border border-[#3a3a3a] rounded-full">
-                        <span className={commonTextClasses}>12 days</span>
-                    </div>
+                    <button 
+                        onClick={onUpgrade}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95"
+                    >
+                        <svg className="w-3.5 h-3.5 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <span className={commonTextClasses}>
+                            {user ? `${user.credits || 0}` : '0'} <span className="text-[#6b6b6b]">credits</span>
+                        </span>
+                    </button>
                 </div>
             </header>
         );
@@ -118,12 +128,18 @@ export const Header: React.FC<HeaderProps> = ({
                         />
                     </div>
 
-                    {/* 3. Right: 12 days Pill */}
-                    <div className="shrink-0 flex items-center px-3 py-1.5 bg-transparent border border-[#3a3a3a] rounded-full z-10">
+                    {/* 3. Right: Credits Pill - Clickable for Upgrade */}
+                    <button 
+                        onClick={onUpgrade}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-transparent border border-[#3a3a3a] rounded-full z-10 hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95"
+                    >
+                        <svg className="w-3.5 h-3.5 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
                         <span className={commonTextClasses}>
-                            12 days
+                            {user ? `${user.credits || 0}` : '0'} <span className="text-[#6b6b6b]">credits</span>
                         </span>
-                    </div>
+                    </button>
                 </div>
             </header>
 
@@ -186,9 +202,17 @@ export const Header: React.FC<HeaderProps> = ({
                                 className={inputClasses}
                             />
                         </div>
-                        <div className="shrink-0 flex items-center px-4 py-2 border border-[#3a3a3a] rounded-full">
-                            <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">12 days</span>
-                        </div>
+                        <button 
+                            onClick={onUpgrade}
+                            className="shrink-0 flex items-center gap-2 px-4 py-2 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95"
+                        >
+                            <svg className="w-4 h-4 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
+                                {user ? `${user.credits || 0}` : '0'} credits
+                            </span>
+                        </button>
                     </div>
                 </div>
             </header>

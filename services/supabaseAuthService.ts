@@ -107,11 +107,12 @@ export const supabaseAuthService = {
 
   async _getUserProfile(supabaseUser: any): Promise<User> {
       let profileName = null;
+      let profileCredits = 0;
       try {
-        // Fast fetch with timeout
+        // Fast fetch with timeout - now also fetching credits
         const profilePromise = supabase
           .from('profiles')
-          .select('full_name')
+          .select('full_name, credits')
           .eq('id', supabaseUser.id)
           .single();
         
@@ -121,19 +122,20 @@ export const supabaseAuthService = {
         
         const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
         profileName = profile?.full_name;
+        profileCredits = profile?.credits || 0;
       } catch (e) {
         // Fallback silently if profile fetch fails
       }
 
-      return this._mapUser(supabaseUser, profileName);
+      return this._mapUser(supabaseUser, profileName, profileCredits);
   },
 
-  _mapUser(supabaseUser: any, profileName?: string | null): User {
+  _mapUser(supabaseUser: any, profileName?: string | null, profileCredits?: number): User {
       return {
         id: supabaseUser.id,
         email: supabaseUser.email!,
         name: profileName || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
-        credits: 0, 
+        credits: profileCredits || 0, 
         createdAt: new Date(supabaseUser.created_at),
         lastLogin: new Date(),
       }
