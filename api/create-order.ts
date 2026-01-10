@@ -6,13 +6,8 @@
  * Requires authenticated user.
  */
 
-// @ts-ignore - Razorpay uses CommonJS, handle both default and named exports
-import RazorpayModule from 'razorpay';
 import { createClient } from '@supabase/supabase-js';
 import { getOrderRateLimiter, checkRateLimit } from '../lib/ratelimit';
-
-// Handle ESM/CommonJS interop
-const Razorpay = (RazorpayModule as any).default || RazorpayModule;
 
 // Pricing plans (must match constants.ts)
 const PLANS: Record<string, { name: string; price: number; credits: number; currency: string }> = {
@@ -124,11 +119,42 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Initialize Razorpay
-    const razorpay = new Razorpay({
-      key_id: razorpayKeyId,
-      key_secret: razorpayKeySecret,
-    });
+    // Dynamic import to handle CommonJS/ESM interop - runs at request time, not module-load time
+    let Razorpay: any;
+    try {
+      const RazorpayModule = await import('razorpay') as any;
+      Razorpay = RazorpayModule.default ?? RazorpayModule;
+    } catch (importError: any) {
+      console.error('Failed to import Razorpay SDK:', importError);
+      return res.status(500).json({
+        success: false,
+        error: 'Payment service temporarily unavailable',
+      });
+    }
+
+    // Initialize Razorpay with try/catch to handle malformed credentials
+    let razorpay: any;
+    try {
+      razorpay = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret,
+      });
+    } catch (initError: any) {
+      console.error('Razorpay initialization failed:', initError);
+      return res.status(500).json({
+        success: false,
+        error: 'Payment service configuration error',
+      });
+    }
+
+    // Defensive null check before using SDK
+    if (!razorpay || typeof razorpay.orders?.create !== 'function') {
+      console.error('Razorpay SDK not properly initialized');
+      return res.status(500).json({
+        success: false,
+        error: 'Payment service unavailable',
+      });
+    }
 
     // Create unique receipt ID
     const receipt = `rcpt_${userId.substring(0, 8)}_${Date.now()}`;
@@ -146,7 +172,24 @@ export default async function handler(req: any, res: any) {
       },
     };
 
-    const order = await razorpay.orders.create(orderOptions);
+    let order: any;
+    try {
+      order = await razorpay.orders.create(orderOptions);
+    } catch (razorpayError: any) {
+      console.error('Razorpay API error:', razorpayError);
+      return res.status(500).json({
+        success: false,
+        error: razorpayError.error?.description || 'Failed to create payment order',
+      });
+    }
+
+    if (!order?.id) {
+      console.error('Invalid order response from Razorpay:', order);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create payment order',
+      });
+    }
 
     // Store order in database
     const { error: dbError } = await supabase
