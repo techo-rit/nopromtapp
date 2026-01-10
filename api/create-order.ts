@@ -7,7 +7,52 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { getOrderRateLimiter, checkRateLimit } from './_lib/ratelimit';
+import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
+
+// ============== INLINE RATE LIMITING (avoids Vercel bundling issues) ==============
+let redisClient: Redis | null = null;
+let orderRateLimiter: Ratelimit | null = null;
+
+function getOrderRateLimiter(): Ratelimit | null {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  
+  if (!url || !token) {
+    console.warn('Redis credentials missing - rate limiting disabled');
+    return null;
+  }
+  
+  if (!redisClient) {
+    try {
+      redisClient = new Redis({ url, token });
+    } catch (e) {
+      console.error('Failed to init Redis:', e);
+      return null;
+    }
+  }
+  
+  if (!orderRateLimiter) {
+    orderRateLimiter = new Ratelimit({
+      redis: redisClient,
+      limiter: Ratelimit.slidingWindow(10, '60 s'),
+      prefix: 'ratelimit:order',
+    });
+  }
+  return orderRateLimiter;
+}
+
+async function checkRateLimit(limiter: Ratelimit | null, id: string) {
+  if (!limiter) return { success: true, limit: 100, remaining: 100, reset: 0 };
+  try {
+    const r = await limiter.limit(id);
+    return { success: r.success, limit: r.limit, remaining: r.remaining, reset: r.reset };
+  } catch (e) {
+    console.error('Rate limit check failed:', e);
+    return { success: true, limit: 0, remaining: 0, reset: 0 };
+  }
+}
+// ==================================================================================
 
 // Pricing plans (must match constants.ts)
 const PLANS: Record<string, { name: string; price: number; credits: number; currency: string }> = {
