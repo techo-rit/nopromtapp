@@ -91,7 +91,20 @@ export async function createOrder(request: { planId: string }): Promise<CreateOr
       body: JSON.stringify({ planId: request.planId }),
     });
 
-    const data = await response.json();
+    // FIX: Read text first to debug "Unexpected token" errors
+    const text = await response.text();
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('Server returned non-JSON response:', text);
+      return {
+        success: false,
+        // Show the user (and you) the actual error text from the server
+        error: `Server Error: ${text.substring(0, 100)}...`, 
+      };
+    }
 
     if (!response.ok) {
       return {
