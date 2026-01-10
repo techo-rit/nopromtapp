@@ -7,7 +7,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { getOrderRateLimiter, checkRateLimit } from '../lib/ratelimit';
+import { getOrderRateLimiter, checkRateLimit } from './_lib/ratelimit';
 
 // Pricing plans (must match constants.ts)
 const PLANS: Record<string, { name: string; price: number; credits: number; currency: string }> = {

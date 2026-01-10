@@ -1,8 +1,8 @@
 // api/generate.ts
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
-import { getGenerateRateLimiter, checkRateLimit } from '../lib/ratelimit';
-import { createLogger, generateRequestId, type Logger } from '../lib/logger';
+import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit';
+import { createLogger, generateRequestId, type Logger } from './_lib/logger';
 
 // SECURITY: Allowed image MIME types
 const ALLOWED_MIME_TYPES = new Set([
