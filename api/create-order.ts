@@ -47,6 +47,24 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
+// SECURITY: Verify JWT token and return authenticated user
+async function verifyAuth(req: any, supabase: any): Promise<{ user: any } | { error: string; status: number }> {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { error: 'Unauthorized - missing auth token', status: 401 };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  
+  if (authError || !user) {
+    return { error: 'Unauthorized - invalid session', status: 401 };
+  }
+
+  return { user };
+}
+
 export default async function handler(req: any, res: any) {
   // Only allow POST
   if (req.method !== 'POST') {
@@ -77,8 +95,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Parse request body
-    const { planId, userId, userEmail, userName } = req.body || {};
+    // Initialize Supabase client with service role (bypasses RLS)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // SECURITY: Verify JWT authentication
+    const authResult = await verifyAuth(req, supabase);
+    if ('error' in authResult) {
+      return res.status(authResult.status).json({ success: false, error: authResult.error });
+    }
+    const authenticatedUser = authResult.user;
+
+    // Parse request body - only planId needed, user info from JWT
+    const { planId } = req.body || {};
+    const userId = authenticatedUser.id;
+    const userEmail = authenticatedUser.email;
+    const userName = authenticatedUser.user_metadata?.full_name || authenticatedUser.user_metadata?.name || ''
 
     // Validate required fields
     if (!planId || !userId || !userEmail) {
@@ -128,9 +159,6 @@ export default async function handler(req: any, res: any) {
     };
 
     const order = await razorpay.orders.create(orderOptions);
-
-    // Initialize Supabase client with service role (bypasses RLS)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Store order in database
     const { error: dbError } = await supabase

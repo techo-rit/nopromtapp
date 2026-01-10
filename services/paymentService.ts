@@ -5,6 +5,7 @@
  * Handles Razorpay script loading and checkout flow.
  */
 
+import { supabase } from '../lib/supabase';
 import type { 
   CreateOrderRequest, 
   CreateOrderResponse, 
@@ -16,6 +17,12 @@ import type {
 
 // Razorpay checkout script URL
 const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
+
+// Helper to get current auth token
+async function getAuthToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
+}
 
 // Track if script is loaded
 let razorpayScriptLoaded = false;
@@ -66,15 +73,22 @@ export async function loadRazorpayScript(): Promise<void> {
 
 /**
  * Create a new Razorpay order
+ * SECURITY: Now requires authentication - user info comes from JWT
  */
-export async function createOrder(request: CreateOrderRequest): Promise<CreateOrderResponse> {
+export async function createOrder(request: { planId: string }): Promise<CreateOrderResponse> {
   try {
+    const token = await getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Please sign in to continue' };
+    }
+
     const response = await fetch('/api/create-order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify({ planId: request.planId }),
     });
 
     const data = await response.json();
@@ -98,13 +112,20 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
 
 /**
  * Verify payment after Razorpay checkout
+ * SECURITY: Now requires authentication - userId comes from JWT
  */
-export async function verifyPayment(request: VerifyPaymentRequest): Promise<VerifyPaymentResponse> {
+export async function verifyPayment(request: Omit<VerifyPaymentRequest, 'userId'>): Promise<VerifyPaymentResponse> {
   try {
+    const token = await getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Session expired. Please sign in again.' };
+    }
+
     const response = await fetch('/api/verify-payment', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(request),
     });
@@ -130,8 +151,9 @@ export async function verifyPayment(request: VerifyPaymentRequest): Promise<Veri
 
 /**
  * Get user subscription status
+ * SECURITY: Now uses JWT auth - no userId in URL
  */
-export async function getUserSubscription(userId: string): Promise<{
+export async function getUserSubscription(): Promise<{
   success: boolean;
   profile?: {
     id: string;
@@ -147,7 +169,16 @@ export async function getUserSubscription(userId: string): Promise<{
   error?: string;
 }> {
   try {
-    const response = await fetch(`/api/user-subscription?userId=${encodeURIComponent(userId)}`);
+    const token = await getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Please sign in to view subscription' };
+    }
+
+    const response = await fetch('/api/user-subscription', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
     const data = await response.json();
 
     if (!response.ok) {
@@ -215,6 +246,7 @@ export async function openRazorpayCheckout(
 /**
  * Complete payment flow
  * Creates order → Opens checkout → Verifies payment
+ * SECURITY: User info now comes from JWT, not passed to API
  */
 export async function processPayment(
   planId: string,
@@ -228,13 +260,8 @@ export async function processPayment(
     onCheckoutDismissed?: () => void;
   }
 ): Promise<void> {
-  // Step 1: Create order
-  const orderResponse = await createOrder({
-    planId,
-    userId: user.id,
-    userEmail: user.email,
-    userName: user.name,
-  });
+  // Step 1: Create order (JWT auth handles user identification)
+  const orderResponse = await createOrder({ planId });
 
   if (!orderResponse.success || !orderResponse.orderId) {
     callbacks.onPaymentFailed?.(orderResponse.error || 'Failed to create order');
@@ -257,12 +284,11 @@ export async function processPayment(
         planName,
       },
       async (paymentResponse) => {
-        // Step 3: Verify payment
+        // Step 3: Verify payment (JWT auth handles user identification)
         const verifyResponse = await verifyPayment({
           razorpayOrderId: paymentResponse.razorpay_order_id,
           razorpayPaymentId: paymentResponse.razorpay_payment_id,
           razorpaySignature: paymentResponse.razorpay_signature,
-          userId: user.id,
         });
 
         if (verifyResponse.success) {

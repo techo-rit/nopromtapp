@@ -13,8 +13,8 @@
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
-// Processed event IDs to prevent duplicate processing
-const processedEvents: Set<string> = new Set();
+// NOTE: In-memory cache removed - using database idempotency_keys table instead
+// This is critical for serverless environments where each request may hit a different instance
 
 export default async function handler(req: any, res: any) {
   // Only allow POST
@@ -68,25 +68,44 @@ export default async function handler(req: any, res: any) {
     const eventId = event.event;
     const payload = event.payload;
 
-    // Check for duplicate processing (idempotency)
-    const eventKey = `${eventId}_${payload?.payment?.entity?.id || payload?.order?.entity?.id || Date.now()}`;
-    if (processedEvents.has(eventKey)) {
-      console.log('Duplicate event, skipping:', eventKey);
+    // Create unique idempotency key from event data
+    const eventKey = `webhook_${eventId}_${payload?.payment?.entity?.id || payload?.order?.entity?.id || Date.now()}`;
+
+    // SECURITY: Database-based idempotency check (works across serverless instances)
+    const { data: existingKey, error: keyCheckError } = await supabase
+      .from('idempotency_keys')
+      .select('id')
+      .eq('key', eventKey)
+      .maybeSingle();
+
+    if (existingKey) {
+      console.log('Duplicate webhook event, skipping:', eventKey);
       return res.status(200).json({ status: 'ok', message: 'Already processed' });
     }
-    processedEvents.add(eventKey);
 
-    // Clean up old events (keep last 1000)
-    if (processedEvents.size > 1000) {
-      const entries = Array.from(processedEvents);
-      entries.slice(0, 500).forEach(e => processedEvents.delete(e));
+    // Insert idempotency key BEFORE processing (prevents race conditions)
+    const { error: keyInsertError } = await supabase
+      .from('idempotency_keys')
+      .insert({ 
+        key: eventKey, 
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+      });
+
+    if (keyInsertError) {
+      // If insert fails due to unique constraint, another instance already processed this
+      if (keyInsertError.code === '23505') { // Postgres unique violation
+        console.log('Concurrent webhook processing detected, skipping:', eventKey);
+        return res.status(200).json({ status: 'ok', message: 'Already processed' });
+      }
+      console.error('Idempotency key insert error:', keyInsertError);
     }
 
     // Initialize Supabase client with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseForHandlers = createClient(supabaseUrl, supabaseServiceKey);
 
     // Log the webhook event
-    await supabase.from('payment_logs').insert({
+    await supabaseForHandlers.from('payment_logs').insert({
       event_type: `webhook_${eventId}`,
       razorpay_order_id: payload?.order?.entity?.id || payload?.payment?.entity?.order_id,
       razorpay_payment_id: payload?.payment?.entity?.id,
@@ -102,15 +121,15 @@ export default async function handler(req: any, res: any) {
     // Handle different event types
     switch (eventId) {
       case 'payment.captured':
-        await handlePaymentCaptured(supabase, payload);
+        await handlePaymentCaptured(supabaseForHandlers, payload);
         break;
 
       case 'payment.failed':
-        await handlePaymentFailed(supabase, payload);
+        await handlePaymentFailed(supabaseForHandlers, payload);
         break;
 
       case 'order.paid':
-        await handleOrderPaid(supabase, payload);
+        await handleOrderPaid(supabaseForHandlers, payload);
         break;
 
       default:
@@ -150,14 +169,9 @@ async function handlePaymentCaptured(supabase: any, payload: any) {
     return;
   }
 
-  // Skip if already paid
-  if (subscription.status === 'paid') {
-    console.log('Subscription already paid:', subscription.id);
-    return;
-  }
-
-  // Update subscription status
-  await supabase
+  // SECURITY: Atomic update with status check to prevent double-credit race condition
+  // Only update if status is NOT already 'paid'
+  const { data: updatedSubscription, error: updateError } = await supabase
     .from('subscriptions')
     .update({
       status: 'paid',
@@ -165,9 +179,18 @@ async function handlePaymentCaptured(supabase: any, payload: any) {
       paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', subscription.id);
+    .eq('id', subscription.id)
+    .neq('status', 'paid')  // CRITICAL: Only update if not already paid
+    .select()
+    .maybeSingle();
 
-  // Add credits to user
+  // If no row was updated, payment was already processed
+  if (!updatedSubscription) {
+    console.log('Subscription already paid (race condition prevented):', subscription.id);
+    return;
+  }
+
+  // Add credits to user (only if atomic update succeeded)
   await supabase.rpc('add_user_credits', {
     p_user_id: subscription.user_id,
     p_credits: subscription.credits_purchased,
@@ -240,14 +263,8 @@ async function handleOrderPaid(supabase: any, payload: any) {
     return;
   }
 
-  // Skip if already paid
-  if (subscription.status === 'paid') {
-    console.log('Subscription already paid:', subscription.id);
-    return;
-  }
-
-  // Update subscription status
-  await supabase
+  // SECURITY: Atomic update with status check to prevent double-credit race condition
+  const { data: updatedSubscription, error: updateError } = await supabase
     .from('subscriptions')
     .update({
       status: 'paid',
@@ -255,9 +272,18 @@ async function handleOrderPaid(supabase: any, payload: any) {
       paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', subscription.id);
+    .eq('id', subscription.id)
+    .neq('status', 'paid')  // CRITICAL: Only update if not already paid
+    .select()
+    .maybeSingle();
 
-  // Add credits to user
+  // If no row was updated, payment was already processed
+  if (!updatedSubscription) {
+    console.log('Subscription already paid via order.paid (race condition prevented):', subscription.id);
+    return;
+  }
+
+  // Add credits to user (only if atomic update succeeded)
   await supabase.rpc('add_user_credits', {
     p_user_id: subscription.user_id,
     p_credits: subscription.credits_purchased,

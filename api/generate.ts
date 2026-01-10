@@ -2,6 +2,44 @@
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
+// SECURITY: Rate limiting for generation endpoint
+const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 20; // Max 20 generations per minute per user
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const record = rateLimitStore.get(userId);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitStore.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
+// SECURITY: Allowed image MIME types
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg', 
+  'image/png',
+  'image/webp',
+  'image/gif'
+]);
+
+// SECURITY: Max image size (10MB in base64 ≈ 13.3MB string)
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_SIZE_BYTES * 4 / 3);
+
+// SECURITY: Max prompt length to prevent abuse
+const MAX_PROMPT_LENGTH = 10000;
+
 // Helper to verify user authentication and check credits
 async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { error: string; status: number }> {
     const authHeader = req.headers.authorization;
@@ -14,7 +52,7 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
-        return { error: 'Server misconfiguration: database not configured', status: 500 };
+        return { error: 'Server configuration error', status: 500 };
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -25,6 +63,11 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
     
     if (authError || !user) {
         return { error: 'Unauthorized - invalid session', status: 401 };
+    }
+
+    // SECURITY: Rate limit check before credit operations
+    if (!checkRateLimit(user.id)) {
+        return { error: 'Rate limit exceeded. Please wait before generating more images.', status: 429 };
     }
 
     // Check user has credits
@@ -50,10 +93,55 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
 
     if (deductError) {
         console.error('Credit deduction failed:', deductError);
-        return { error: 'Failed to deduct credits', status: 500 };
+        return { error: 'Failed to process request', status: 500 };
     }
 
     return { userId: user.id };
+}
+
+// SECURITY: Validate and parse image data URL with strict checks
+function validateAndParseImage(dataUrl: string | null | undefined): { mimeType: string; data: string } | { error: string } | null {
+    if (!dataUrl) return null;
+    
+    const m = /^data:(.+);base64,(.*)$/.exec(dataUrl);
+    if (!m) {
+        return { error: 'Invalid image format' };
+    }
+    
+    const mimeType = m[1].toLowerCase();
+    const base64Data = m[2];
+    
+    // Check MIME type whitelist
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+        return { error: `Unsupported image type: ${mimeType}. Allowed: JPEG, PNG, WebP, GIF` };
+    }
+    
+    // Check size limit
+    if (base64Data.length > MAX_BASE64_LENGTH) {
+        return { error: 'Image too large. Maximum size is 10MB.' };
+    }
+    
+    // Basic base64 validation (check for valid characters)
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64Data)) {
+        return { error: 'Invalid image data encoding' };
+    }
+    
+    return { mimeType, data: base64Data };
+}
+
+// SECURITY: Sanitize prompt text to prevent injection
+function sanitizePrompt(text: string | object | null | undefined): string {
+    if (!text) return '';
+    
+    // Convert objects to string
+    let prompt = typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
+    
+    // Truncate to max length
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+        prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
+    }
+    
+    return prompt;
 }
 
 export default async function handler(req: any, res: any) {
@@ -81,59 +169,60 @@ export default async function handler(req: any, res: any) {
             return;
         }
 
+        // SECURITY: Validate main image
+        const mainImageResult = validateAndParseImage(imageData);
+        if (mainImageResult && 'error' in mainImageResult) {
+            res.status(400).json({ error: mainImageResult.error });
+            return;
+        }
+
+        // SECURITY: Validate optional wearable image
+        const wearableImageResult = validateAndParseImage(wearableData);
+        if (wearableImageResult && 'error' in wearableImageResult) {
+            res.status(400).json({ error: `Wearable image: ${wearableImageResult.error}` });
+            return;
+        }
+
         const apiKey =
             process.env.GEMINI_API_KEY ||
             process.env.GOOGLE_API_KEY;
 
         if (!apiKey) {
             res.status(500).json({
-                error: 'Server misconfiguration: missing API key',
+                error: 'Generation service temporarily unavailable',
             });
             return;
         }
 
         const ai = new GoogleGenAI({ apiKey });
 
-        const toInline = (dataUrl: string | null | undefined) => {
-            if (!dataUrl) return null;
-            const m = /^data:(.+);base64,(.*)$/.exec(dataUrl);
-            if (!m) return null;
-            return { mimeType: m[1], data: m[2] };
-        };
-
-        const mainInline = toInline(imageData);
-        const wearableInline = toInline(wearableData);
-
         const parts: any[] = [];
 
-        if (mainInline) {
+        if (mainImageResult && !('error' in mainImageResult)) {
             parts.push({
                 type: 'IMAGE',
-                inlineData: mainInline,
+                inlineData: mainImageResult,
             });
         }
 
-        if (wearableInline) {
+        if (wearableImageResult && !('error' in wearableImageResult)) {
             parts.push({
                 type: 'IMAGE',
-                inlineData: wearableInline,
+                inlineData: wearableImageResult,
             });
         }
 
-       let instructionText = templateOptions?.text || templateOptions?.prompt;
+        // SECURITY: Sanitize prompt text
+        let instructionText = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
+        
+        if (!instructionText) {
+            instructionText = `Remix the provided image using template ${templateId || 'default'}`;
+        }
 
-// CRITICAL FIX: Convert JSON objects to strings
-// If the prompt is a JSON object (from updated templates), stringify it
-if (typeof instructionText === 'object' && instructionText !== null) {
-  instructionText = JSON.stringify(instructionText, null, 2);
-} else if (!instructionText) {
-  instructionText = `Remix the provided image using template ${templateId}`;
-}
-
-parts.push({
-  type: 'TEXT',
-  text: instructionText,
-});
+        parts.push({
+            type: 'TEXT',
+            text: instructionText,
+        });
 
 
         const response = await ai.models.generateContent({
@@ -159,14 +248,28 @@ parts.push({
 
         if (urls.length === 0) {
             res.status(500).json({
-                error: 'No images generated (empty or blocked response)',
+                error: 'Generation failed. The image may have been blocked by safety filters. Please try a different image.',
             });
             return;
         }
 
         res.status(200).json({ images: urls });
     } catch (err: any) {
+        // SECURITY: Log full error server-side but return sanitized message to client
         console.error('API /api/generate error:', err);
-        res.status(500).json({ error: err?.message || 'Unknown error' });
+        
+        // Check for specific Gemini API errors that are safe to expose
+        const errorMessage = err?.message || '';
+        
+        if (errorMessage.includes('SAFETY')) {
+            res.status(400).json({ error: 'Image generation blocked by safety filters. Please try a different image or prompt.' });
+        } else if (errorMessage.includes('quota') || errorMessage.includes('rate')) {
+            res.status(429).json({ error: 'Service temporarily busy. Please try again in a few moments.' });
+        } else if (errorMessage.includes('invalid') && errorMessage.includes('image')) {
+            res.status(400).json({ error: 'Invalid image format. Please upload a valid JPEG, PNG, or WebP image.' });
+        } else {
+            // Generic error - don't leak internal details
+            res.status(500).json({ error: 'Image generation failed. Please try again.' });
+        }
     }
 }

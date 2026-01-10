@@ -38,24 +38,45 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    // Initialize Supabase client with service role
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // SECURITY: Verify JWT authentication
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized - missing auth token' 
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized - invalid session' 
+      });
+    }
+
+    // User ID comes from authenticated JWT, not request body
+    const userId = user.id;
+
     // Parse request body
     const { 
       razorpayOrderId, 
       razorpayPaymentId, 
-      razorpaySignature,
-      userId 
+      razorpaySignature
     } = req.body || {};
 
     // Validate required fields
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !userId) {
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required fields' 
       });
     }
-
-    // Initialize Supabase client with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the payment signature
     // Razorpay signature = HMAC SHA256(order_id + "|" + payment_id, secret)
@@ -122,8 +143,9 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Update subscription status
-    const { error: updateError } = await supabase
+    // SECURITY: Atomic update with status check to prevent double-credit race condition
+    // Only update if status is NOT already 'paid' - returns the updated row if successful
+    const { data: updatedSubscription, error: updateError } = await supabase
       .from('subscriptions')
       .update({
         status: 'paid',
@@ -132,7 +154,10 @@ export default async function handler(req: any, res: any) {
         paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', subscription.id);
+      .eq('id', subscription.id)
+      .neq('status', 'paid')  // CRITICAL: Only update if not already paid
+      .select()
+      .maybeSingle();
 
     if (updateError) {
       console.error('Failed to update subscription:', updateError);
@@ -142,7 +167,18 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Add credits to user profile
+    // If no row was updated, it means status was already 'paid' (race condition prevented)
+    if (!updatedSubscription) {
+      console.log('Payment already processed (race condition prevented):', subscription.id);
+      return res.status(200).json({
+        success: true,
+        message: 'Payment already verified',
+        subscriptionId: subscription.id,
+        creditsAdded: subscription.credits_purchased,
+      });
+    }
+
+    // Add credits to user profile (only happens if atomic update succeeded)
     const { error: creditsError } = await supabase.rpc('add_user_credits', {
       p_user_id: userId,
       p_credits: subscription.credits_purchased,
