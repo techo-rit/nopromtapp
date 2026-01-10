@@ -3,22 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit';
 import { createLogger, generateRequestId, type Logger } from './_lib/logger';
-
-// SECURITY: Allowed image MIME types
-const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/jpg', 
-  'image/png',
-  'image/webp',
-  'image/gif'
-]);
-
-// SECURITY: Max image size (10MB in base64 ≈ 13.3MB string)
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_SIZE_BYTES * 4 / 3);
-
-// SECURITY: Max prompt length to prevent abuse
-const MAX_PROMPT_LENGTH = 10000;
+import { UPLOAD_CONFIG, GEMINI_CONFIG } from './_lib/serverConfig';
 
 // Helper to verify user authentication and check credits
 async function verifyAuthAndCredits(req: any, log: Logger): Promise<{ userId: string } | { error: string; status: number }> {
@@ -100,12 +85,12 @@ function validateAndParseImage(dataUrl: string | null | undefined): { mimeType: 
     const base64Data = m[2];
     
     // Check MIME type whitelist
-    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    if (!UPLOAD_CONFIG.ALLOWED_MIME_TYPES.has(mimeType)) {
         return { error: `Unsupported image type: ${mimeType}. Allowed: JPEG, PNG, WebP, GIF` };
     }
     
     // Check size limit
-    if (base64Data.length > MAX_BASE64_LENGTH) {
+    if (base64Data.length > UPLOAD_CONFIG.MAX_BASE64_LENGTH) {
         return { error: 'Image too large. Maximum size is 10MB.' };
     }
     
@@ -125,15 +110,14 @@ function sanitizePrompt(text: string | object | null | undefined): string {
     let prompt = typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
     
     // Truncate to max length
-    if (prompt.length > MAX_PROMPT_LENGTH) {
-        prompt = prompt.substring(0, MAX_PROMPT_LENGTH);
+    if (prompt.length > GEMINI_CONFIG.MAX_PROMPT_LENGTH) {
+        prompt = prompt.substring(0, GEMINI_CONFIG.MAX_PROMPT_LENGTH);
     }
     
     return prompt;
 }
 
 export default async function handler(req: any, res: any) {
-    const AI_MODEL = 'gemini-2.5-flash-image';
     const requestId = generateRequestId();
     const log = createLogger(requestId);
 
@@ -228,7 +212,7 @@ export default async function handler(req: any, res: any) {
 
 
         const response = await ai.models.generateContent({
-            model: AI_MODEL,
+            model: GEMINI_CONFIG.MODEL_NAME,
             contents: { parts },
             config: {
                 imageConfig: {

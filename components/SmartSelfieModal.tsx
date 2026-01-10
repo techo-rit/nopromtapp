@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import { FaceDetector, FilesetResolver, Detection } from '@mediapipe/tasks-vision';
+import { CONFIG } from '../config';
 
 interface SmartSelfieModalProps {
     isOpen: boolean;
@@ -23,6 +24,10 @@ type AlignmentStatus =
     | 'HOLD_STILL'   // Perfect alignment
     | 'CAPTURING';
 
+// Extract face detection config for cleaner code
+const FACE_CONFIG = CONFIG.FACE_DETECTION;
+const MEDIAPIPE_CONFIG = CONFIG.MEDIAPIPE;
+
 export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     isOpen,
     onClose,
@@ -43,19 +48,6 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
     const lastStatusRef = useRef<AlignmentStatus>('LOADING');
     const isCapturingRef = useRef(false);
 
-    // --- PROFESSIONAL INDUSTRY CONFIGURATION ---
-    const HOLD_DURATION_MS = 900; 
-    const FACE_WIDTH_MIN = 0.15;
-    const FACE_WIDTH_MAX = 0.65;
-    const CENTER_TOLERANCE = 0.25; 
-    const TILT_TOLERANCE_DEG = 15; 
-    const YAW_TOLERANCE = 0.25;    
-    const ASPECT_RATIO_CONTAINER = 3 / 4;
-    
-    // NEW: Controls vertical head tilt. 
-    // Set to 0.08 (Approx 7-8 degrees) for strict parallel alignment.
-    const PITCH_TOLERANCE = 0.08;
-
     // --- RESET STATE ON OPEN ---
     useEffect(() => {
         if (isOpen) {
@@ -75,17 +67,17 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         const initializeDetector = async () => {
             try {
                 const vision = await FilesetResolver.forVisionTasks(
-                    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+                    MEDIAPIPE_CONFIG.CDN_URL
                 );
                 if (!isMounted) return;
 
                 const detector = await FaceDetector.createFromOptions(vision, {
                     baseOptions: {
-                        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+                        modelAssetPath: MEDIAPIPE_CONFIG.MODEL_URL,
                         delegate: 'GPU',
                     },
                     runningMode: 'VIDEO',
-                    minDetectionConfidence: 0.5,
+                    minDetectionConfidence: MEDIAPIPE_CONFIG.MIN_DETECTION_CONFIDENCE,
                 });
 
                 if (isMounted) {
@@ -121,10 +113,10 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
         let visibleHeight = videoHeight;
         const videoAspect = videoWidth / videoHeight;
 
-        if (videoAspect > ASPECT_RATIO_CONTAINER) {
-            visibleWidth = videoHeight * ASPECT_RATIO_CONTAINER;
+        if (videoAspect > FACE_CONFIG.ASPECT_RATIO_CONTAINER) {
+            visibleWidth = videoHeight * FACE_CONFIG.ASPECT_RATIO_CONTAINER;
         } else {
-            visibleHeight = videoWidth / ASPECT_RATIO_CONTAINER;
+            visibleHeight = videoWidth / FACE_CONFIG.ASPECT_RATIO_CONTAINER;
         }
 
         const faceWidth = bbox.width;
@@ -133,14 +125,14 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
         // Distance Check
         const widthRatio = faceWidth / visibleWidth;
-        if (widthRatio < FACE_WIDTH_MIN) return 'TOO_FAR';
-        if (widthRatio > FACE_WIDTH_MAX) return 'TOO_CLOSE';
+        if (widthRatio < FACE_CONFIG.FACE_WIDTH_MIN) return 'TOO_FAR';
+        if (widthRatio > FACE_CONFIG.FACE_WIDTH_MAX) return 'TOO_CLOSE';
 
         // Centering Check
         const devX = Math.abs(faceCenterX - videoWidth / 2) / visibleWidth;
         const devY = Math.abs(faceCenterY - videoHeight / 2) / visibleHeight;
 
-        if (devX > CENTER_TOLERANCE || devY > CENTER_TOLERANCE) return 'OFF_CENTER';
+        if (devX > FACE_CONFIG.CENTER_TOLERANCE || devY > FACE_CONFIG.CENTER_TOLERANCE) return 'OFF_CENTER';
 
         // Geometry Checks
         const keypoints = detection.keypoints;
@@ -159,7 +151,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             if (angle > 90) angle = 180 - angle;
             if (angle < -90) angle = -180 - angle;
 
-            if (Math.abs(angle) > TILT_TOLERANCE_DEG) {
+            if (Math.abs(angle) > FACE_CONFIG.TILT_TOLERANCE_DEG) {
                 return 'TILTED';
             }
 
@@ -172,10 +164,10 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             const pitchVal = (meanEarY - meanEyeY) / bbox.width;
 
             // If ears are higher than eyes (negative value), you are looking down
-            if (pitchVal < -PITCH_TOLERANCE) return 'TILT_DOWN';
+            if (pitchVal < -FACE_CONFIG.PITCH_TOLERANCE) return 'TILT_DOWN';
             
             // If ears are lower than eyes (positive value), you are looking up
-            if (pitchVal > PITCH_TOLERANCE) return 'TILT_UP';
+            if (pitchVal > FACE_CONFIG.PITCH_TOLERANCE) return 'TILT_UP';
 
             // --- 3. Yaw Check (Turn Head Left/Right) ---
             const distToRightEye = Math.abs(nose.x - rightEye.x);
@@ -186,8 +178,8 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 const avg = (distToRightEye + distToLeftEye) / 2;
                 const yawRatio = diff / avg;
 
-                if (yawRatio > YAW_TOLERANCE) return 'TURN_RIGHT';
-                if (yawRatio < -YAW_TOLERANCE) return 'TURN_LEFT';
+                if (yawRatio > FACE_CONFIG.YAW_TOLERANCE) return 'TURN_RIGHT';
+                if (yawRatio < -FACE_CONFIG.YAW_TOLERANCE) return 'TURN_LEFT';
             }
         }
 
@@ -221,7 +213,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                 setFlashActive(false);
                 isCapturingRef.current = false; // Unlock on fail
             }
-        }, 150);
+        }, FACE_CONFIG.CAPTURE_DELAY_MS);
     }, [onCapture, onClose]);
 
     const detectFaces = useCallback(() => {
@@ -263,10 +255,10 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     setProgress(0);
                 } else {
                     const elapsed = startTimeMs - holdStartTimeRef.current;
-                    const progressVal = Math.min((elapsed / HOLD_DURATION_MS) * 100, 100);
+                    const progressVal = Math.min((elapsed / FACE_CONFIG.HOLD_DURATION_MS) * 100, 100);
                     setProgress(progressVal);
 
-                    if (elapsed >= HOLD_DURATION_MS) {
+                    if (elapsed >= FACE_CONFIG.HOLD_DURATION_MS) {
                         performCapture();
                         return;
                     }

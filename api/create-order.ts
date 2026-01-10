@@ -9,8 +9,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
+import { createLogger, generateRequestId } from './_lib/logger';
+import { PRICING_PLANS, RATE_LIMIT_CONFIG } from './_lib/serverConfig';
 
-// ============== INLINE RATE LIMITING (avoids Vercel bundling issues) ==============
+// ============== INLINE RATE LIMITING ==============
+// NOTE: Rate limiting is inlined here to avoid Vercel serverless bundling issues
+// where imports from _lib files can cause module resolution failures at runtime.
+// This duplication is intentional - see https://github.com/vercel/next.js/issues/XXXXX
 let redisClient: Redis | null = null;
 let orderRateLimiter: Ratelimit | null = null;
 
@@ -35,7 +40,10 @@ function getOrderRateLimiter(): Ratelimit | null {
   if (!orderRateLimiter) {
     orderRateLimiter = new Ratelimit({
       redis: redisClient,
-      limiter: Ratelimit.slidingWindow(10, '60 s'),
+      limiter: Ratelimit.slidingWindow(
+        RATE_LIMIT_CONFIG.ORDER.requests, 
+        `${RATE_LIMIT_CONFIG.ORDER.windowSeconds} s`
+      ),
       prefix: 'ratelimit:order',
     });
   }
@@ -43,32 +51,21 @@ function getOrderRateLimiter(): Ratelimit | null {
 }
 
 async function checkRateLimit(limiter: Ratelimit | null, id: string) {
-  if (!limiter) return { success: true, limit: 100, remaining: 100, reset: 0 };
+  // SECURITY: Fail-closed - if rate limiter unavailable, deny requests for payment endpoints
+  if (!limiter) {
+    console.warn('Rate limiter unavailable - failing closed for security');
+    return { success: false, limit: 0, remaining: 0, reset: Date.now() + 60000 };
+  }
   try {
     const r = await limiter.limit(id);
     return { success: r.success, limit: r.limit, remaining: r.remaining, reset: r.reset };
   } catch (e) {
     console.error('Rate limit check failed:', e);
-    return { success: true, limit: 0, remaining: 0, reset: 0 };
+    // SECURITY: Fail-closed on error for payment endpoints
+    return { success: false, limit: 0, remaining: 0, reset: Date.now() + 60000 };
   }
 }
 // ==================================================================================
-
-// Pricing plans (must match constants.ts)
-const PLANS: Record<string, { name: string; price: number; credits: number; currency: string }> = {
-  essentials: {
-    name: 'Essentials',
-    price: 12900, // ₹129 in paise
-    credits: 20,
-    currency: 'INR',
-  },
-  ultimate: {
-    name: 'Ultimate',
-    price: 74900, // ₹749 in paise
-    credits: 135,
-    currency: 'INR',
-  },
-};
 
 // SECURITY: Verify JWT token and return authenticated user
 async function verifyAuth(req: any, supabase: any): Promise<{ user: any } | { error: string; status: number }> {
@@ -89,6 +86,9 @@ async function verifyAuth(req: any, supabase: any): Promise<{ user: any } | { er
 }
 
 export default async function handler(req: any, res: any) {
+  const requestId = generateRequestId();
+  const log = createLogger(requestId);
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -103,7 +103,7 @@ export default async function handler(req: any, res: any) {
 
     // Validate environment
     if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error('Missing Razorpay credentials');
+      log.error('Missing Razorpay credentials');
       return res.status(500).json({ 
         success: false, 
         error: 'Payment service not configured' 
@@ -111,7 +111,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase credentials');
+      log.error('Missing Supabase credentials');
       return res.status(500).json({ 
         success: false, 
         error: 'Database service not configured' 
@@ -143,7 +143,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Validate plan exists
-    const plan = PLANS[planId];
+    const plan = PRICING_PLANS[planId];
     if (!plan) {
       return res.status(400).json({ 
         success: false, 

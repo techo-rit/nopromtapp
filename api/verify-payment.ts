@@ -8,8 +8,58 @@
 
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { createLogger, generateRequestId } from './_lib/logger';
+import { PAYMENT_CONFIG } from './_lib/serverConfig';
+
+// Helper to verify Razorpay signature
+function verifyRazorpaySignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  secret: string
+): boolean {
+  const body = `${orderId}|${paymentId}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('hex');
+  return expectedSignature === signature;
+}
+
+// Helper for retrying credit addition with backoff
+async function addCreditsWithRetry(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  credits: number,
+  log: ReturnType<typeof createLogger>
+): Promise<{ success: boolean; error?: Error }> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= PAYMENT_CONFIG.RETRY_ATTEMPTS; attempt++) {
+    const { error } = await supabase.rpc('add_user_credits', {
+      p_user_id: userId,
+      p_credits: credits,
+    });
+    
+    if (!error) {
+      return { success: true };
+    }
+    
+    lastError = new Error(error.message);
+    
+    if (attempt < PAYMENT_CONFIG.RETRY_ATTEMPTS) {
+      log.warn(`Credit addition attempt ${attempt} failed, retrying...`, { error: error.message });
+      await new Promise(resolve => setTimeout(resolve, PAYMENT_CONFIG.RETRY_DELAY_MS));
+    }
+  }
+  
+  return { success: false, error: lastError || new Error('Unknown error') };
+}
 
 export default async function handler(req: any, res: any) {
+  const requestId = generateRequestId();
+  const log = createLogger(requestId);
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -23,7 +73,7 @@ export default async function handler(req: any, res: any) {
 
     // Validate environment
     if (!razorpayKeySecret) {
-      console.error('Missing Razorpay secret');
+      log.error('Missing Razorpay secret');
       return res.status(500).json({ 
         success: false, 
         error: 'Payment verification not configured' 
@@ -31,7 +81,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase credentials');
+      log.error('Missing Supabase credentials');
       return res.status(500).json({ 
         success: false, 
         error: 'Database service not configured' 
@@ -62,6 +112,7 @@ export default async function handler(req: any, res: any) {
 
     // User ID comes from authenticated JWT, not request body
     const userId = user.id;
+    const userLog = createLogger(requestId, userId);
 
     // Parse request body
     const { 
@@ -79,17 +130,15 @@ export default async function handler(req: any, res: any) {
     }
 
     // Verify the payment signature
-    // Razorpay signature = HMAC SHA256(order_id + "|" + payment_id, secret)
-    const body = razorpayOrderId + '|' + razorpayPaymentId;
-    const expectedSignature = crypto
-      .createHmac('sha256', razorpayKeySecret)
-      .update(body)
-      .digest('hex');
-
-    const isValidSignature = expectedSignature === razorpaySignature;
+    const isValidSignature = verifyRazorpaySignature(
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      razorpayKeySecret
+    );
 
     if (!isValidSignature) {
-      console.error('Invalid payment signature');
+      userLog.error('Invalid payment signature', { razorpayOrderId, razorpayPaymentId });
       
       // Log the failed verification
       await supabase.from('payment_logs').insert({
@@ -109,6 +158,8 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    userLog.info('Payment signature verified', { razorpayOrderId, razorpayPaymentId });
+
     // Get the subscription record
     const { data: subscription, error: fetchError } = await supabase
       .from('subscriptions')
@@ -117,7 +168,7 @@ export default async function handler(req: any, res: any) {
       .single();
 
     if (fetchError || !subscription) {
-      console.error('Subscription not found:', fetchError);
+      userLog.error('Subscription not found', { razorpayOrderId, error: fetchError?.message });
       return res.status(404).json({ 
         success: false, 
         error: 'Order not found' 
@@ -136,7 +187,7 @@ export default async function handler(req: any, res: any) {
 
     // Verify the user matches
     if (subscription.user_id !== userId) {
-      console.error('User mismatch:', { subscriptionUserId: subscription.user_id, requestUserId: userId });
+      userLog.error('User mismatch', { subscriptionUserId: subscription.user_id, requestUserId: userId });
       return res.status(403).json({ 
         success: false, 
         error: 'Unauthorized' 
@@ -144,7 +195,6 @@ export default async function handler(req: any, res: any) {
     }
 
     // SECURITY: Atomic update with status check to prevent double-credit race condition
-    // Only update if status is NOT already 'paid' - returns the updated row if successful
     const { data: updatedSubscription, error: updateError } = await supabase
       .from('subscriptions')
       .update({
@@ -155,12 +205,12 @@ export default async function handler(req: any, res: any) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', subscription.id)
-      .neq('status', 'paid')  // CRITICAL: Only update if not already paid
+      .neq('status', 'paid')
       .select()
       .maybeSingle();
 
     if (updateError) {
-      console.error('Failed to update subscription:', updateError);
+      userLog.error('Failed to update subscription', { error: updateError.message });
       return res.status(500).json({ 
         success: false, 
         error: 'Failed to update payment status' 
@@ -169,7 +219,7 @@ export default async function handler(req: any, res: any) {
 
     // If no row was updated, it means status was already 'paid' (race condition prevented)
     if (!updatedSubscription) {
-      console.log('Payment already processed (race condition prevented):', subscription.id);
+      userLog.info('Payment already processed (race condition prevented)', { subscriptionId: subscription.id });
       return res.status(200).json({
         success: true,
         message: 'Payment already verified',
@@ -178,35 +228,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Add credits to user profile (only happens if atomic update succeeded)
-    // SECURITY: Retry once if first attempt fails, then log critical alert
-    let creditsError = null;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const { error } = await supabase.rpc('add_user_credits', {
-        p_user_id: userId,
-        p_credits: subscription.credits_purchased,
-      });
-      
-      if (!error) {
-        creditsError = null;
-        break;
-      }
-      
-      creditsError = error;
-      if (attempt === 1) {
-        console.warn(`Credit addition attempt ${attempt} failed, retrying...`, error);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay before retry
-      }
-    }
+    // Add credits to user profile with retry logic
+    const creditResult = await addCreditsWithRetry(
+      supabase,
+      userId,
+      subscription.credits_purchased,
+      userLog
+    );
 
-    if (creditsError) {
+    if (!creditResult.success) {
       // CRITICAL: Payment succeeded but credits failed - requires manual intervention
-      console.error('[CRITICAL ALERT] Failed to add credits after payment verification!', {
-        userId,
+      userLog.error('[CRITICAL ALERT] Failed to add credits after payment verification!', {
         subscriptionId: subscription.id,
         razorpayPaymentId,
         creditsToAdd: subscription.credits_purchased,
-        error: creditsError,
+        error: creditResult.error?.message,
       });
       
       // Log to payment_logs for tracking/reconciliation
@@ -218,7 +254,7 @@ export default async function handler(req: any, res: any) {
         amount: subscription.amount,
         currency: subscription.currency,
         status: 'error',
-        error_message: `Credit addition failed: ${creditsError.message}`,
+        error_message: `Credit addition failed: ${creditResult.error?.message}`,
         metadata: {
           subscriptionId: subscription.id,
           creditsToAdd: subscription.credits_purchased,
@@ -247,6 +283,11 @@ export default async function handler(req: any, res: any) {
       user_agent: req.headers['user-agent'],
     });
 
+    userLog.info('Payment verified successfully', { 
+      subscriptionId: subscription.id, 
+      creditsAdded: subscription.credits_purchased 
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Payment verified successfully',
@@ -255,7 +296,7 @@ export default async function handler(req: any, res: any) {
     });
 
   } catch (error: any) {
-    console.error('Verify payment error:', error);
+    log.error('Verify payment error', { error: error.message });
     return res.status(500).json({ 
       success: false, 
       error: 'Payment verification failed. Please contact support.' 
