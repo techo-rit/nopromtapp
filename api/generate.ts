@@ -277,10 +277,11 @@ export default async function handler(req: any, res: any) {
         const errorMessage = (err?.message || '').toLowerCase();
         
         // Categorize errors for better client feedback
-        const errorType = errorMessage.includes('safety') ? 'safety_block'
-            : errorMessage.includes('quota') || errorMessage.includes('rate') ? 'rate_limit'
+        // IMPORTANT: Check 'not found' FIRST to prevent false match on 'generateContent' containing 'rate'
+        const errorType = errorMessage.includes('not found') || errorMessage.includes('404') ? 'model_not_found'
+            : errorMessage.includes('safety') ? 'safety_block'
+            : errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('resource_exhausted') ? 'rate_limit'
             : errorMessage.includes('invalid') && errorMessage.includes('image') ? 'invalid_image'
-            : errorMessage.includes('not found') || errorMessage.includes('404') ? 'model_not_found' // NEW: Catch model errors
             : 'unknown';
 
         // Use top-level log since userLog may not be defined if error occurred before auth

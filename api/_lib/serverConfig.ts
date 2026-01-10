@@ -20,8 +20,8 @@ export const UPLOAD_CONFIG = {
 
 // Gemini AI configuration
 export const GEMINI_CONFIG = {
-  // UPDATED: Using the preview model name as requested
-  MODEL_NAME: 'gemini-2.5-flash-preview-image', 
+  // Using gemini-2.5-flash-image for image generation
+  MODEL_NAME: 'gemini-2.5-flash-image',
   MAX_PROMPT_LENGTH: 10000,
 } as const;
 
