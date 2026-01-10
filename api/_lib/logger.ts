@@ -4,6 +4,8 @@
  * Outputs JSON logs with request correlation IDs for production debugging.
  * Compatible with Vercel LogDrain, DataDog, and other log aggregators.
  * 
+ * SECURITY: Stack traces are only included in non-production environments.
+ * 
  * Usage:
  *   const log = createLogger(requestId, userId);
  *   log.info('Generation started', { templateId });
@@ -12,8 +14,46 @@
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+// Check if running in production (Vercel sets NODE_ENV=production)
+const isProduction = process.env.NODE_ENV === 'production';
+
 export interface LogContext {
   [key: string]: unknown;
+}
+
+/**
+ * Sanitize error objects for logging - removes stack traces in production
+ */
+export function sanitizeError(error: unknown): Record<string, unknown> {
+  if (!error) return { error: 'Unknown error' };
+  
+  if (error instanceof Error) {
+    const sanitized: Record<string, unknown> = {
+      message: error.message,
+      name: error.name,
+    };
+    
+    // Only include stack trace in non-production for security
+    if (!isProduction && error.stack) {
+      sanitized.stack = error.stack;
+    }
+    
+    return sanitized;
+  }
+  
+  if (typeof error === 'object') {
+    const obj = error as Record<string, unknown>;
+    const sanitized: Record<string, unknown> = { ...obj };
+    
+    // Remove stack in production
+    if (isProduction) {
+      delete sanitized.stack;
+    }
+    
+    return sanitized;
+  }
+  
+  return { error: String(error) };
 }
 
 export interface StructuredLog {

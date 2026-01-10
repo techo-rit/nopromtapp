@@ -179,14 +179,54 @@ export default async function handler(req: any, res: any) {
     }
 
     // Add credits to user profile (only happens if atomic update succeeded)
-    const { error: creditsError } = await supabase.rpc('add_user_credits', {
-      p_user_id: userId,
-      p_credits: subscription.credits_purchased,
-    });
+    // SECURITY: Retry once if first attempt fails, then log critical alert
+    let creditsError = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error } = await supabase.rpc('add_user_credits', {
+        p_user_id: userId,
+        p_credits: subscription.credits_purchased,
+      });
+      
+      if (!error) {
+        creditsError = null;
+        break;
+      }
+      
+      creditsError = error;
+      if (attempt === 1) {
+        console.warn(`Credit addition attempt ${attempt} failed, retrying...`, error);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay before retry
+      }
+    }
 
     if (creditsError) {
-      console.error('Failed to add credits:', creditsError);
-      // Log but don't fail - subscription is updated
+      // CRITICAL: Payment succeeded but credits failed - requires manual intervention
+      console.error('[CRITICAL ALERT] Failed to add credits after payment verification!', {
+        userId,
+        subscriptionId: subscription.id,
+        razorpayPaymentId,
+        creditsToAdd: subscription.credits_purchased,
+        error: creditsError,
+      });
+      
+      // Log to payment_logs for tracking/reconciliation
+      await supabase.from('payment_logs').insert({
+        user_id: userId,
+        event_type: 'credit_addition_failed',
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        amount: subscription.amount,
+        currency: subscription.currency,
+        status: 'error',
+        error_message: `Credit addition failed: ${creditsError.message}`,
+        metadata: {
+          subscriptionId: subscription.id,
+          creditsToAdd: subscription.credits_purchased,
+          requiresManualFix: true,
+        },
+        ip_address: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      });
     }
 
     // Log successful payment

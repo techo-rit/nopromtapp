@@ -66,15 +66,16 @@ export function getGenerateRateLimiter(): Ratelimit | null {
 
 /**
  * Check rate limit safely
- * If Redis is missing/down, we return success=true (Fail Open)
+ * SECURITY: Fail-closed - if Redis is unavailable, deny the request to prevent abuse
  */
 export async function checkRateLimit(
   limiter: Ratelimit | null,
   identifier: string
-): Promise<{ success: boolean; limit: number; remaining: number; reset: number }> {
-  // 1. Safety Check: If no limiter (due to missing Env Vars), allow the request
+): Promise<{ success: boolean; limit: number; remaining: number; reset: number; failedClosed?: boolean }> {
+  // 1. Safety Check: If no limiter (due to missing Env Vars), DENY the request
   if (!limiter) {
-    return { success: true, limit: 100, remaining: 100, reset: 0 };
+    console.error('[SECURITY ALERT] Rate limiter unavailable - Redis not configured. Denying request for safety.');
+    return { success: false, limit: 0, remaining: 0, reset: 0, failedClosed: true };
   }
 
   try {
@@ -86,9 +87,9 @@ export async function checkRateLimit(
       reset: result.reset,
     };
   } catch (error) {
-    // 2. Runtime Check: If Redis crashes during fetch, allow the request
-    console.error('Rate limit check failed (failing open):', error);
-    return { success: true, limit: 0, remaining: 0, reset: 0 };
+    // 2. Runtime Check: If Redis crashes during fetch, DENY the request
+    console.error('[SECURITY ALERT] Rate limit check failed - Redis error. Denying request for safety:', error);
+    return { success: false, limit: 0, remaining: 0, reset: 0, failedClosed: true };
   }
 }
 
