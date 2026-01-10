@@ -16,7 +16,8 @@ import { StackView } from "./routes/StackView";
 // Services & Utils
 import { authService } from "./services/authService";
 import { searchTemplates } from "./utils/searchLogic";
-import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
+import { useDebounce } from "./hooks/useDebounce";
+import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./constants";
 import type { Template, User, NavCategory, Stack } from "./types";
 
 // Storage Helper (Moved here for now, could be in utils)
@@ -33,7 +34,8 @@ const TemplateRoute = ({
   onBack: () => void 
 }) => {
   const { templateId } = useParams();
-  const selectedTemplate = TEMPLATES.find((t) => t.id === templateId);
+  // O(1) lookup instead of O(n) find
+  const selectedTemplate = templateId ? TEMPLATES_BY_ID.get(templateId) : undefined;
   if (!selectedTemplate) return <Navigate to="/" replace />;
   
   const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
@@ -67,12 +69,16 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // --- Search ---
+  // --- Search (debounced to prevent O(n) search on every keystroke) ---
   const [searchQuery, setSearchQuery] = useState("");
-  const searchResults = useMemo(() => searchTemplates(searchQuery, TEMPLATES), [searchQuery]);
+  const debouncedSearchQuery = useDebounce(searchQuery, 250);
+  const searchResults = useMemo(
+    () => searchTemplates(debouncedSearchQuery, TEMPLATES), 
+    [debouncedSearchQuery]
+  );
   
   const trendingTemplates = useMemo(
-    () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES.find((t) => t.id === id)).filter((t): t is Template => !!t),
+    () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES_BY_ID.get(id)).filter((t): t is Template => !!t),
     []
   );
 

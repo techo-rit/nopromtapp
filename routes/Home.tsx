@@ -3,7 +3,7 @@ import React from "react";
 import { TemplateGrid } from "../components/TemplateGrid";
 import { TrendingCarousel } from "../components/TrendingCarousel";
 import { StackGrid } from "../components/StackGrid";
-import { STACKS, TEMPLATES } from "../constants"; // Ensure these exist in your constants file
+import { STACKS, TEMPLATES_BY_STACK } from "../constants";
 import type { Stack, Template } from "../types";
 
 interface HomeProps {
@@ -41,7 +41,8 @@ export const Home: React.FC<HomeProps> = ({
 
   // 2. "Try on" Mode
   if (activeNav === "Try on") {
-    const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
+    // O(1) lookup instead of O(n) filter
+    const fititTemplates = TEMPLATES_BY_STACK.get("fitit") ?? [];
     return (
       <div className="w-full h-full bg-[#0a0a0a]">
         <TemplateGrid templates={fititTemplates} onSelectTemplate={onSelectTemplate} />

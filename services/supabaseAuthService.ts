@@ -123,8 +123,16 @@ export const supabaseAuthService = {
         const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
         profileName = profile?.full_name;
         profileCredits = profile?.credits || 0;
-      } catch (e) {
-        // Fallback silently if profile fetch fails
+      } catch (e: any) {
+        // Log profile fetch failures for observability instead of silent swallow
+        console.warn(JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: 'warn',
+          message: 'Profile fetch failed',
+          userId: supabaseUser.id,
+          error: e?.message || 'Unknown error',
+          action: 'profile_fetch_fallback'
+        }));
       }
 
       return this._mapUser(supabaseUser, profileName, profileCredits);

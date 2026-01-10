@@ -5850,3 +5850,22 @@ export const TEMPLATES: Template[] = [
   ...sceneriesTemplates,
   ...placeholderTemplates,
 ];
+
+// ==========================================
+// PRE-INDEXED TEMPLATE LOOKUPS (Performance optimization)
+// Use these instead of .find() / .filter() on TEMPLATES array
+// ==========================================
+
+/** O(1) lookup by template ID */
+export const TEMPLATES_BY_ID = new Map<string, Template>(
+  TEMPLATES.map(t => [t.id, t])
+);
+
+/** O(1) lookup by stack ID - returns array of templates for that stack */
+export const TEMPLATES_BY_STACK = TEMPLATES.reduce((acc, t) => {
+  if (!acc.has(t.stackId)) {
+    acc.set(t.stackId, []);
+  }
+  acc.get(t.stackId)!.push(t);
+  return acc;
+}, new Map<string, Template[]>());

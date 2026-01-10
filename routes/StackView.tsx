@@ -2,7 +2,7 @@
 import React from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { TemplateGrid } from "../components/TemplateGrid";
-import { STACKS, TEMPLATES } from "../constants";
+import { STACKS, TEMPLATES_BY_STACK } from "../constants";
 import type { Template } from "../types";
 
 interface StackViewProps {
@@ -15,7 +15,8 @@ export const StackView: React.FC<StackViewProps> = ({ onSelectTemplate }) => {
 
   if (!selectedStack) return <Navigate to="/" replace />;
 
-  const stackTemplates = TEMPLATES.filter((t) => t.stackId === selectedStack.id);
+  // O(1) lookup instead of O(n) filter
+  const stackTemplates = TEMPLATES_BY_STACK.get(selectedStack.id) ?? [];
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#0a0a0a]">

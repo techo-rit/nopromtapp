@@ -2,6 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { getGenerateRateLimiter, checkRateLimit } from '../lib/ratelimit';
+import { createLogger, generateRequestId, type Logger } from '../lib/logger';
 
 // SECURITY: Allowed image MIME types
 const ALLOWED_MIME_TYPES = new Set([
@@ -20,10 +21,11 @@ const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_SIZE_BYTES * 4 / 3);
 const MAX_PROMPT_LENGTH = 10000;
 
 // Helper to verify user authentication and check credits
-async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { error: string; status: number }> {
+async function verifyAuthAndCredits(req: any, log: Logger): Promise<{ userId: string } | { error: string; status: number }> {
     const authHeader = req.headers.authorization;
     
     if (!authHeader?.startsWith('Bearer ')) {
+        log.warn('Auth failed: missing token');
         return { error: 'Unauthorized - missing auth token', status: 401 };
     }
 
@@ -31,6 +33,7 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
+        log.error('Server config error: missing Supabase credentials');
         return { error: 'Server configuration error', status: 500 };
     }
 
@@ -41,12 +44,14 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+        log.warn('Auth failed: invalid session');
         return { error: 'Unauthorized - invalid session', status: 401 };
     }
 
     // SECURITY: Redis-backed rate limit check (persists across serverless instances)
     const rateLimitResult = await checkRateLimit(getGenerateRateLimiter(), user.id);
     if (!rateLimitResult.success) {
+        log.warn('Rate limit exceeded', { userId: user.id, remaining: rateLimitResult.remaining });
         return { error: 'Rate limit exceeded. Please wait before generating more images.', status: 429 };
     }
 
@@ -58,10 +63,12 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
         .single();
 
     if (profileError || !profile) {
+        log.warn('Profile not found', { userId: user.id });
         return { error: 'User profile not found', status: 404 };
     }
 
     if (profile.credits < 1) {
+        log.info('Insufficient credits', { userId: user.id, credits: profile.credits });
         return { error: 'Insufficient credits', status: 403 };
     }
 
@@ -72,10 +79,11 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
     });
 
     if (deductError) {
-        console.error('Credit deduction failed:', deductError);
+        log.error('Credit deduction failed', { userId: user.id, error: deductError.message });
         return { error: 'Failed to process request', status: 500 };
     }
 
+    log.info('Credit deducted', { userId: user.id, action: 'credit_deducted', creditsRemaining: profile.credits - 1 });
     return { userId: user.id };
 }
 
@@ -126,25 +134,39 @@ function sanitizePrompt(text: string | object | null | undefined): string {
 
 export default async function handler(req: any, res: any) {
     const AI_MODEL = 'gemini-2.5-flash-image';
+    const requestId = generateRequestId();
+    const log = createLogger(requestId);
 
     try {
         if (req.method !== 'POST') {
+            log.warn('Method not allowed', { method: req.method });
             res.status(405).json({ error: 'Method not allowed' });
             return;
         }
 
+        log.info('Generation request started');
+
         // SECURITY: Verify authentication and deduct credits BEFORE processing
-        const authResult = await verifyAuthAndCredits(req);
+        const authResult = await verifyAuthAndCredits(req, log);
         if ('error' in authResult) {
             res.status(authResult.status).json({ error: authResult.error });
             return;
         }
-        // authResult.userId is now available for logging if needed
+        
+        // Rebind logger with userId for remaining logs
+        const userLog = createLogger(requestId, authResult.userId);
 
         const body = req.body || {};
         const { imageData, wearableData, templateId, templateOptions } = body;
 
+        userLog.info('Processing generation request', { 
+            templateId, 
+            hasWearable: !!wearableData,
+            aspectRatio: templateOptions?.aspectRatio 
+        });
+
         if (!imageData) {
+            userLog.warn('Missing imageData');
             res.status(400).json({ error: 'Missing imageData (main image)' });
             return;
         }
@@ -227,25 +249,42 @@ export default async function handler(req: any, res: any) {
         }
 
         if (urls.length === 0) {
+            userLog.warn('Generation returned no images', { templateId });
             res.status(500).json({
                 error: 'Generation failed. The image may have been blocked by safety filters. Please try a different image.',
             });
             return;
         }
 
+        // METRIC: Log successful generation with latency
+        userLog.withDuration('info', 'Generation completed', { 
+            templateId, 
+            imagesGenerated: urls.length,
+            action: 'generation_success'
+        });
+
         res.status(200).json({ images: urls });
     } catch (err: any) {
         // SECURITY: Log full error server-side but return sanitized message to client
-        console.error('API /api/generate error:', err);
-        
-        // Check for specific Gemini API errors that are safe to expose
         const errorMessage = err?.message || '';
+        const errorType = errorMessage.includes('SAFETY') ? 'safety_block'
+            : errorMessage.includes('quota') || errorMessage.includes('rate') ? 'rate_limit'
+            : errorMessage.includes('invalid') && errorMessage.includes('image') ? 'invalid_image'
+            : 'unknown';
+
+        // Use top-level log since userLog may not be defined if error occurred before auth
+        const errorLog = createLogger(requestId);
+        errorLog.error('Generation failed', { 
+            errorType,
+            errorMessage: err?.message,
+            action: 'generation_error'
+        });
         
-        if (errorMessage.includes('SAFETY')) {
+        if (errorType === 'safety_block') {
             res.status(400).json({ error: 'Image generation blocked by safety filters. Please try a different image or prompt.' });
-        } else if (errorMessage.includes('quota') || errorMessage.includes('rate')) {
+        } else if (errorType === 'rate_limit') {
             res.status(429).json({ error: 'Service temporarily busy. Please try again in a few moments.' });
-        } else if (errorMessage.includes('invalid') && errorMessage.includes('image')) {
+        } else if (errorType === 'invalid_image') {
             res.status(400).json({ error: 'Invalid image format. Please upload a valid JPEG, PNG, or WebP image.' });
         } else {
             // Generic error - don't leak internal details
