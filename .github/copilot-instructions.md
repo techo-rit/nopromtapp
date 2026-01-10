@@ -1,5 +1,45 @@
 # Copilot Instructions: NoPromp App
 
+## Quickstart Guide for AI Coding Agents
+
+### Core Architecture
+- **Server-side AI only**: Image generation runs in [api/generate.ts](api/generate.ts) using `process.env.GEMINI_API_KEY` and `@google/genai`. Do not import the Gemini SDK in client code.
+- **Client → Server flow**: [services/geminiService.ts](services/geminiService.ts) converts uploads to data URLs and POSTs to `/api/generate`. The API returns a URL for the generated image.
+- **Constants-based data**: Templates, stacks, pricing live in [constants.ts](constants.ts). No DB for templates; modify constants for content changes.
+- **Routing & state**: React Router with `/`, `/stack/:stackId`, `/template/:templateId` from [App.tsx](App.tsx). No global state libraries; pass `user` via props.
+
+### Auth & Credits
+- **Supabase auth**: Config in [lib/supabase.ts](lib/supabase.ts) with `persistSession` and `autoRefreshToken`. OAuth + email/password in [services/supabaseAuthService.ts](services/supabaseAuthService.ts).
+- **Session recovery**: Check `authService.getCurrentUser()` before render in [App.tsx](App.tsx). User type in [types.ts](types.ts).
+- **Credit deduction**: After successful `/api/generate`, deduct 1 credit via Supabase RPC (see functions in [supabase/migrations/001_payment_schema.sql](supabase/migrations/001_payment_schema.sql) and [supabase/migrations/002_deduct_credits.sql](supabase/migrations/002_deduct_credits.sql)). Client guards generation if `!user` or insufficient credits.
+
+### Payments (Razorpay)
+- **Flow**: Client selects plan in [components/PaymentModal.tsx](components/PaymentModal.tsx) → `/api/create-order` → Razorpay checkout via [services/paymentService.ts](services/paymentService.ts) → `/api/verify-payment` → credits added; webhook in [api/webhook.ts](api/webhook.ts).
+- **Security**: Verify signatures server-side, use idempotency keys, and rate limit order creation.
+
+### UI & Interaction Patterns
+- **Dual uploads for Fitit**: When `stack.id === "fitit"`, show selfie + garment upload in [components/TemplateExecution.tsx](components/TemplateExecution.tsx).
+- **Paste-to-upload**: Global paste handler reads `e.clipboardData.items` and respects auth/loading state in [components/TemplateExecution.tsx](components/TemplateExecution.tsx).
+- **Camera & guidance**: Use [components/StandardCameraModal.tsx](components/StandardCameraModal.tsx) for capture and [components/SmartSelfieModal.tsx](components/SmartSelfieModal.tsx) for MediaPipe-based alignment guidance.
+- **Refs in effects**: Store latest values in refs for stable event listeners (see pattern in [components/TemplateExecution.tsx](components/TemplateExecution.tsx)).
+- **Search**: Dual-index keyword search in [utils/searchLogic.ts](utils/searchLogic.ts) for names and `keywords[]`.
+
+### Styling & UX
+- **Tailwind-first**: Custom palette and responsive typography in [src/index.css](src/index.css). Hide scrollbars via `scrollbar-hide`.
+- **Mobile-first**: Touch-optimized interactions; prevent default scroll in modals.
+
+### Environment & Commands
+- **Env (client)**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in `.env.local`.
+- **Env (server)**: `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` used in `api/*`.
+- **Run dev**: `npm install` then `npm run dev` (Vite at localhost:5173).
+- **Build**: `npm run build` (deploys via Vercel; see [vercel.json](vercel.json)).
+
+### Critical Do/Don’t
+- **Do**: Keep AI calls in `api/*`. Update templates in [constants.ts](constants.ts). Use Supabase RPC for credits.
+- **Don’t**: Import `@google/genai` client-side or expose secrets. Add state libraries or move templates to DB.
+- **Check**: Payment verification, idempotency, and session persistence before shipping.
+
+
 ## Project Overview
 React + TypeScript AI image generation app for virtual try-on and scene transformations using Google's Gemini 2.5 Flash Image model. Users upload selfies, select templates, and generate AI-transformed images with preserved facial identity.
 

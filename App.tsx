@@ -1,114 +1,28 @@
-import React, {
-  useState,
-  useCallback,
-  useEffect,
-  useMemo,
-} from "react";
+// src/App.tsx
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
+
+// Components
 import { Header } from "./components/Header";
 import { BottomNav } from "./components/BottomNav";
 import { AuthModal } from "./components/AuthModal";
 import { PaymentModal } from "./components/PaymentModal";
-import { TrendingCarousel } from "./components/TrendingCarousel";
-import { StackGrid } from "./components/StackGrid";
-import { TemplateGrid } from "./components/TemplateGrid";
 import { TemplateExecution } from "./components/TemplateExecution";
+
+// New Routes
+import { Home } from "./routes/Home";
+import { StackView } from "./routes/StackView";
+
+// Services & Utils
 import { authService } from "./services/authService";
 import { searchTemplates } from "./utils/searchLogic";
-import type { Stack, Template, User, NavCategory } from "./types";
 import { STACKS, TEMPLATES, TRENDING_TEMPLATE_IDS } from "./constants";
+import type { Template, User, NavCategory, Stack } from "./types";
 
+// Storage Helper (Moved here for now, could be in utils)
+const STORAGE_KEY_NAV = "nopromt_nav";
 
-// --- Main App Component ---
-
-const HomeRoute = ({ 
-  activeNav, 
-  handleSelectStack, 
-  handleSelectTemplate, 
-  trendingTemplates,
-  searchQuery,
-  searchResults
-}: any) => {
-
-  // 1. SEARCH STATE ACTIVE: Show Results Grid
-  if (searchQuery.length > 0) {
-      return (
-          // FIX: Full height container for the grid
-          <div className="w-full h-full bg-[#0a0a0a]">
-              {searchResults.length > 0 ? (
-                  <TemplateGrid
-                      templates={searchResults}
-                      onSelectTemplate={handleSelectTemplate}
-                  />
-              ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] px-4">
-                      <p>No templates found.</p>
-                      <p className="text-sm mt-2">Try searching for "wedding", "office", or "party".</p>
-                  </div>
-              )}
-          </div>
-      );
-  }
-
-  // 2. NORMAL FLOW ("Try on")
-  if (activeNav === "Try on") {
-    const fititTemplates = TEMPLATES.filter((t) => t.stackId === "fitit");
-    return (
-      <div className="w-full h-full bg-[#0a0a0a]">
-        <TemplateGrid
-          templates={fititTemplates}
-          onSelectTemplate={handleSelectTemplate}
-        />
-      </div>
-    );
-  }
-
-  // 3. NORMAL FLOW ("Creators" / Home)
-  const creatorsStackIds = [
-    "flex", "aesthetics", "sceneries", "clothes", "monuments", "celebration", "fitit", "animation",
-  ];
-  const stacksToShow = creatorsStackIds
-    .map((id) => STACKS.find((s) => s.id === id))
-    .filter((s): s is Stack => !!s);
-
-  return (
-    // FIX: This section needs its own scroll container because it's content-heavy
-    // pb-24 ensures the last item isn't hidden behind the BottomNav visuals
-    <div className="w-full h-full overflow-y-auto scrollbar-hide pb-24 bg-[#0a0a0a]">
-      <div>
-        <TrendingCarousel
-          templates={trendingTemplates}
-          onSelectTemplate={handleSelectTemplate}
-        />
-      </div>
-      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
-        <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] lg:tracking-[-0.02em] leading-[1.2] md:leading-[1.1] lg:leading-[1.08] text-[#f5f5f5] mb-8 md:mb-10 lg:mb-12 pt-4 md:pt-6 lg:pt-8 border-t border-[#2a2a2a] text-left">
-          Choose your form
-        </h2>
-        <StackGrid
-          stacks={stacksToShow}
-          onSelectStack={handleSelectStack}
-        />
-      </div>
-    </div>
-  );
-};
-
-const StackRoute = ({ onSelectTemplate }: { onSelectTemplate: (t: Template) => void }) => {
-  const { stackId } = useParams();
-  const selectedStack = STACKS.find((s) => s.id === stackId);
-  if (!selectedStack) return <Navigate to="/" replace />;
-  // FIX: h-full allows TemplateGrid to take available space
-  return (
-    <div className="w-full h-full overflow-hidden bg-[#0a0a0a]">
-      <TemplateGrid
-        templates={TEMPLATES.filter((t) => t.stackId === selectedStack.id)}
-        onSelectTemplate={onSelectTemplate}
-      />
-    </div>
-  );
-};
-
+// Wrapper for Template Route (keeps access to User/Auth logic)
 const TemplateRoute = ({ 
   user, 
   onLoginRequired, 
@@ -121,8 +35,10 @@ const TemplateRoute = ({
   const { templateId } = useParams();
   const selectedTemplate = TEMPLATES.find((t) => t.id === templateId);
   if (!selectedTemplate) return <Navigate to="/" replace />;
+  
   const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
   if (!stack) return <Navigate to="/" replace />;
+  
   return (
     <TemplateExecution
       template={selectedTemplate}
@@ -134,57 +50,41 @@ const TemplateRoute = ({
   );
 };
 
-// Storage Helpers
-const STORAGE_KEY_NAV = "nopromt_nav";
-const safeGetItem = (key: string): string | null => {
-  try { return localStorage.getItem(key); } catch { return null; }
-};
-const safeSetItem = (key: string, value: string): void => {
-  try { localStorage.setItem(key, value); } catch {}
-};
-
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // --- Global State ---
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
-    const saved = safeGetItem(STORAGE_KEY_NAV);
-    return saved === "Try on" || saved === "Creators" ? saved : "Creators";
+    return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
-
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
+  // --- Modals ---
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // --- SEARCH STATE ---
+  // --- Search ---
   const [searchQuery, setSearchQuery] = useState("");
-
-  const searchResults = useMemo(() => {
-    return searchTemplates(searchQuery, TEMPLATES);
-  }, [searchQuery]);
-
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    if (query.length > 0 && location.pathname !== '/') {
-        navigate('/');
-    }
-  };
-
+  const searchResults = useMemo(() => searchTemplates(searchQuery, TEMPLATES), [searchQuery]);
+  
   const trendingTemplates = useMemo(
     () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES.find((t) => t.id === id)).filter((t): t is Template => !!t),
-    [],
+    []
   );
 
+  // --- Effects ---
   useEffect(() => {
-    safeSetItem(STORAGE_KEY_NAV, activeNav);
+    localStorage.setItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
 
   useEffect(() => {
     let mounted = true;
+    
+    // Initial Load
     authService.getCurrentUser().then((initialUser) => {
       if (mounted) {
         if (initialUser) setUser(initialUser);
@@ -192,6 +92,7 @@ const App: React.FC = () => {
       }
     });
 
+    // Auth Listener
     const subscription = authService.onAuthStateChange((updatedUser) => {
       if (mounted) {
         setUser(updatedUser);
@@ -201,188 +102,120 @@ const App: React.FC = () => {
 
     return () => {
       mounted = false;
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        subscription.unsubscribe();
-      }
+      if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
 
-  // Navigation Handlers
-  const handleSelectStack = useCallback((stack: Stack) => {
-    navigate(`/stack/${stack.id}`);
-  }, [navigate]);
+  // --- Handlers ---
+  const handleNavClick = (category: NavCategory) => {
+    setActiveNav(category);
+    setSearchQuery("");
+    navigate('/');
+  };
 
-  const handleSelectTemplate = useCallback((template: Template) => {
-    navigate(`/template/${template.id}`);
-  }, [navigate]);
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (query.length > 0 && location.pathname !== '/') navigate('/');
+  };
 
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     if (searchQuery) {
         setSearchQuery("");
         return;
     }
+
+    // FIX: Split logic so TypeScript knows exactly which overload to use
     if (location.pathname.includes('/template/')) {
-       navigate(-1); 
-    } else if (location.pathname.includes('/stack/')) {
-       navigate('/');
+       navigate(-1); // "Go back one step" (Mode: number)
     } else {
-      navigate('/');
-    }
-  }, [location, navigate, searchQuery]);
-
-  const handleNavClick = useCallback((category: NavCategory) => {
-    setActiveNav(category);
-    setSearchQuery("");
-    navigate('/');
-  }, [navigate]);
-
-  const handleLoginRequired = useCallback(() => {
-    if (!user) setShowAuthModal(true);
-  }, [user]);
-
-  // Payment Modal Handler
-  const handleUpgrade = useCallback(() => {
-    if (!user) {
-      // Open auth modal first, then payment after login
-      setShowAuthModal(true);
-    } else {
-      setShowPaymentModal(true);
-    }
-  }, [user]);
-
-  // Handle payment success - refresh user credits
-  const handlePaymentSuccess = useCallback(async (creditsAdded: number) => {
-    // Refresh user data to get updated credits
-    const updatedUser = await authService.getCurrentUser();
-    if (updatedUser) {
-      setUser(updatedUser);
-    }
-  }, []);
-
-  // Auth Handlers
-  const handleSignUp = async (email: string, password: string, name: string) => {
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      const newUser = await authService.signUp(email, password, name);
-      if (newUser) {
-        setUser(newUser);
-        setShowAuthModal(false);
-      } else {
-        setAuthError("Account created! Please check your email to confirm.");
-      }
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Sign up failed");
-    } finally {
-      setAuthLoading(false);
+       navigate('/'); // "Go to home" (Mode: string)
     }
   };
 
-  const handleLogin = async (email: string, password: string) => {
+  // Auth & Payments
+  const handleAuthAction = async (action: () => Promise<any>, successMsg?: string) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const loggedInUser = await authService.login(email, password);
-      setUser(loggedInUser);
+      const result = await action();
+      if (result) setUser(result); // If action returns a user
       setShowAuthModal(false);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Login failed");
+    } catch (error: any) {
+      setAuthError(error.message || "Authentication failed");
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const handleGoogleAuth = async () => {
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      await authService.signInWithGoogle();
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Google sign in failed");
-      setAuthLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await authService.logout();
-    setUser(null);
-  };
-
-  const isSecondaryPage = location.pathname !== '/';
-
-  // --- APP SHELL LAYOUT ---
-  // We use 100dvh (Dynamic Viewport Height) to properly handle mobile browser bars.
-  // The layout is a flex column: Header (fixed height) + Main (flexible) + Footer (fixed height).
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
       
-      {/* 1. Header (Static at top) */}
+      {/* HEADER */}
       <div className="shrink-0 z-50">
         <Header
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={handleLogout}
-          onUpgrade={handleUpgrade}
+          onLogout={async () => { await authService.logout(); setUser(null); }}
+          onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
           isLoading={isGlobalLoading}
-          isSecondaryPage={isSecondaryPage}
+          isSecondaryPage={location.pathname !== '/'}
           onBack={handleBack}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
         />
       </div>
 
+      {/* MODALS */}
       <AuthModal
         isOpen={showAuthModal}
-        onClose={() => {
-          setShowAuthModal(false);
-          setAuthError(null);
-        }}
-        onSignUp={handleSignUp}
-        onLogin={handleLogin}
-        onGoogleAuth={handleGoogleAuth}
+        onClose={() => setShowAuthModal(false)}
+        onSignUp={(e, p, n) => handleAuthAction(() => authService.signUp(e, p, n))}
+        onLogin={(e, p) => handleAuthAction(() => authService.login(e, p))}
+        onGoogleAuth={() => handleAuthAction(() => authService.signInWithGoogle())}
         isLoading={authLoading}
         error={authError}
       />
 
-      {/* Payment Modal */}
       {user && (
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           user={user}
-          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentSuccess={async () => {
+             const u = await authService.getCurrentUser();
+             if (u) setUser(u);
+          }}
         />
       )}
       
-      {/* 2. Main Content (Scrollable Area) */}
-      {/* flex-1 makes it fill all remaining space. overflow-hidden prevents body scroll. */}
+      {/* MAIN CONTENT */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
         <Routes>
           <Route 
             path="/" 
             element={
-              <HomeRoute 
+              <Home 
                 activeNav={activeNav}
-                handleSelectStack={handleSelectStack}
-                handleSelectTemplate={handleSelectTemplate}
-                trendingTemplates={trendingTemplates}
                 searchQuery={searchQuery}
                 searchResults={searchResults}
+                trendingTemplates={trendingTemplates}
+                onSelectStack={(s) => navigate(`/stack/${s.id}`)}
+                onSelectTemplate={(t) => navigate(`/template/${t.id}`)}
               />
             } 
           />
           <Route 
             path="/stack/:stackId" 
-            element={<StackRoute onSelectTemplate={handleSelectTemplate} />} 
+            element={<StackView onSelectTemplate={(t) => navigate(`/template/${t.id}`)} />} 
           />
           <Route 
             path="/template/:templateId" 
             element={
               <TemplateRoute 
                 user={user} 
-                onLoginRequired={handleLoginRequired} 
+                onLoginRequired={() => setShowAuthModal(true)} 
                 onBack={handleBack} 
               />
             } 
@@ -391,14 +224,14 @@ const App: React.FC = () => {
         </Routes>
       </main>
 
-      {/* 3. Bottom Nav (Static at bottom) */}
+      {/* FOOTER */}
       <div className="shrink-0 z-50">
         <BottomNav
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={handleLogout}
+          onLogout={async () => { await authService.logout(); setUser(null); }}
         />
       </div>
     </div>
