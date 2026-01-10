@@ -6,9 +6,13 @@
  * Requires authenticated user.
  */
 
-import Razorpay from 'razorpay';
+// @ts-ignore - Razorpay uses CommonJS, handle both default and named exports
+import RazorpayModule from 'razorpay';
 import { createClient } from '@supabase/supabase-js';
 import { getOrderRateLimiter, checkRateLimit } from '../lib/ratelimit';
+
+// Handle ESM/CommonJS interop
+const Razorpay = (RazorpayModule as any).default || RazorpayModule;
 
 // Pricing plans (must match constants.ts)
 const PLANS: Record<string, { name: string; price: number; credits: number; currency: string }> = {
@@ -196,6 +200,8 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error('Create order error:', error);
+    console.error('Error stack:', error?.stack);
+    console.error('Error message:', error?.message);
     
     // Handle Razorpay specific errors
     if (error.error?.description) {
@@ -205,9 +211,10 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    // Always return JSON, never let it crash
     return res.status(500).json({ 
       success: false, 
-      error: 'Failed to create order. Please try again.' 
+      error: error?.message || 'Failed to create order. Please try again.' 
     });
   }
 }
