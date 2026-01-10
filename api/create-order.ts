@@ -8,6 +8,7 @@
 
 import Razorpay from 'razorpay';
 import { createClient } from '@supabase/supabase-js';
+import { getOrderRateLimiter, checkRateLimit } from '../lib/ratelimit';
 
 // Pricing plans (must match constants.ts)
 const PLANS: Record<string, { name: string; price: number; credits: number; currency: string }> = {
@@ -24,28 +25,6 @@ const PLANS: Record<string, { name: string; price: number; credits: number; curr
     currency: 'INR',
   },
 };
-
-// Rate limiting: Simple in-memory store (use Redis in production for multi-instance)
-const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 10; // Max 10 orders per minute per user
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const record = rateLimitStore.get(userId);
-  
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  
-  if (record.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-  
-  record.count++;
-  return true;
-}
 
 // SECURITY: Verify JWT token and return authenticated user
 async function verifyAuth(req: any, supabase: any): Promise<{ user: any } | { error: string; status: number }> {
@@ -128,11 +107,16 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Rate limiting check
-    if (!checkRateLimit(userId)) {
+    // SECURITY: Redis-backed rate limiting (persists across serverless instances)
+    const rateLimitResult = await checkRateLimit(getOrderRateLimiter(), userId);
+    if (!rateLimitResult.success) {
+      const retryAfter = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+      res.setHeader('Retry-After', retryAfter.toString());
+      res.setHeader('X-RateLimit-Limit', rateLimitResult.limit.toString());
+      res.setHeader('X-RateLimit-Remaining', '0');
       return res.status(429).json({ 
         success: false, 
-        error: 'Too many requests. Please try again in a minute.' 
+        error: `Too many requests. Please try again in ${retryAfter} seconds.` 
       });
     }
 

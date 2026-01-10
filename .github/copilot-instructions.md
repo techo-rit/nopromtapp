@@ -36,7 +36,13 @@ npm run build               # Production build (Vercel auto-deploys)
 
 **Client** (`.env.local`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
-**Server** (`api/*`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
+**Server** (`api/*`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+
+## Rate Limiting
+
+Redis-backed rate limiting via Upstash (persists across serverless cold starts). See [lib/ratelimit.ts](lib/ratelimit.ts):
+- `/api/create-order`: 10 requests/minute per user
+- `/api/generate`: 20 requests/minute per user
 
 ## Styling
 

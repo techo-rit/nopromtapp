@@ -1,28 +1,7 @@
 // api/generate.ts
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
-
-// SECURITY: Rate limiting for generation endpoint
-const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 20; // Max 20 generations per minute per user
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const record = rateLimitStore.get(userId);
-  
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  
-  if (record.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-  
-  record.count++;
-  return true;
-}
+import { getGenerateRateLimiter, checkRateLimit } from '../lib/ratelimit';
 
 // SECURITY: Allowed image MIME types
 const ALLOWED_MIME_TYPES = new Set([
@@ -65,8 +44,9 @@ async function verifyAuthAndCredits(req: any): Promise<{ userId: string } | { er
         return { error: 'Unauthorized - invalid session', status: 401 };
     }
 
-    // SECURITY: Rate limit check before credit operations
-    if (!checkRateLimit(user.id)) {
+    // SECURITY: Redis-backed rate limit check (persists across serverless instances)
+    const rateLimitResult = await checkRateLimit(getGenerateRateLimiter(), user.id);
+    if (!rateLimitResult.success) {
         return { error: 'Rate limit exceeded. Please wait before generating more images.', status: 429 };
     }
 
