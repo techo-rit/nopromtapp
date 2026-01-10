@@ -1,85 +1,82 @@
 /**
- * Redis-backed Rate Limiting (Upstash)
- * 
- * Persistent rate limiting that works across serverless cold starts
- * and parallel instances. Required for payment/credit-based apps.
- * 
- * Environment variables (auto-added by Vercel Upstash integration):
- * - KV_REST_API_URL (or UPSTASH_REDIS_REST_URL)
- * - KV_REST_API_TOKEN (or UPSTASH_REDIS_REST_TOKEN)
+ * Redis-backed Rate Limiting (Upstash) - "Fail Open" Version
+ * * If Redis is not configured (missing env vars), this will now
+ * explicitly ALLOW the request instead of crashing the app.
  */
 
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 
-// Lazy-initialized Redis client (created on first use)
+// Lazy-initialized Redis client
 let redisClient: Redis | null = null;
+let isRedisConfigured = false;
 
-function getRedis(): Redis {
-  if (!redisClient) {
-    // Support both Vercel integration names and manual setup names
+function getRedis(): Redis | null {
+  if (!redisClient && !isRedisConfigured) {
+    // Check for Vercel integration or manual keys
     const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (!url || !token) {
-      throw new Error(
-        'Missing Redis credentials. Set KV_REST_API_URL/KV_REST_API_TOKEN ' +
-        '(Vercel integration) or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN (manual)'
-      );
+      // FIX: Log warning instead of crashing
+      console.warn('⚠️ Redis credentials missing. Rate limiting is disabled (Allowed Mode).');
+      return null;
     }
 
-    redisClient = new Redis({ url, token });
+    try {
+      redisClient = new Redis({ url, token });
+      isRedisConfigured = true;
+    } catch (e) {
+      console.error('Failed to initialize Redis client:', e);
+      return null;
+    }
   }
   return redisClient;
 }
 
-// ...existing code...
-// Rate limiter instances (lazy-initialized)
+// Rate limiter instances
 let orderRateLimiter: Ratelimit | null = null;
-let generateRateLimiter: Ratelimit | null = null;
 
-/**
- * Rate limiter for order creation
- * Sliding window: 10 requests per 60 seconds per user
- */
-export function getOrderRateLimiter(): Ratelimit {
+export function getOrderRateLimiter(): Ratelimit | null {
+  const redis = getRedis();
+  if (!redis) return null;
+
   if (!orderRateLimiter) {
     orderRateLimiter = new Ratelimit({
-      redis: getRedis(),
+      redis: redis,
       limiter: Ratelimit.slidingWindow(10, '60 s'),
       prefix: 'ratelimit:order',
-      analytics: true, // Enable analytics in Upstash console
+      analytics: true,
     });
   }
   return orderRateLimiter;
 }
 
-/**
- * Rate limiter for image generation
- * Sliding window: 20 requests per 60 seconds per user
- */
-export function getGenerateRateLimiter(): Ratelimit {
-  if (!generateRateLimiter) {
-    generateRateLimiter = new Ratelimit({
-      redis: getRedis(),
-      limiter: Ratelimit.slidingWindow(20, '60 s'),
-      prefix: 'ratelimit:generate',
-      analytics: true,
-    });
-  }
-  return generateRateLimiter;
+export function getGenerateRateLimiter(): Ratelimit | null {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  return new Ratelimit({
+    redis: redis,
+    limiter: Ratelimit.slidingWindow(20, '60 s'),
+    prefix: 'ratelimit:generate',
+    analytics: true,
+  });
 }
 
 /**
- * Check rate limit and return result
- * @param limiter - The rate limiter to use
- * @param identifier - User ID or IP address
- * @returns Object with success boolean and reset time
+ * Check rate limit safely
+ * If Redis is missing/down, we return success=true (Fail Open)
  */
 export async function checkRateLimit(
-  limiter: Ratelimit,
+  limiter: Ratelimit | null,
   identifier: string
 ): Promise<{ success: boolean; limit: number; remaining: number; reset: number }> {
+  // 1. Safety Check: If no limiter (due to missing Env Vars), allow the request
+  if (!limiter) {
+    return { success: true, limit: 100, remaining: 100, reset: 0 };
+  }
+
   try {
     const result = await limiter.limit(identifier);
     return {
@@ -89,15 +86,12 @@ export async function checkRateLimit(
       reset: result.reset,
     };
   } catch (error) {
-    // If Redis is unavailable, fail open (allow request) but log the error
-    console.error('Rate limit check failed:', error);
+    // 2. Runtime Check: If Redis crashes during fetch, allow the request
+    console.error('Rate limit check failed (failing open):', error);
     return { success: true, limit: 0, remaining: 0, reset: 0 };
   }
 }
 
-/**
- * Get client IP from request headers (works with Vercel proxy)
- */
 export function getClientIP(req: any): string {
   return (
     req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
