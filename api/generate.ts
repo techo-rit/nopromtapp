@@ -35,10 +35,22 @@ async function verifyAuthAndCredits(req: any, log: Logger): Promise<{ userId: st
     }
 
     // SECURITY: Redis-backed rate limit check (persists across serverless instances)
-    const rateLimitResult = await checkRateLimit(getGenerateRateLimiter(), user.id);
+    const limiter = getGenerateRateLimiter();
+    log.info('Rate limiter status', { limiterConfigured: !!limiter, userId: user.id });
+    
+    const rateLimitResult = await checkRateLimit(limiter, user.id);
+    log.info('Rate limit result', { 
+        userId: user.id, 
+        success: rateLimitResult.success, 
+        remaining: rateLimitResult.remaining,
+        limit: rateLimitResult.limit,
+        failedOpen: rateLimitResult.failedOpen 
+    });
+    
     if (!rateLimitResult.success) {
-        log.warn('Rate limit exceeded', { userId: user.id, remaining: rateLimitResult.remaining });
-        return { error: 'Rate limit exceeded. Please wait before generating more images.', status: 429 };
+        const resetTime = new Date(rateLimitResult.reset).toISOString();
+        log.warn('Rate limit exceeded', { userId: user.id, remaining: rateLimitResult.remaining, resetAt: resetTime });
+        return { error: `Rate limit exceeded. Please wait before generating more images. Resets at ${resetTime}`, status: 429 };
     }
 
     // Check user has credits

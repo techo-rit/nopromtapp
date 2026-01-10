@@ -38,8 +38,9 @@ function getRedis(): Redis | null {
   return redisClient;
 }
 
-// Rate limiter instances
+// Rate limiter instances (cached to avoid creating new instances per request)
 let orderRateLimiter: Ratelimit | null = null;
+let generateRateLimiter: Ratelimit | null = null;
 
 export function getOrderRateLimiter(): Ratelimit | null {
   const redis = getRedis();
@@ -60,12 +61,15 @@ export function getGenerateRateLimiter(): Ratelimit | null {
   const redis = getRedis();
   if (!redis) return null;
 
-  return new Ratelimit({
-    redis: redis,
-    limiter: Ratelimit.slidingWindow(20, '60 s'),
-    prefix: 'ratelimit:generate',
-    analytics: true,
-  });
+  if (!generateRateLimiter) {
+    generateRateLimiter = new Ratelimit({
+      redis: redis,
+      limiter: Ratelimit.slidingWindow(20, '60 s'),
+      prefix: 'ratelimit:generate',
+      analytics: true,
+    });
+  }
+  return generateRateLimiter;
 }
 
 /**
@@ -76,16 +80,16 @@ export function getGenerateRateLimiter(): Ratelimit | null {
 export async function checkRateLimit(
   limiter: Ratelimit | null,
   identifier: string
-): Promise<{ success: boolean; limit: number; remaining: number; reset: number; failedClosed?: boolean }> {
+): Promise<{ success: boolean; limit: number; remaining: number; reset: number; failedOpen?: boolean }> {
   // 1. Safety Check: If no limiter (due to missing Env Vars), ALLOW the request
   if (!limiter) {
-    // Changed from returning false (Block) to true (Allow)
-    // This fixes the 429 error when Redis is not set up
-    return { success: true, limit: 100, remaining: 100, reset: 0, failedClosed: true };
+    console.log('🔓 Rate limiter not configured - allowing request (fail-open)');
+    return { success: true, limit: 100, remaining: 100, reset: 0, failedOpen: true };
   }
 
   try {
     const result = await limiter.limit(identifier);
+    console.log(`🔍 Rate limit check for ${identifier}: success=${result.success}, remaining=${result.remaining}/${result.limit}`);
     return {
       success: result.success,
       limit: result.limit,
@@ -95,7 +99,7 @@ export async function checkRateLimit(
   } catch (error) {
     // 2. Runtime Check: If Redis crashes during fetch, ALLOW the request
     console.warn('⚠️ Rate limit check failed (Redis error). Allowing request:', error);
-    return { success: true, limit: 100, remaining: 100, reset: 0, failedClosed: true };
+    return { success: true, limit: 100, remaining: 100, reset: 0, failedOpen: true };
   }
 }
 
