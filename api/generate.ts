@@ -184,17 +184,23 @@ export default async function handler(req: any, res: any) {
 
         const parts: any[] = [];
 
+        // Add main image part with correct structure (no 'type' field)
         if (mainImageResult && !('error' in mainImageResult)) {
             parts.push({
-                type: 'IMAGE',
-                inlineData: mainImageResult,
+                inlineData: {
+                    mimeType: mainImageResult.mimeType,
+                    data: mainImageResult.data,
+                },
             });
         }
 
+        // Add wearable image part with correct structure
         if (wearableImageResult && !('error' in wearableImageResult)) {
             parts.push({
-                type: 'IMAGE',
-                inlineData: wearableImageResult,
+                inlineData: {
+                    mimeType: wearableImageResult.mimeType,
+                    data: wearableImageResult.data,
+                },
             });
         }
 
@@ -205,20 +211,25 @@ export default async function handler(req: any, res: any) {
             instructionText = `Remix the provided image using template ${templateId || 'default'}`;
         }
 
-        parts.push({
-            type: 'TEXT',
-            text: instructionText,
-        });
+        // Add text part with correct structure (no 'type' field)
+        parts.push({ text: instructionText });
 
+        // Build config with responseModalities for image generation
+        const config: any = {
+            responseModalities: ['TEXT', 'IMAGE'],
+        };
+
+        // Add aspect ratio if provided
+        if (templateOptions?.aspectRatio) {
+            config.imageConfig = {
+                aspectRatio: templateOptions.aspectRatio,
+            };
+        }
 
         const response = await ai.models.generateContent({
             model: GEMINI_CONFIG.MODEL_NAME,
-            contents: { parts },
-            config: {
-                imageConfig: {
-                    aspectRatio: templateOptions?.aspectRatio,
-                },
-            },
+            contents: parts,
+            config,
         });
 
         const urls: string[] = [];
