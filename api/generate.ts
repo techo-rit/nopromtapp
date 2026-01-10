@@ -1,9 +1,10 @@
 // api/generate.ts
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
-import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit';
-import { createLogger, generateRequestId, type Logger } from './_lib/logger';
-import { UPLOAD_CONFIG, GEMINI_CONFIG } from './_lib/serverConfig';
+// FIXED: Added .js extension for ESM compatibility
+import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit.js';
+import { createLogger, generateRequestId, type Logger } from './_lib/logger.js';
+import { UPLOAD_CONFIG, GEMINI_CONFIG } from './_lib/serverConfig.js';
 
 // Helper to verify user authentication and check credits
 async function verifyAuthAndCredits(req: any, log: Logger): Promise<{ userId: string } | { error: string; status: number }> {
