@@ -39,6 +39,9 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
+    // Initialize Supabase client with service role EARLY (before any DB operations)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Get the signature from headers
     const signature = req.headers['x-razorpay-signature'];
     if (!signature) {
@@ -101,11 +104,8 @@ export default async function handler(req: any, res: any) {
       console.error('Idempotency key insert error:', keyInsertError);
     }
 
-    // Initialize Supabase client with service role
-    const supabaseForHandlers = createClient(supabaseUrl, supabaseServiceKey);
-
     // Log the webhook event
-    await supabaseForHandlers.from('payment_logs').insert({
+    await supabase.from('payment_logs').insert({
       event_type: `webhook_${eventId}`,
       razorpay_order_id: payload?.order?.entity?.id || payload?.payment?.entity?.order_id,
       razorpay_payment_id: payload?.payment?.entity?.id,
@@ -121,15 +121,15 @@ export default async function handler(req: any, res: any) {
     // Handle different event types
     switch (eventId) {
       case 'payment.captured':
-        await handlePaymentCaptured(supabaseForHandlers, payload);
+        await handlePaymentCaptured(supabase, payload);
         break;
 
       case 'payment.failed':
-        await handlePaymentFailed(supabaseForHandlers, payload);
+        await handlePaymentFailed(supabase, payload);
         break;
 
       case 'order.paid':
-        await handleOrderPaid(supabaseForHandlers, payload);
+        await handleOrderPaid(supabase, payload);
         break;
 
       default:
