@@ -261,14 +261,21 @@ export default async function handler(req: any, res: any) {
         res.status(200).json({ images: urls });
     } catch (err: any) {
         // SECURITY: Log full error server-side but return sanitized message to client
-        const errorMessage = err?.message || '';
-        const errorType = errorMessage.includes('SAFETY') ? 'safety_block'
+        const errorMessage = (err?.message || '').toLowerCase();
+        
+        // Categorize errors for better client feedback
+        const errorType = errorMessage.includes('safety') ? 'safety_block'
             : errorMessage.includes('quota') || errorMessage.includes('rate') ? 'rate_limit'
             : errorMessage.includes('invalid') && errorMessage.includes('image') ? 'invalid_image'
+            : errorMessage.includes('not found') || errorMessage.includes('404') ? 'model_not_found' // NEW: Catch model errors
             : 'unknown';
 
         // Use top-level log since userLog may not be defined if error occurred before auth
         const errorLog = createLogger(requestId);
+        
+        // Helpful dev log
+        console.error('API Error:', err); 
+
         errorLog.error('Generation failed', { 
             errorType,
             errorMessage: err?.message,
@@ -281,6 +288,8 @@ export default async function handler(req: any, res: any) {
             res.status(429).json({ error: 'Service temporarily busy. Please try again in a few moments.' });
         } else if (errorType === 'invalid_image') {
             res.status(400).json({ error: 'Invalid image format. Please upload a valid JPEG, PNG, or WebP image.' });
+        } else if (errorType === 'model_not_found') {
+            res.status(500).json({ error: `Server Configuration Error: Model '${GEMINI_CONFIG.MODEL_NAME}' not found. Please check your API key and access.` });
         } else {
             // Generic error - don't leak internal details
             res.status(500).json({ error: 'Image generation failed. Please try again.' });

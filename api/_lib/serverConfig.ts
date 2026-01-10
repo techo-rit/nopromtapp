@@ -1,7 +1,7 @@
+// api/_lib/serverConfig.ts
 /**
  * Server-side configuration constants
- * 
- * These values are used by API routes and should be kept in sync
+ * * These values are used by API routes and should be kept in sync
  * with client-side config.ts where applicable.
  */
 
@@ -20,7 +20,8 @@ export const UPLOAD_CONFIG = {
 
 // Gemini AI configuration
 export const GEMINI_CONFIG = {
-  MODEL_NAME: 'gemini-2.5-flash-image',
+  // UPDATED: Using the preview model name as requested
+  MODEL_NAME: 'gemini-2.5-flash-preview-image', 
   MAX_PROMPT_LENGTH: 10000,
 } as const;
 
@@ -38,7 +39,6 @@ export const PAYMENT_CONFIG = {
 } as const;
 
 // Pricing plans (source of truth for server-side)
-// Note: Also defined in constants.ts for client-side display
 export const PRICING_PLANS: Record<string, { 
   name: string; 
   price: number; 
