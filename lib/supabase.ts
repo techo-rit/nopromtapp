@@ -7,19 +7,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// CRITICAL: Session persistence for auth survival across page refreshes and browser closes
+// CRITICAL: Session persistence for auth survival across page refreshes
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,      // Persist session to localStorage automatically
-    autoRefreshToken: true,    // Auto-refresh tokens before expiry
-    detectSessionInUrl: true,  // Detect & recover session from URL params (OAuth redirect) 
-    storageKey: 'supabase.auth.token', // Explicit storage key for debugging
+    persistSession: true,      // Persist session to localStorage
+    autoRefreshToken: true,    // Handle token refreshes automatically
+    detectSessionInUrl: true,  // Important for OAuth redirects
+    // INDUSTRY STANDARD: Use a unique, namespaced key to avoid conflicts with other localhost apps
+    storageKey: 'noprompt_auth_token_v1', 
+    // SECURITY: Force PKCE flow. It is more robust than implicit flow for modern web apps.
+    flowType: 'pkce', 
   },
   
   global: {
     headers: {
-      // Allow multi-device sessions - ensure no single-device locking
-      'X-Client-Info': `supabase-js/${(globalThis as any)?.SUPABASE_JS_VERSION || 'unknown'}`,
+      'X-Client-Info': `noprompt-web/${(globalThis as any)?.SUPABASE_JS_VERSION || 'unknown'}`,
     },
   },
 });

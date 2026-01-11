@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
 
 // Components
@@ -18,12 +18,11 @@ import { authService } from "./services/authService";
 import { searchTemplates } from "./utils/searchLogic";
 import { useDebounce } from "./hooks/useDebounce";
 import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./constants";
-import type { Template, User, NavCategory, Stack } from "./types";
+import type { Template, User, NavCategory } from "./types";
 
-// Storage Helper (Moved here for now, could be in utils)
 const STORAGE_KEY_NAV = "nopromt_nav";
 
-// Wrapper for Template Route (keeps access to User/Auth logic)
+// Wrapper for Template Route
 const TemplateRoute = ({ 
   user, 
   onLoginRequired, 
@@ -34,7 +33,6 @@ const TemplateRoute = ({
   onBack: () => void 
 }) => {
   const { templateId } = useParams();
-  // O(1) lookup instead of O(n) find
   const selectedTemplate = templateId ? TEMPLATES_BY_ID.get(templateId) : undefined;
   if (!selectedTemplate) return <Navigate to="/" replace />;
   
@@ -61,6 +59,8 @@ const App: React.FC = () => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
   const [user, setUser] = useState<User | null>(null);
+  
+  // Start true to prevent "flicker" of logged-out state on refresh
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
   // --- Modals ---
@@ -69,7 +69,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // --- Search (debounced to prevent O(n) search on every keystroke) ---
+  // --- Search ---
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 250);
   const searchResults = useMemo(
@@ -89,21 +89,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    
-    // Initial Load
-    authService.getCurrentUser().then((initialUser) => {
-      if (mounted) {
-        if (initialUser) setUser(initialUser);
-        setIsGlobalLoading(false); 
-      }
-    });
 
-    // Auth Listener
+    // FIX: Single Source of Truth for Auth
+    // We removed the manual `authService.getCurrentUser()` call.
+    // Supabase v2 automatically fires 'INITIAL_SESSION' immediately upon subscription.
+    // Relying on this listener alone prevents the race condition where the refresh token
+    // is consumed twice (once by getCurrentUser, once by the listener), causing a logout.
+
     const subscription = authService.onAuthStateChange((updatedUser) => {
-      if (mounted) {
-        setUser(updatedUser);
-        setIsGlobalLoading(false);
-      }
+      if (!mounted) return;
+      
+      console.log("Auth State Updated:", updatedUser ? "Logged In" : "Logged Out");
+      setUser(updatedUser);
+      setIsGlobalLoading(false); // Only stop loading once Supabase has reported the initial state
     });
 
     return () => {
@@ -129,22 +127,21 @@ const App: React.FC = () => {
         setSearchQuery("");
         return;
     }
-
-    // FIX: Split logic so TypeScript knows exactly which overload to use
     if (location.pathname.includes('/template/')) {
-       navigate(-1); // "Go back one step" (Mode: number)
+       navigate(-1);
     } else {
-       navigate('/'); // "Go to home" (Mode: string)
+       navigate('/');
     }
   };
 
-  // Auth & Payments
-  const handleAuthAction = async (action: () => Promise<any>, successMsg?: string) => {
+  const handleAuthAction = async (action: () => Promise<any>) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
       const result = await action();
-      if (result) setUser(result); // If action returns a user
+      // Note: We don't strictly need to setUser here because the onAuthStateChange listener
+      // will pick up the change, but setting it here provides immediate feedback.
+      if (result) setUser(result); 
       setShowAuthModal(false);
     } catch (error: any) {
       setAuthError(error.message || "Authentication failed");
@@ -152,6 +149,11 @@ const App: React.FC = () => {
       setAuthLoading(false);
     }
   };
+
+  if (isGlobalLoading) {
+    // Optional: Render a loading spinner here while checking auth
+    return <div className="fixed inset-0 bg-[#0a0a0a]" />;
+  }
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
@@ -163,7 +165,10 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); setUser(null); }}
+          onLogout={async () => { 
+            await authService.logout(); 
+            // User state will be cleared by the listener
+          }}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
           isLoading={isGlobalLoading}
           isSecondaryPage={location.pathname !== '/'}
@@ -190,6 +195,7 @@ const App: React.FC = () => {
           onClose={() => setShowPaymentModal(false)}
           user={user}
           onPaymentSuccess={async () => {
+             // Force refresh user to get new credits
              const u = await authService.getCurrentUser();
              if (u) setUser(u);
           }}
@@ -237,7 +243,7 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); setUser(null); }}
+          onLogout={async () => { await authService.logout(); }}
         />
       </div>
     </div>
