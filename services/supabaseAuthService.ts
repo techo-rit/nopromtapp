@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { retryWithBackoff } from '../utils/retryWithBackoff' // Import the retry utility
 import type { User } from '../types'
 
 export const supabaseAuthService = {
@@ -69,8 +70,7 @@ export const supabaseAuthService = {
   async getCurrentUser(): Promise<User | null> {
     try {
       // STANDARD: Just get the session. 
-      // If token is expired, Supabase's autoRefreshToken (configured in lib/supabase.ts) 
-      // will handle the refresh cycle automatically in the background.
+      // If token is expired, Supabase's autoRefreshToken will handle it.
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error || !session?.user) {
@@ -108,31 +108,43 @@ export const supabaseAuthService = {
   async _getUserProfile(supabaseUser: any): Promise<User> {
       let profileName = null;
       let profileCredits = 0;
+      
       try {
-        // Fast fetch with timeout - now also fetching credits
-        const profilePromise = supabase
-          .from('profiles')
-          .select('full_name, credits')
-          .eq('id', supabaseUser.id)
-          .single();
-        
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 1500)
-        );
-        
-        const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
+        // FIX: Replaced aggressive Promise.race timeout with retry logic.
+        // This ensures temporary network glitches don't reset credits to 0.
+        const fetchProfileOp = async () => {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('full_name, credits')
+            .eq('id', supabaseUser.id)
+            .single();
+            
+          if (error) throw error;
+          return data;
+        };
+
+        // Attempt to fetch 3 times with exponential backoff
+        const profile = await retryWithBackoff(fetchProfileOp, {
+          maxAttempts: 3,
+          initialDelayMs: 500, // Wait 500ms before first retry
+          backoffMultiplier: 1.5
+        }) as any;
+
         profileName = profile?.full_name;
-        profileCredits = profile?.credits || 0;
+        profileCredits = profile?.credits ?? 0; // Use nullish coalescing to handle 0 correctly
+
       } catch (e: any) {
-        // Log profile fetch failures for observability instead of silent swallow
+        // Log profile fetch failures for observability
         console.warn(JSON.stringify({
           timestamp: new Date().toISOString(),
           level: 'warn',
-          message: 'Profile fetch failed',
+          message: 'Profile fetch failed after retries', // Updated message
           userId: supabaseUser.id,
           error: e?.message || 'Unknown error',
           action: 'profile_fetch_fallback'
         }));
+        
+        // Only now do we fall back to defaults
       }
 
       return this._mapUser(supabaseUser, profileName, profileCredits);
