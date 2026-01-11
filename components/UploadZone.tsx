@@ -97,7 +97,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowCamera(true); }}
-          className="mt-3 w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] font-medium hover:bg-[#2a2a2a] transition-all"
+          className="mt-3 w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] font-medium hover:bg-[#2a2a2a] transition-all hover:cursor-pointer"
         >
           <span>{captureMode === 'user' ? "Capture your face" : "Take a photo"}</span>
         </button>
