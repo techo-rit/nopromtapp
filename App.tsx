@@ -9,21 +9,35 @@ import { AuthModal } from "./components/AuthModal";
 import { PaymentModal } from "./components/PaymentModal";
 import { TemplateExecution } from "./components/TemplateExecution";
 
-// Routes & Services
+// New Routes
 import { Home } from "./routes/Home";
 import { StackView } from "./routes/StackView";
+
+// Services & Utils
 import { authService } from "./services/authService";
 import { searchTemplates } from "./utils/searchLogic";
 import { useDebounce } from "./hooks/useDebounce";
 import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./constants";
-import type { Template, User, NavCategory } from "./types";
+import type { Template, User, NavCategory, Stack } from "./types";
 
+// Storage Helper (Moved here for now, could be in utils)
 const STORAGE_KEY_NAV = "nopromt_nav";
 
-const TemplateRoute = ({ user, onLoginRequired, onBack }: any) => {
+// Wrapper for Template Route (keeps access to User/Auth logic)
+const TemplateRoute = ({ 
+  user, 
+  onLoginRequired, 
+  onBack 
+}: { 
+  user: User | null, 
+  onLoginRequired: () => void,
+  onBack: () => void 
+}) => {
   const { templateId } = useParams();
+  // O(1) lookup instead of O(n) find
   const selectedTemplate = templateId ? TEMPLATES_BY_ID.get(templateId) : undefined;
   if (!selectedTemplate) return <Navigate to="/" replace />;
+  
   const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
   if (!stack) return <Navigate to="/" replace />;
   
@@ -47,8 +61,6 @@ const App: React.FC = () => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
   const [user, setUser] = useState<User | null>(null);
-  
-  // FIX: Safety mechanism to prevent infinite loading
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
   // --- Modals ---
@@ -57,50 +69,45 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // --- Search (debounced to prevent O(n) search on every keystroke) ---
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 250);
-  const searchResults = useMemo(() => searchTemplates(debouncedSearchQuery, TEMPLATES), [debouncedSearchQuery]);
-  const trendingTemplates = useMemo(() => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES_BY_ID.get(id)).filter((t): t is Template => !!t), []);
+  const searchResults = useMemo(
+    () => searchTemplates(debouncedSearchQuery, TEMPLATES), 
+    [debouncedSearchQuery]
+  );
+  
+  const trendingTemplates = useMemo(
+    () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES_BY_ID.get(id)).filter((t): t is Template => !!t),
+    []
+  );
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY_NAV, activeNav); }, [activeNav]);
+  // --- Effects ---
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_NAV, activeNav);
+  }, [activeNav]);
 
-  // --- AUTH INITIALIZATION FIX ---
   useEffect(() => {
     let mounted = true;
-
-    const initAuth = async () => {
-      try {
-        // 1. Explicit Check: Get session immediately (don't wait for listener)
-        const initialUser = await authService.getCurrentUser();
-        if (mounted && initialUser) {
-          setUser(initialUser);
-        }
-      } catch (e) {
-        console.error("Auth init failed", e);
-      } finally {
-        // 2. Guaranteed Unlock: Remove loading screen regardless of outcome
-        if (mounted) setIsGlobalLoading(false);
+    
+    // Initial Load
+    authService.getCurrentUser().then((initialUser) => {
+      if (mounted) {
+        if (initialUser) setUser(initialUser);
+        setIsGlobalLoading(false); 
       }
-    };
-
-    // 3. Listener: Handles subsequent updates (sign out, token refresh)
-    const subscription = authService.onAuthStateChange((updatedUser) => {
-      if (!mounted) return;
-      setUser(updatedUser);
-      // Ensure loading is off if listener fires first
-      setIsGlobalLoading(false); 
     });
 
-    initAuth();
-
-    // 4. Safety Timeout: Absolute failsafe for blank screen
-    const safetyTimer = setTimeout(() => {
-        if (mounted && isGlobalLoading) setIsGlobalLoading(false);
-    }, 3000);
+    // Auth Listener
+    const subscription = authService.onAuthStateChange((updatedUser) => {
+      if (mounted) {
+        setUser(updatedUser);
+        setIsGlobalLoading(false);
+      }
+    });
 
     return () => {
       mounted = false;
-      clearTimeout(safetyTimer);
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
@@ -118,16 +125,26 @@ const App: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (searchQuery) { setSearchQuery(""); return; }
-    if (location.pathname.includes('/template/')) { navigate(-1); } else { navigate('/'); }
+    if (searchQuery) {
+        setSearchQuery("");
+        return;
+    }
+
+    // FIX: Split logic so TypeScript knows exactly which overload to use
+    if (location.pathname.includes('/template/')) {
+       navigate(-1); // "Go back one step" (Mode: number)
+    } else {
+       navigate('/'); // "Go to home" (Mode: string)
+    }
   };
 
-  const handleAuthAction = async (action: () => Promise<any>) => {
+  // Auth & Payments
+  const handleAuthAction = async (action: () => Promise<any>, successMsg?: string) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
       const result = await action();
-      if (result) setUser(result);
+      if (result) setUser(result); // If action returns a user
       setShowAuthModal(false);
     } catch (error: any) {
       setAuthError(error.message || "Authentication failed");
@@ -136,27 +153,17 @@ const App: React.FC = () => {
     }
   };
 
-  // Render Loading Screen
-  if (isGlobalLoading) {
-    return (
-      <div className="fixed inset-0 w-full h-full flex items-center justify-center bg-[#0a0a0a] text-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Loading Nopromt...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
+      
+      {/* HEADER */}
       <div className="shrink-0 z-50">
         <Header
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); }}
+          onLogout={async () => { await authService.logout(); setUser(null); }}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
           isLoading={isGlobalLoading}
           isSecondaryPage={location.pathname !== '/'}
@@ -166,6 +173,7 @@ const App: React.FC = () => {
         />
       </div>
 
+      {/* MODALS */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
@@ -188,17 +196,49 @@ const App: React.FC = () => {
         />
       )}
       
+      {/* MAIN CONTENT */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
         <Routes>
-          <Route path="/" element={<Home activeNav={activeNav} searchQuery={searchQuery} searchResults={searchResults} trendingTemplates={trendingTemplates} onSelectStack={(s) => navigate(`/stack/${s.id}`)} onSelectTemplate={(t) => navigate(`/template/${t.id}`)} />} />
-          <Route path="/stack/:stackId" element={<StackView onSelectTemplate={(t) => navigate(`/template/${t.id}`)} />} />
-          <Route path="/template/:templateId" element={<TemplateRoute user={user} onLoginRequired={() => setShowAuthModal(true)} onBack={handleBack} />} />
+          <Route 
+            path="/" 
+            element={
+              <Home 
+                activeNav={activeNav}
+                searchQuery={searchQuery}
+                searchResults={searchResults}
+                trendingTemplates={trendingTemplates}
+                onSelectStack={(s) => navigate(`/stack/${s.id}`)}
+                onSelectTemplate={(t) => navigate(`/template/${t.id}`)}
+              />
+            } 
+          />
+          <Route 
+            path="/stack/:stackId" 
+            element={<StackView onSelectTemplate={(t) => navigate(`/template/${t.id}`)} />} 
+          />
+          <Route 
+            path="/template/:templateId" 
+            element={
+              <TemplateRoute 
+                user={user} 
+                onLoginRequired={() => setShowAuthModal(true)} 
+                onBack={handleBack} 
+              />
+            } 
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
+      {/* FOOTER */}
       <div className="shrink-0 z-50">
-        <BottomNav activeNav={activeNav} onNavClick={handleNavClick} user={user} onSignIn={() => setShowAuthModal(true)} onLogout={async () => { await authService.logout(); }} />
+        <BottomNav
+          activeNav={activeNav}
+          onNavClick={handleNavClick}
+          user={user}
+          onSignIn={() => setShowAuthModal(true)}
+          onLogout={async () => { await authService.logout(); setUser(null); }}
+        />
       </div>
     </div>
   );
