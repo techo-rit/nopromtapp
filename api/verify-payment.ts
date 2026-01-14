@@ -8,8 +8,8 @@
 
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { createLogger, generateRequestId } from './_lib/logger';
-import { PAYMENT_CONFIG } from './_lib/serverConfig';
+import { createLogger, generateRequestId } from './_lib/logger.js';
+import { PAYMENT_CONFIG } from './_lib/serverConfig.js';
 
 // Helper to verify Razorpay signature
 function verifyRazorpaySignature(

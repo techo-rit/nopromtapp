@@ -9,8 +9,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
-import { createLogger, generateRequestId } from './_lib/logger';
-import { PRICING_PLANS, RATE_LIMIT_CONFIG } from './_lib/serverConfig';
+import { createLogger, generateRequestId } from './_lib/logger.js';
+import { PRICING_PLANS, RATE_LIMIT_CONFIG } from './_lib/serverConfig.js';
 
 // ============== INLINE RATE LIMITING ==============
 // NOTE: Rate limiting is inlined here to avoid Vercel serverless bundling issues
