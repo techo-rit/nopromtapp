@@ -193,6 +193,7 @@ export default async function handler(req: any, res: any) {
 
         // Safety Settings: Relaxed for "Try-On" to prevent blocking partial skin/body generation
         // but kept strict on Harassment/Hate.
+        // Note: Using string values for compatibility with most GoogleGenAI versions.
         const safetySettings = [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
@@ -204,10 +205,8 @@ export default async function handler(req: any, res: any) {
             systemInstruction: systemPrompt,
             temperature: 0.15, // Low temperature for identity retention
             topP: 0.8,
-            // FIX: If a wearable is provided (FitIt), request 4 candidates. Otherwise default to 1.
-            candidateCount: validWearable ? 4 : 1,
-            safetySettings: safetySettings, 
-            responseModalities: ['TEXT', 'IMAGE'], 
+            candidateCount: 1,
+            safetySettings: safetySettings, // Apply safety settings
         };
 
         if (templateOptions?.aspectRatio) {
@@ -226,7 +225,6 @@ export default async function handler(req: any, res: any) {
         const urls: string[] = [];
         const candidates = response.candidates || [];
         
-        // Loop through all candidates to gather all generated images
         for (const c of candidates) {
             const part = c?.content?.parts?.find((p: any) => p.inlineData);
             if (part?.inlineData?.data) {
@@ -236,6 +234,7 @@ export default async function handler(req: any, res: any) {
 
         if (urls.length === 0) {
             userLog.warn('No images returned', { templateId, safetyRatings: candidates[0]?.safetyRatings });
+            // More descriptive error for debugging (client will see standard error)
             res.status(500).json({ error: 'Generation failed. The AI might have blocked the request due to safety filters on the body/clothing.' });
             return;
         }
