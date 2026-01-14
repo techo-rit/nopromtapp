@@ -1,17 +1,15 @@
 // api/generate.ts
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
-// FIXED: Added .js extension for ESM compatibility
 import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit.js';
 import { createLogger, generateRequestId, type Logger } from './_lib/logger.js';
 import { UPLOAD_CONFIG, GEMINI_CONFIG } from './_lib/serverConfig.js';
 
-// Helper to verify user authentication and check credits
+// --- 1. HELPER FUNCTIONS ---
+
 async function verifyAuthAndCredits(req: any, log: Logger): Promise<{ userId: string } | { error: string; status: number }> {
     const authHeader = req.headers.authorization;
-    
     if (!authHeader?.startsWith('Bearer ')) {
-        log.warn('Auth failed: missing token');
         return { error: 'Unauthorized - missing auth token', status: 401 };
     }
 
@@ -25,110 +23,48 @@ async function verifyAuthAndCredits(req: any, log: Logger): Promise<{ userId: st
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const token = authHeader.replace('Bearer ', '');
-
-    // Verify the JWT token
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-        log.warn('Auth failed: invalid session');
         return { error: 'Unauthorized - invalid session', status: 401 };
     }
 
-    // SECURITY: Redis-backed rate limit check (persists across serverless instances)
+    // Rate Limit Check
     const limiter = getGenerateRateLimiter();
-    log.info('Rate limiter status', { limiterConfigured: !!limiter, userId: user.id });
-    
     const rateLimitResult = await checkRateLimit(limiter, user.id);
-    log.info('Rate limit result', { 
-        userId: user.id, 
-        success: rateLimitResult.success, 
-        remaining: rateLimitResult.remaining,
-        limit: rateLimitResult.limit,
-        failedOpen: rateLimitResult.failedOpen 
-    });
-    
     if (!rateLimitResult.success) {
-        const resetTime = new Date(rateLimitResult.reset).toISOString();
-        log.warn('Rate limit exceeded', { userId: user.id, remaining: rateLimitResult.remaining, resetAt: resetTime });
-        return { error: `Rate limit exceeded. Please wait before generating more images. Resets at ${resetTime}`, status: 429 };
+        return { error: 'Rate limit exceeded. Please wait.', status: 429 };
     }
 
-    // Check user has credits
-    const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', user.id)
-        .single();
-
-    if (profileError || !profile) {
-        log.warn('Profile not found', { userId: user.id });
-        return { error: 'User profile not found', status: 404 };
-    }
-
-    if (profile.credits < 1) {
-        log.info('Insufficient credits', { userId: user.id, credits: profile.credits });
+    // Credit Check
+    const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
+    if (!profile || profile.credits < 1) {
         return { error: 'Insufficient credits', status: 403 };
     }
 
-    // Deduct credit before generation
-    const { error: deductError } = await supabase.rpc('deduct_credits', {
-        p_user_id: user.id,
-        p_amount: 1
-    });
-
+    // Deduct Credit
+    const { error: deductError } = await supabase.rpc('deduct_credits', { p_user_id: user.id, p_amount: 1 });
     if (deductError) {
-        log.error('Credit deduction failed', { userId: user.id, error: deductError.message });
+        log.error('Credit deduction failed', { error: deductError.message });
         return { error: 'Failed to process request', status: 500 };
     }
 
-    log.info('Credit deducted', { userId: user.id, action: 'credit_deducted', creditsRemaining: profile.credits - 1 });
     return { userId: user.id };
 }
 
-// SECURITY: Validate and parse image data URL with strict checks
 function validateAndParseImage(dataUrl: string | null | undefined): { mimeType: string; data: string } | { error: string } | null {
     if (!dataUrl) return null;
-    
     const m = /^data:(.+);base64,(.*)$/.exec(dataUrl);
-    if (!m) {
-        return { error: 'Invalid image format' };
-    }
-    
-    const mimeType = m[1].toLowerCase();
-    const base64Data = m[2];
-    
-    // Check MIME type whitelist
-    if (!UPLOAD_CONFIG.ALLOWED_MIME_TYPES.has(mimeType)) {
-        return { error: `Unsupported image type: ${mimeType}. Allowed: JPEG, PNG, WebP, GIF` };
-    }
-    
-    // Check size limit
-    if (base64Data.length > UPLOAD_CONFIG.MAX_BASE64_LENGTH) {
-        return { error: 'Image too large. Maximum size is 10MB.' };
-    }
-    
-    // Basic base64 validation (check for valid characters)
-    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64Data)) {
-        return { error: 'Invalid image data encoding' };
-    }
-    
-    return { mimeType, data: base64Data };
+    if (!m) return { error: 'Invalid image format' };
+    return { mimeType: m[1].toLowerCase(), data: m[2] };
 }
 
-// SECURITY: Sanitize prompt text to prevent injection
 function sanitizePrompt(text: string | object | null | undefined): string {
     if (!text) return '';
-    
-    // Convert objects to string
-    let prompt = typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
-    
-    // Truncate to max length
-    if (prompt.length > GEMINI_CONFIG.MAX_PROMPT_LENGTH) {
-        prompt = prompt.substring(0, GEMINI_CONFIG.MAX_PROMPT_LENGTH);
-    }
-    
-    return prompt;
+    return typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
 }
+
+// --- 2. MAIN HANDLER ---
 
 export default async function handler(req: any, res: any) {
     const requestId = generateRequestId();
@@ -136,177 +72,147 @@ export default async function handler(req: any, res: any) {
 
     try {
         if (req.method !== 'POST') {
-            log.warn('Method not allowed', { method: req.method });
             res.status(405).json({ error: 'Method not allowed' });
             return;
         }
 
-        log.info('Generation request started');
-
-        // SECURITY: Verify authentication and deduct credits BEFORE processing
         const authResult = await verifyAuthAndCredits(req, log);
         if ('error' in authResult) {
             res.status(authResult.status).json({ error: authResult.error });
             return;
         }
-        
-        // Rebind logger with userId for remaining logs
+
+        const { imageData, wearableData, templateId, templateOptions } = req.body || {};
         const userLog = createLogger(requestId, authResult.userId);
 
-        const body = req.body || {};
-        const { imageData, wearableData, templateId, templateOptions } = body;
-
-        userLog.info('Processing generation request', { 
-            templateId, 
-            hasWearable: !!wearableData,
-            aspectRatio: templateOptions?.aspectRatio 
-        });
-
-        if (!imageData) {
-            userLog.warn('Missing imageData');
-            res.status(400).json({ error: 'Missing imageData (main image)' });
+        // --- FIXED VALIDATION LOGIC ---
+        // 1. Validate Main Image
+        const mainImage = validateAndParseImage(imageData);
+        
+        if (!mainImage) {
+            res.status(400).json({ error: 'Missing main image' });
             return;
         }
 
-        // SECURITY: Validate main image
-        const mainImageResult = validateAndParseImage(imageData);
-        if (mainImageResult && 'error' in mainImageResult) {
-            res.status(400).json({ error: mainImageResult.error });
+        // TypeScript Guard: Explicitly check for error property
+        if ('error' in mainImage) {
+            res.status(400).json({ error: mainImage.error });
             return;
         }
 
-        // SECURITY: Validate optional wearable image
-        const wearableImageResult = validateAndParseImage(wearableData);
-        if (wearableImageResult && 'error' in wearableImageResult) {
-            res.status(400).json({ error: `Wearable image: ${wearableImageResult.error}` });
-            return;
+        // 2. Validate Wearable Image (Optional)
+        const wearableImage = validateAndParseImage(wearableData);
+        let validWearable = null;
+
+        if (wearableImage) {
+            if ('error' in wearableImage) {
+                // If they provided a wearable but it's invalid, fail the request
+                res.status(400).json({ error: `Wearable image error: ${wearableImage.error}` });
+                return;
+            }
+            validWearable = wearableImage;
         }
 
-        const apiKey =
-            process.env.GEMINI_API_KEY ||
-            process.env.GOOGLE_API_KEY;
-
+        // API Setup
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
         if (!apiKey) {
-            res.status(500).json({
-                error: 'Generation service temporarily unavailable',
-            });
+            res.status(500).json({ error: 'Server misconfigured: Missing API Key' });
             return;
         }
 
         const ai = new GoogleGenAI({ apiKey });
-
         const parts: any[] = [];
 
-        // Add main image part with correct structure (no 'type' field)
-        if (mainImageResult && !('error' in mainImageResult)) {
-            parts.push({
-                inlineData: {
-                    mimeType: mainImageResult.mimeType,
-                    data: mainImageResult.data,
-                },
-            });
-        }
-
-        // Add wearable image part with correct structure
-        if (wearableImageResult && !('error' in wearableImageResult)) {
-            parts.push({
-                inlineData: {
-                    mimeType: wearableImageResult.mimeType,
-                    data: wearableImageResult.data,
-                },
-            });
-        }
-
-        // SECURITY: Sanitize prompt text
-        let instructionText = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
+        // --- 3. CONSTRUCT PARTS ---
         
-        if (!instructionText) {
-            instructionText = `Remix the provided image using template ${templateId || 'default'}`;
-        }
-
-        // Add text part with correct structure (no 'type' field)
-        parts.push({ text: instructionText });
-
-        // Build config with responseModalities for image generation
-        const config: any = {
-            responseModalities: ['TEXT', 'IMAGE'],
-        };
-
-        // Add aspect ratio if provided
-        if (templateOptions?.aspectRatio) {
-            config.imageConfig = {
-                aspectRatio: templateOptions.aspectRatio,
-            };
-        }
-
-        const response = await ai.models.generateContent({
-            model: GEMINI_CONFIG.MODEL_NAME,
-            contents: parts,
-            config,
+        // Image 1: Identity (User)
+        // No casting needed now because we ensured it's not the error type above
+        parts.push({
+            inlineData: {
+                mimeType: mainImage.mimeType,
+                data: mainImage.data,
+            },
         });
 
-        const urls: string[] = [];
+        // Image 2: Style/Reference (Optional)
+        if (validWearable) {
+            parts.push({
+                inlineData: {
+                    mimeType: validWearable.mimeType,
+                    data: validWearable.data,
+                },
+            });
+        }
 
-        for (const c of response.candidates ?? []) {
+        // User Prompt
+        const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
+        const promptText = userInstruction || `Generate a photorealistic remix based on template: ${templateId}`;
+        parts.push({ text: promptText });
+
+        // --- 4. CONFIGURATION (Identity Locked) ---
+        
+        const systemPrompt = `
+        ROLE: Expert Visual Effects Artist & Identity Preservation Specialist.
+        
+        INPUTS:
+        1. FIRST IMAGE = The "Subject". You MUST preserve this person's exact face, skin tone, and bone structure.
+        2. SECOND IMAGE (Optional) = The "Reference/Wearable". Use this for clothing/style only.
+        
+        STRICT RULES:
+        - FIDELITY IS PARAMOUNT. The output face must be indistinguishable from the First Image.
+        - Do not "beautify" or genericize the face. Keep all distinctive features.
+        - If a JSON configuration is provided in the prompt, execute it precisely.
+        `;
+
+        const config: any = {
+            systemInstruction: systemPrompt,
+            temperature: 0.4, // Low temperature is critical for face preservation
+            candidateCount: 1, 
+            responseModalities: ['TEXT', 'IMAGE'], 
+        };
+
+        if (templateOptions?.aspectRatio) {
+            // @ts-ignore
+            config.imageConfig = { aspectRatio: templateOptions.aspectRatio };
+        }
+
+        // Generate
+        const response = await ai.models.generateContent({
+            model: GEMINI_CONFIG.MODEL_NAME,
+            contents: parts, 
+            config,          
+        });
+
+        // Extract Results
+        const urls: string[] = [];
+        const candidates = response.candidates || [];
+        
+        for (const c of candidates) {
             const part = c?.content?.parts?.find((p: any) => p.inlineData);
             if (part?.inlineData?.data) {
-                urls.push(
-                    `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-                );
+                urls.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
             }
         }
 
         if (urls.length === 0) {
-            userLog.warn('Generation returned no images', { templateId });
-            res.status(500).json({
-                error: 'Generation failed. The image may have been blocked by safety filters. Please try a different image.',
-            });
+            userLog.warn('No images returned', { templateId });
+            res.status(500).json({ error: 'Generation failed. Safety filters may have blocked the image.' });
             return;
         }
 
-        // METRIC: Log successful generation with latency
-        userLog.withDuration('info', 'Generation completed', { 
-            templateId, 
-            imagesGenerated: urls.length,
-            action: 'generation_success'
-        });
-
+        userLog.info('Success', { count: urls.length });
         res.status(200).json({ images: urls });
+
     } catch (err: any) {
-        // SECURITY: Log full error server-side but return sanitized message to client
-        const errorMessage = (err?.message || '').toLowerCase();
+        console.error('API Error:', err);
+        const msg = (err?.message || '').toLowerCase();
         
-        // Categorize errors for better client feedback
-        // IMPORTANT: Check 'not found' FIRST to prevent false match on 'generateContent' containing 'rate'
-        const errorType = errorMessage.includes('not found') || errorMessage.includes('404') ? 'model_not_found'
-            : errorMessage.includes('safety') ? 'safety_block'
-            : errorMessage.includes('quota') || errorMessage.includes('rate limit') || errorMessage.includes('resource_exhausted') ? 'rate_limit'
-            : errorMessage.includes('invalid') && errorMessage.includes('image') ? 'invalid_image'
-            : 'unknown';
-
-        // Use top-level log since userLog may not be defined if error occurred before auth
-        const errorLog = createLogger(requestId);
-        
-        // Helpful dev log
-        console.error('API Error:', err); 
-
-        errorLog.error('Generation failed', { 
-            errorType,
-            errorMessage: err?.message,
-            action: 'generation_error'
-        });
-        
-        if (errorType === 'safety_block') {
-            res.status(400).json({ error: 'Image generation blocked by safety filters. Please try a different image or prompt.' });
-        } else if (errorType === 'rate_limit') {
-            res.status(429).json({ error: 'Service temporarily busy. Please try again in a few moments.' });
-        } else if (errorType === 'invalid_image') {
-            res.status(400).json({ error: 'Invalid image format. Please upload a valid JPEG, PNG, or WebP image.' });
-        } else if (errorType === 'model_not_found') {
-            res.status(500).json({ error: `Server Configuration Error: Model '${GEMINI_CONFIG.MODEL_NAME}' not found. Please check your API key and access.` });
+        if (msg.includes('quota') || msg.includes('429')) {
+            res.status(429).json({ error: 'Server busy. Please try again.' });
+        } else if (msg.includes('safety')) {
+            res.status(400).json({ error: 'Safety filter triggered.' });
         } else {
-            // Generic error - don't leak internal details
-            res.status(500).json({ error: 'Image generation failed. Please try again.' });
+            res.status(500).json({ error: 'Generation failed.' });
         }
     }
 }

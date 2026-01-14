@@ -342,10 +342,11 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     ref={webcamRef}
                     audio={false}
                     screenshotFormat="image/jpeg"
+                    screenshotQuality={1.0}  // CRITICAL: Max quality to preserve facial details
                     videoConstraints={{
                         facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
+                        width: { ideal: 1920 },   // Increased from 1280 for better face detail
+                        height: { ideal: 1080 },  // Increased from 720 for better face detail
                     }}
                     mirrored={true}
                     className="absolute inset-0 w-full h-full object-cover"
