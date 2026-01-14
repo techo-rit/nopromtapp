@@ -138,28 +138,37 @@ export default async function handler(req: any, res: any) {
             });
         }
 
+        // Extract the specific prompt defined in constants.ts
         const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
         
         // DYNAMIC PROMPT LOGIC
-        // If a wearable is provided, we switch to explicit Try-On instructions.
         let coreInstruction = '';
         
         if (validWearable) {
-            coreInstruction = `
-            TASK: VIRTUAL TRY-ON (CLOTHING TRANSFER).
-            
-            INPUTS:
-            - IMAGE 1: The model/person (Reference Identity).
-            - IMAGE 2: The garment/clothing (Reference Style).
-            
-            INSTRUCTIONS:
-            1. Generate an image of the PERSON from Image 1 wearing the CLOTHING from Image 2.
-            2. RETAIN the face, hair, and body proportions of the person in Image 1 exactly.
-            3. RETAIN the texture, color, and design of the clothing in Image 2 exactly.
-            4. Merge them realistically. The lighting on the clothes should match the person's environment.
-            `;
+            // FIX APPLIED HERE:
+            // Priority 1: Use the highly specific studio prompt from constants.ts if available.
+            // Priority 2: Fallback to generic Try-On instruction if no prompt is provided.
+            if (userInstruction && userInstruction.trim().length > 10) {
+                // The templates in constants.ts are self-contained (they describe Input 1 vs Input 2),
+                // so we use them directly.
+                coreInstruction = userInstruction;
+            } else {
+                coreInstruction = `
+                TASK: VIRTUAL TRY-ON (CLOTHING TRANSFER).
+                
+                INPUTS:
+                - IMAGE 1: The model/person (Reference Identity).
+                - IMAGE 2: The garment/clothing (Reference Style).
+                
+                INSTRUCTIONS:
+                1. Generate an image of the PERSON from Image 1 wearing the CLOTHING from Image 2.
+                2. RETAIN the face, hair, and body proportions of the person in Image 1 exactly.
+                3. RETAIN the texture, color, and design of the clothing in Image 2 exactly.
+                4. Merge them realistically. The lighting on the clothes should match the person's environment.
+                `;
+            }
         } else {
-            // Standard Remix / Style Transfer
+            // Standard Remix / Style Transfer (Non-Wearable)
             coreInstruction = userInstruction || `Generate a photorealistic remix based on template: ${templateId}`;
         }
 
@@ -191,13 +200,11 @@ export default async function handler(req: any, res: any) {
         4. SAFETY: Do not generate NSFW content. If the request implies nudity, clothe the person appropriately.
         `;
 
-        // Safety Settings: Relaxed for "Try-On" to prevent blocking partial skin/body generation
-        // but kept strict on Harassment/Hate.
-        // Note: Using string values for compatibility with most GoogleGenAI versions.
+        // Safety Settings
         const safetySettings = [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' }, // Crucial for fashion/body generation
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
         ];
 
@@ -206,7 +213,7 @@ export default async function handler(req: any, res: any) {
             temperature: 0.15, // Low temperature for identity retention
             topP: 0.8,
             candidateCount: 1,
-            safetySettings: safetySettings, // Apply safety settings
+            safetySettings: safetySettings, 
         };
 
         if (templateOptions?.aspectRatio) {
@@ -234,7 +241,6 @@ export default async function handler(req: any, res: any) {
 
         if (urls.length === 0) {
             userLog.warn('No images returned', { templateId, safetyRatings: candidates[0]?.safetyRatings });
-            // More descriptive error for debugging (client will see standard error)
             res.status(500).json({ error: 'Generation failed. The AI might have blocked the request due to safety filters on the body/clothing.' });
             return;
         }
