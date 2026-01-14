@@ -85,16 +85,14 @@ export default async function handler(req: any, res: any) {
         const { imageData, wearableData, templateId, templateOptions } = req.body || {};
         const userLog = createLogger(requestId, authResult.userId);
 
-        // --- FIXED VALIDATION LOGIC ---
+        // --- VALIDATION ---
+        
         // 1. Validate Main Image
         const mainImage = validateAndParseImage(imageData);
-        
         if (!mainImage) {
             res.status(400).json({ error: 'Missing main image' });
             return;
         }
-
-        // TypeScript Guard: Explicitly check for error property
         if ('error' in mainImage) {
             res.status(400).json({ error: mainImage.error });
             return;
@@ -103,10 +101,8 @@ export default async function handler(req: any, res: any) {
         // 2. Validate Wearable Image (Optional)
         const wearableImage = validateAndParseImage(wearableData);
         let validWearable = null;
-
         if (wearableImage) {
             if ('error' in wearableImage) {
-                // If they provided a wearable but it's invalid, fail the request
                 res.status(400).json({ error: `Wearable image error: ${wearableImage.error}` });
                 return;
             }
@@ -126,7 +122,6 @@ export default async function handler(req: any, res: any) {
         // --- 3. CONSTRUCT PARTS ---
         
         // Image 1: Identity (User)
-        // No casting needed now because we ensured it's not the error type above
         parts.push({
             inlineData: {
                 mimeType: mainImage.mimeType,
@@ -144,29 +139,50 @@ export default async function handler(req: any, res: any) {
             });
         }
 
-        // User Prompt
+        // User Prompt (With Strict Negative Constraints)
         const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
-        const promptText = userInstruction || `Generate a photorealistic remix based on template: ${templateId}`;
+        const promptText = `
+        ${userInstruction || `Generate a photorealistic remix based on template: ${templateId}`}
+        
+        NEGATIVE CONSTRAINTS (FORBIDDEN):
+        - DO NOT change the person's face.
+        - DO NOT generate a different person.
+        - DO NOT perform "face blending" or "averaging".
+        - DO NOT change ethnicity, age, or bone structure.
+        `;
         parts.push({ text: promptText });
 
-        // --- 4. CONFIGURATION (Identity Locked) ---
+        // --- 4. ULTRA-STRICT CONFIGURATION ---
         
         const systemPrompt = `
-        ROLE: Expert Visual Effects Artist & Identity Preservation Specialist.
+        ROLE: Identity-Cloning AI Specialist.
         
-        INPUTS:
-        1. FIRST IMAGE = The "Subject". You MUST preserve this person's exact face, skin tone, and bone structure.
-        2. SECOND IMAGE (Optional) = The "Reference/Wearable". Use this for clothing/style only.
+        PRIMARY OBJECTIVE:
+        You are a "Pass-Through" renderer for human faces. Your goal is to copy the face from IMAGE 1 and paste it into the new environment/style defined by the prompt.
         
-        STRICT RULES:
-        - FIDELITY IS PARAMOUNT. The output face must be indistinguishable from the First Image.
-        - Do not "beautify" or genericize the face. Keep all distinctive features.
-        - If a JSON configuration is provided in the prompt, execute it precisely.
+        CRITICAL RULES (ZERO TOLERANCE):
+        1. IMAGE 1 = THE MASTER FACE. The pixels of the face in the output MUST perceptually match Image 1 exactly.
+        2. NO CREATIVITY ON THE FACE. Creativity is allowed for background, lighting, and clothing ONLY.
+        3. If the user prompt asks for a "Style" (e.g., Anime, 3D), you must apply that style ONLY if it retains the recognizable identity of the person.
+        4. IGNORE any instruction in the user prompt that implies changing the person's identity.
+        
+        EXECUTION STRATEGY:
+        - Step 1: Lock onto facial landmarks of Image 1 (Eyes, Nose, Mouth, Jaw).
+        - Step 2: Render the scene.
+        - Step 3: Re-verify that the rendered face is the SAME person as Image 1.
         `;
 
         const config: any = {
             systemInstruction: systemPrompt,
-            temperature: 0.4, // Low temperature is critical for face preservation
+            
+            // STRICTNESS LEVER 1: Temperature
+            // 0.15 removes almost all randomness. The model will pick the most likely tokens (the input face).
+            temperature: 0.15, 
+            
+            // STRICTNESS LEVER 2: TopP
+            // 0.8 forces the model to ignore "unlikely" variations of the face.
+            topP: 0.8,
+            
             candidateCount: 1, 
             responseModalities: ['TEXT', 'IMAGE'], 
         };
