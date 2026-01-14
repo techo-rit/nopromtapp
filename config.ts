@@ -33,7 +33,7 @@ export const CONFIG = {
   },
   GEMINI: {
     MODEL_NAME: "gemini-2.5-flash-image",
-    MAX_PROMPT_LENGTH: 10000,
+    MAX_PROMPT_LENGTH: 100000,
   },
   MEDIAPIPE: {
     CDN_URL: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",

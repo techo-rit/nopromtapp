@@ -147,8 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
             <header className="hidden md:block relative w-full bg-[#0a0a0a] z-50">
                 <div className="w-full max-w-[1440px] mx-auto px-8 h-[80px] flex items-center justify-between">
                     <div className="flex items-center gap-12">
-                        <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5]">
-                            <RemixLogoIcon />
+                        <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5] hover:cursor-pointer">                            <RemixLogoIcon />
                             <span>nopromt.ai</span>
                         </div>
                         <nav className="flex items-center gap-2">
@@ -168,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     <div className="flex items-center gap-4">
                         {!user ? (
-                            <button onClick={onSignIn} className="min-h-[44px] px-6 py-2.5 bg-[#1a1a1a] text-[#f5f5f5] rounded-full border border-[#3a3a3a] hover:border-[#c9a962]/30 transition-all">
+                            <button onClick={onSignIn} className="min-h-[44px] px-6 py-2.5 bg-[#1a1a1a] text-[#f5f5f5] rounded-full border border-[#3a3a3a] hover:cursor-pointer hover:border-[#c9a962]/30 transition-all">
                                 Sign In
                             </button>
                         ) : (
@@ -204,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <button 
                             onClick={onUpgrade}
-                            className="shrink-0 flex items-center gap-2 px-4 py-2 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95"
+                            className="shrink-0 flex items-center gap-2 px-4 py-2 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95  hover:cursor-pointer"
                         >
                             <svg className="w-4 h-4 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>

@@ -22,7 +22,7 @@ export const UPLOAD_CONFIG = {
 export const GEMINI_CONFIG = {
   // Using gemini-2.5-flash-image for image generation
   MODEL_NAME: 'gemini-2.5-flash-image',
-  MAX_PROMPT_LENGTH: 10000,
+  MAX_PROMPT_LENGTH: 100000,
 } as const;
 
 // Rate limiting configuration
