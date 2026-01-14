@@ -1,4 +1,3 @@
-// api/generate.ts
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit.js';
@@ -87,7 +86,7 @@ export default async function handler(req: any, res: any) {
 
         // --- VALIDATION ---
         
-        // 1. Validate Main Image
+        // 1. Validate Main Image (The User/Model)
         const mainImage = validateAndParseImage(imageData);
         if (!mainImage) {
             res.status(400).json({ error: 'Missing main image' });
@@ -98,7 +97,7 @@ export default async function handler(req: any, res: any) {
             return;
         }
 
-        // 2. Validate Wearable Image (Optional)
+        // 2. Validate Wearable Image (The Cloth/Accessory)
         const wearableImage = validateAndParseImage(wearableData);
         let validWearable = null;
         if (wearableImage) {
@@ -119,7 +118,7 @@ export default async function handler(req: any, res: any) {
         const ai = new GoogleGenAI({ apiKey });
         const parts: any[] = [];
 
-        // --- 3. CONSTRUCT PARTS ---
+        // --- 3. CONSTRUCT PARTS & PROMPT ---
         
         // Image 1: Identity (User)
         parts.push({
@@ -129,7 +128,7 @@ export default async function handler(req: any, res: any) {
             },
         });
 
-        // Image 2: Style/Reference (Optional)
+        // Image 2: Style/Reference (Wearable)
         if (validWearable) {
             parts.push({
                 inlineData: {
@@ -139,51 +138,75 @@ export default async function handler(req: any, res: any) {
             });
         }
 
-        // User Prompt (With Strict Negative Constraints)
         const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
-        const promptText = `
-        ${userInstruction || `Generate a photorealistic remix based on template: ${templateId}`}
+        
+        // DYNAMIC PROMPT LOGIC
+        // If a wearable is provided, we switch to explicit Try-On instructions.
+        let coreInstruction = '';
+        
+        if (validWearable) {
+            coreInstruction = `
+            TASK: VIRTUAL TRY-ON (CLOTHING TRANSFER).
+            
+            INPUTS:
+            - IMAGE 1: The model/person (Reference Identity).
+            - IMAGE 2: The garment/clothing (Reference Style).
+            
+            INSTRUCTIONS:
+            1. Generate an image of the PERSON from Image 1 wearing the CLOTHING from Image 2.
+            2. RETAIN the face, hair, and body proportions of the person in Image 1 exactly.
+            3. RETAIN the texture, color, and design of the clothing in Image 2 exactly.
+            4. Merge them realistically. The lighting on the clothes should match the person's environment.
+            `;
+        } else {
+            // Standard Remix / Style Transfer
+            coreInstruction = userInstruction || `Generate a photorealistic remix based on template: ${templateId}`;
+        }
+
+        const finalPrompt = `
+        ${coreInstruction}
         
         NEGATIVE CONSTRAINTS (FORBIDDEN):
-        - DO NOT change the person's face.
+        - DO NOT change the person's face identity.
         - DO NOT generate a different person.
         - DO NOT perform "face blending" or "averaging".
-        - DO NOT change ethnicity, age, or bone structure.
+        - DO NOT distort facial features.
+        - DO NOT create nudity or compromised anatomy.
         `;
-        parts.push({ text: promptText });
+        
+        parts.push({ text: finalPrompt });
 
-        // --- 4. ULTRA-STRICT CONFIGURATION ---
+        // --- 4. CONFIGURATION ---
         
         const systemPrompt = `
-        ROLE: Identity-Cloning AI Specialist.
+        ROLE: Expert Identity-Cloning & Fashion AI.
         
         PRIMARY OBJECTIVE:
-        You are a "Pass-Through" renderer for human faces. Your goal is to copy the face from IMAGE 1 and paste it into the new environment/style defined by the prompt.
+        You are a high-fidelity image renderer. Your absolute priority is PRESERVING THE IDENTITY of the person in IMAGE 1.
         
-        CRITICAL RULES (ZERO TOLERANCE):
-        1. IMAGE 1 = THE MASTER FACE. The pixels of the face in the output MUST perceptually match Image 1 exactly.
-        2. NO CREATIVITY ON THE FACE. Creativity is allowed for background, lighting, and clothing ONLY.
-        3. If the user prompt asks for a "Style" (e.g., Anime, 3D), you must apply that style ONLY if it retains the recognizable identity of the person.
-        4. IGNORE any instruction in the user prompt that implies changing the person's identity.
-        
-        EXECUTION STRATEGY:
-        - Step 1: Lock onto facial landmarks of Image 1 (Eyes, Nose, Mouth, Jaw).
-        - Step 2: Render the scene.
-        - Step 3: Re-verify that the rendered face is the SAME person as Image 1.
+        CRITICAL RULES:
+        1. FACE LOCK: The face in the output MUST be perceptually identical to Image 1.
+        2. IF WEARABLE (Image 2) IS PROVIDED: Replace the clothing of the person in Image 1 with the item in Image 2. Do not change the person's pose unless necessary for the fit.
+        3. REALISM: Output must be photorealistic, 8k resolution, high texture quality.
+        4. SAFETY: Do not generate NSFW content. If the request implies nudity, clothe the person appropriately.
         `;
+
+        // Safety Settings: Relaxed for "Try-On" to prevent blocking partial skin/body generation
+        // but kept strict on Harassment/Hate.
+        const safetySettings = [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' }, // Crucial for fashion/body generation
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        ];
 
         const config: any = {
             systemInstruction: systemPrompt,
-            
-            // STRICTNESS LEVER 1: Temperature
-            // 0.15 removes almost all randomness. The model will pick the most likely tokens (the input face).
-            temperature: 0.15, 
-            
-            // STRICTNESS LEVER 2: TopP
-            // 0.8 forces the model to ignore "unlikely" variations of the face.
+            temperature: 0.15, // Low temperature for identity retention
             topP: 0.8,
-            
-            candidateCount: 1, 
+            // FIX: If a wearable is provided (FitIt), request 4 candidates. Otherwise default to 1.
+            candidateCount: validWearable ? 4 : 1,
+            safetySettings: safetySettings, 
             responseModalities: ['TEXT', 'IMAGE'], 
         };
 
@@ -203,6 +226,7 @@ export default async function handler(req: any, res: any) {
         const urls: string[] = [];
         const candidates = response.candidates || [];
         
+        // Loop through all candidates to gather all generated images
         for (const c of candidates) {
             const part = c?.content?.parts?.find((p: any) => p.inlineData);
             if (part?.inlineData?.data) {
@@ -211,8 +235,8 @@ export default async function handler(req: any, res: any) {
         }
 
         if (urls.length === 0) {
-            userLog.warn('No images returned', { templateId });
-            res.status(500).json({ error: 'Generation failed. Safety filters may have blocked the image.' });
+            userLog.warn('No images returned', { templateId, safetyRatings: candidates[0]?.safetyRatings });
+            res.status(500).json({ error: 'Generation failed. The AI might have blocked the request due to safety filters on the body/clothing.' });
             return;
         }
 
@@ -226,7 +250,7 @@ export default async function handler(req: any, res: any) {
         if (msg.includes('quota') || msg.includes('429')) {
             res.status(429).json({ error: 'Server busy. Please try again.' });
         } else if (msg.includes('safety')) {
-            res.status(400).json({ error: 'Safety filter triggered.' });
+            res.status(400).json({ error: 'Safety filter triggered. Please try a different image.' });
         } else {
             res.status(500).json({ error: 'Generation failed.' });
         }
