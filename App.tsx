@@ -90,31 +90,30 @@ const App: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     
-    // INDUSTRY STANDARD: onAuthStateChange is the SINGLE source of truth
-    // It fires INITIAL_SESSION immediately with the persisted session
+    // INDUSTRY STANDARD PATTERN (from Supabase docs):
+    // 1. Get initial session (reads from localStorage, fast)
+    // 2. Set up listener for future changes
+    
+    // Step 1: Get initial session immediately
+    authService.getCurrentUser().then((initialUser) => {
+      if (mounted) {
+        console.log('[App] Initial user:', initialUser?.email ?? 'none');
+        setUser(initialUser);
+        setIsGlobalLoading(false);
+      }
+    });
+
+    // Step 2: Listen for auth changes (sign in, sign out, token refresh)
     const subscription = authService.onAuthStateChange((updatedUser) => {
       if (mounted) {
+        console.log('[App] Auth changed:', updatedUser?.email ?? 'none');
         setUser(updatedUser);
         setIsGlobalLoading(false);
       }
     });
 
-    // Fallback: If onAuthStateChange doesn't fire within 2 seconds, check manually
-    // This handles edge cases where the listener might not fire
-    const fallbackTimer = setTimeout(async () => {
-      if (mounted && isGlobalLoading) {
-        console.log('[Auth] Fallback: checking session manually');
-        const currentUser = await authService.getCurrentUser();
-        if (mounted) {
-          if (currentUser) setUser(currentUser);
-          setIsGlobalLoading(false);
-        }
-      }
-    }, 2000);
-
     return () => {
       mounted = false;
-      clearTimeout(fallbackTimer);
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
