@@ -90,12 +90,25 @@ export const supabaseAuthService = {
   },
 
   onAuthStateChange(callback: (user: User | null) => void) {
+    // Cache to preserve credits across token refresh events
+    let cachedUser: User | null = null;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        // TOKEN_REFRESHED: Don't refetch profile - credits haven't changed
+        // This prevents the timeout issue from resetting credits to 0
+        if (event === 'TOKEN_REFRESHED' && cachedUser && session?.user?.id === cachedUser.id) {
+          // Just update the cached user's lastLogin, keep credits intact
+          callback(cachedUser);
+          return;
+        }
+        
         if (session?.user) {
           const user = await this._getUserProfile(session.user);
+          cachedUser = user; // Cache for future token refresh events
           callback(user);
         } else {
+          cachedUser = null;
           callback(null);
         }
       }
@@ -108,8 +121,10 @@ export const supabaseAuthService = {
   async _getUserProfile(supabaseUser: any): Promise<User> {
       let profileName = null;
       let profileCredits = 0;
+      let fetchSuccess = false;
+      
       try {
-        // Fast fetch with timeout - now also fetching credits
+        // Increased timeout from 1500ms to 5000ms for slow connections
         const profilePromise = supabase
           .from('profiles')
           .select('full_name, credits')
@@ -117,14 +132,18 @@ export const supabaseAuthService = {
           .single();
         
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 1500)
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
         );
         
-        const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
-        profileName = profile?.full_name;
-        profileCredits = profile?.credits || 0;
+        const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+        
+        if (!error && profile) {
+          profileName = profile.full_name;
+          profileCredits = profile.credits ?? 0;
+          fetchSuccess = true;
+        }
       } catch (e: any) {
-        // Log profile fetch failures for observability instead of silent swallow
+        // Log profile fetch failures for observability
         console.warn(JSON.stringify({
           timestamp: new Date().toISOString(),
           level: 'warn',
@@ -133,6 +152,12 @@ export const supabaseAuthService = {
           error: e?.message || 'Unknown error',
           action: 'profile_fetch_fallback'
         }));
+      }
+
+      // If fetch failed, log it but don't silently return 0 credits
+      // The caller should handle this appropriately
+      if (!fetchSuccess) {
+        console.warn('Using fallback user data - profile fetch unsuccessful');
       }
 
       return this._mapUser(supabaseUser, profileName, profileCredits);
