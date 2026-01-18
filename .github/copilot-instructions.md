@@ -1,146 +1,102 @@
 # Copilot Instructions: NoPromt App
 
-AI virtual try-on app (React 19 + TypeScript + Vite) on Vercel. Supabase handles auth + credits; Razorpay (INR) handles payments; Gemini runs server-side only.
+AI virtual try-on app (React 19 + TypeScript + Vite) deployed on Vercel. Supabase handles auth + credits; Razorpay (INR) handles payments; Gemini AI runs server-side only.
 
 ## Architecture
 
-**Client SPA**: React Router v7 with three routes:
-- `/` (Home): Shows stacks or trending templates. Routes via `Home.tsx` or `StackView.tsx`.
-- `/stack/:stackId` (StackView): Templates filtered by stack. Uses `TEMPLATES_BY_STACK` Map.
-- `/template/:templateId` (TemplateRoute): Image generation UI. Wrapped by `TemplateExecution.tsx`.
+**Routing**: React Router v7 with three client routes:
+- `/` → [routes/Home.tsx](routes/Home.tsx) — stacks grid or trending carousel
+- `/stack/:stackId` → [routes/StackView.tsx](routes/StackView.tsx) — templates for a stack
+- `/template/:templateId` → `TemplateRoute` in [App.tsx](App.tsx) → [components/TemplateExecution.tsx](components/TemplateExecution.tsx)
 
-**Data Model**: `constants.ts` is the single source of truth — exports:
-- `STACKS`, `TEMPLATES`, `TEMPLATES_BY_ID` (Map for O(1) lookups), `TEMPLATES_BY_STACK` (Map)
-- `PRICING_PLANS` (must mirror `api/_lib/serverConfig.ts`), `TRENDING_TEMPLATE_IDS`
-- Never move template/stack data to DB; they're versioned with code.
+**Data Model**: [constants.ts](constants.ts) is the single source of truth (5800+ lines):
+- `STACKS`, `TEMPLATES` arrays + pre-indexed `TEMPLATES_BY_ID`, `TEMPLATES_BY_STACK` Maps
+- `PRICING_PLANS`, `TRENDING_TEMPLATE_IDS`
+- Templates/stacks are versioned with code—never move to DB
 
-**Config Split**: 
-- Client: `config.ts` defines `CONFIG.UPLOAD`, `CONFIG.SUPABASE`, `CONFIG.GEMINI`, `CONFIG.MEDIAPIPE`, `CONFIG.FACE_DETECTION`
-- Server: `api/_lib/serverConfig.ts` has `UPLOAD_CONFIG`, `GEMINI_CONFIG`, `RATE_LIMIT_CONFIG`, `PAYMENT_CONFIG`
-- Keep both in sync when changing limits/models.
+**Config Split**:
+- Client: [config.ts](config.ts) → `CONFIG.UPLOAD`, `CONFIG.SUPABASE`, `CONFIG.FACE_DETECTION`
+- Server: [api/_lib/serverConfig.ts](api/_lib/serverConfig.ts) → `UPLOAD_CONFIG`, `GEMINI_CONFIG`, `RATE_LIMIT_CONFIG`, `PRICING_PLANS`
+- Keep limits/plan IDs in sync between both files
 
 ## Generation Flow
 
-1. **Client**: `TemplateExecution.tsx` → `UploadZone` collects selfie (required) + wearable (fitit only) → `generateImage()` in `geminiService.ts` converts File → base64 data URL
-2. **Request**: `POST /api/generate` with `Authorization: Bearer <jwt>`, body: `{ selfieDataUrl, wearableDataUrl, prompt }`
-3. **Server** (`api/generate.ts`):
+1. [TemplateExecution.tsx](components/TemplateExecution.tsx) → `UploadZone` collects `File` objects (selfie required, wearable for `fitit` stack)
+2. [geminiService.ts](services/geminiService.ts) converts `File` → base64 data URL, calls `POST /api/generate`
+3. Request body: `{ imageData, wearableData, templateId, templateOptions }` + `Authorization: Bearer <jwt>`
+4. [api/generate.ts](api/generate.ts):
    - Verify JWT via Supabase service role → extract `user.id`
-   - Rate limit check (fail-open: allow if Redis down)
-   - Deduct 1 credit via RPC `deduct_credits` (atomic, transactional)
-   - Validate images: MIME whitelist (jpeg|png|webp|gif) + ≤10MB each
-   - Call `@google/genai` (`gemini-2.5-flash-image`) with images + prompt (truncated to 100K chars)
-   - Return array of base64-encoded generated image data URLs
-4. **Client**: Display results in carousel; user can download or regenerate.
+   - Rate limit check (fail-open if Redis unavailable)
+   - Atomic credit deduction via RPC `deduct_credits` **before** AI call
+   - Validate MIME (jpeg/png/webp/gif) + size (≤10MB)
+   - Call `@google/genai` (`gemini-2.5-flash-image`) with dynamic prompt (try-on vs. remix)
+   - Return `{ images: string[] }` (base64 data URLs)
 
-## Auth Pattern
+## Auth & State
 
-**Wrapper**: Always use `services/authService.ts` (delegates to `supabaseAuthService.ts`). Never import Supabase client directly in components.
+**Auth wrapper**: Always use [services/authService.ts](services/authService.ts) (delegates to `supabaseAuthService.ts`). Never import Supabase directly in components.
 
-**Flow**: `App.tsx` subscribes to `onAuthStateChange()` → sets `user` state → passes downstream as prop. All auth-gated UI checks `user` existence.
+**State flow**: No Redux. `App.tsx` manages `user` state via `onAuthStateChange()` → props drill down to routes/components.
 
-**Stack-specific rules**: 
-- `fitit` stack requires **both** selfie + wearable images in `TemplateExecution.tsx`
-- All other stacks require only selfie; wearable optional
-- `onLoginRequired` callback redirects to auth modal if user not logged in
-
-## Payments (Razorpay INR)
-
-**Setup**: Plans defined in `PRICING_PLANS` (e.g., "Essentials" ₹129, 20 credits). IDs & amounts must match `api/_lib/serverConfig.ts`.
-
-**Flow**:
-1. User clicks plan → `PaymentModal.tsx` → `POST /api/create-order` → Razorpay returns `orderId`
-2. Razorpay checkout modal → user enters card details
-3. On success → `POST /api/verify-payment` with `orderId`, `paymentId`, `razorpaySignature`
-4. Server: HMAC verify signature (SHA256) using `RAZORPAY_KEY_SECRET` → atomic credit add via RPC `add_user_credits`
-5. Subscription record created in DB with status `paid`
-
-**Rate Limiting**: Payment endpoints use **fail-closed** (deny if Redis unavailable).
-
-## Rate Limiting
-
-Upstash Redis sliding windows via `@upstash/ratelimit` + `@upstash/redis`:
-- **Generate**: 20 req/60s per user (fail-open: allow if Redis down)
-- **Order/Verify**: 10 req/60s per user (fail-closed: deny if Redis down)
-
-Pattern in `api/generate.ts`:
-```typescript
-const limiter = getGenerateRateLimiter();
-const rateLimitResult = await checkRateLimit(limiter, user.id);
-if (!rateLimitResult.success) {
-  return { error: 'Rate limit exceeded', status: 429 };
-}
-```
-
-## Component Patterns
-
-**UploadZone**: Handles file selection (click, drag-drop, paste). Validates MIME + size. Triggers camera modal on button click.
-
-**SmartSelfieModal** vs **StandardCameraModal**: Smart uses MediaPipe face detection + pose guidance; Standard is basic webcam capture. Selected in `UploadZone` based on device support.
-
-**TemplateExecution**: Core generation UI. Manages state via refs to handle clipboard events in passive listeners. Stores `selfieImage` + `wearableImage` (File objects), then converts to base64 on submit.
-
-**Props drill-down**: No Redux/Zustand. State lives in `App.tsx`, props pass down. Routes are passed `user`, `onLoginRequired`, `onBack` callbacks.
-
-## State & Refs in TemplateExecution
-
-Uses React refs to sync with state in paste handlers:
+**Ref pattern** in `TemplateExecution`: Syncs state to refs for clipboard paste handlers (avoids closure staleness):
 ```typescript
 const selfieImageRef = useRef(selfieImage);
 useEffect(() => { selfieImageRef.current = selfieImage; }, [selfieImage]);
 ```
-This avoids closure issues in clipboard event listeners (passive, not in event handler).
+
+## Payments (Razorpay INR)
+
+1. `POST /api/create-order` → Razorpay `orderId`
+2. Razorpay checkout → `POST /api/verify-payment` with signature
+3. HMAC SHA256 verification → atomic RPC `add_user_credits`
+
+Plan IDs (`essentials`, `ultimate`) must match in both [constants.ts](constants.ts) and [api/_lib/serverConfig.ts](api/_lib/serverConfig.ts).
+
+## Rate Limiting
+
+[api/_lib/ratelimit.ts](api/_lib/ratelimit.ts) uses Upstash Redis sliding windows:
+- **Generate**: 20 req/60s (fail-open)
+- **Payment**: 10 req/60s (fail-closed)
 
 ## Key Patterns
 
 ```typescript
-// O(1) template lookup in routes
+// O(1) template lookup — never use .find() on TEMPLATES array
 const template = TEMPLATES_BY_ID.get(templateId);
 const stackTemplates = TEMPLATES_BY_STACK.get(stackId) ?? [];
 
-// Structured JSON logging with request correlation
+// JWT verification — never trust userId from request body
+const { data: { user } } = await supabase.auth.getUser(token);
+
+// Structured logging with correlation
 const log = createLogger(requestId, userId);
-log.info('Generation started', { templateId, stackId });
-log.error('Credit check failed', { credits: profile.credits });
-
-// JWT verification - never trust userId from body
-const { data: { user }, error } = await supabase.auth.getUser(token);
-if (!user) return { error: 'Unauthorized', status: 401 };
-
-// Sanitized error logging (no stack traces in production)
-import { sanitizeError } from './_lib/logger';
-log.error('API failed', sanitizeError(error));
+log.info('Generation started', { templateId });
+log.error('Failed', sanitizeError(error)); // no stack traces in prod
 ```
 
-## Styling & Mobile
+## Environment Variables
 
-**Tailwind 4** with custom palette in `index.css`:
-- Background: `#0a0a0a` (near-black)
-- Text: `#f5f5f5` (off-white)
-- Accent: `#c9a962` (gold)
+**Client** (prefixed `VITE_`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
-**Mobile-first design**: Safe-area insets in `vercel.json` headers. Camera permissions enabled via manifest in `vercel.json`. `BottomNav` sticky on mobile; desktop hides nav.
+**Server**: `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`
 
 ## Commands
 
 ```bash
-npm install && npm run dev     # Vite dev server, localhost:5173
-npm run build                   # Type-check + Vite build → dist/
+npm install && npm run dev     # Vite dev server at localhost:5173
+npm run build                  # TypeScript check + production build
 ```
-
-**Debugging**: API logs appear in Vercel dashboard or local terminal. Use `request_id` to correlate logs across calls.
 
 ## Guardrails
 
 ❌ **Never**:
-- Import `@google/genai` client-side — always POST to `/api/generate`
-- Trust `userId` from request body — derive from verified JWT only
-- Expose `SUPABASE_SERVICE_ROLE_KEY` to client (only server-side env)
-- Move `STACKS` or `TEMPLATES` to DB (versioned with code)
-- Forget to mirror plan IDs between `constants.ts` and `serverConfig.ts`
+- Import `@google/genai` client-side
+- Trust `userId` from request body
+- Move templates/stacks to database
+- Forget to sync plan IDs between client and server config
 
 ✅ **Always**:
-- Use `TEMPLATES_BY_ID.get()` for O(1) lookups, not array scans
-- Verify JWT before trusting user identity in API routes
-- Deduct credits atomically (before calling AI, not after)
-- Validate uploads on both client (UX) and server (security)
-- Use structured logging for observability in production
+- Use `TEMPLATES_BY_ID.get()` for O(1) lookups
+- Deduct credits atomically before AI call
+- Validate uploads on both client and server
+- Use structured logging with `request_id` correlation
