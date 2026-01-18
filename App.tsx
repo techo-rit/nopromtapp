@@ -9,7 +9,7 @@ import { AuthModal } from "./components/AuthModal";
 import { PaymentModal } from "./components/PaymentModal";
 import { TemplateExecution } from "./components/TemplateExecution";
 
-// New Routes
+// Routes
 import { Home } from "./routes/Home";
 import { StackView } from "./routes/StackView";
 
@@ -18,12 +18,11 @@ import { authService } from "./services/authService";
 import { searchTemplates } from "./utils/searchLogic";
 import { useDebounce } from "./hooks/useDebounce";
 import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./constants";
-import type { Template, User, NavCategory, Stack } from "./types";
+import type { Template, User, NavCategory } from "./types";
 
-// Storage Helper (Moved here for now, could be in utils)
 const STORAGE_KEY_NAV = "nopromt_nav";
 
-// Wrapper for Template Route (keeps access to User/Auth logic)
+// --- Route Wrapper ---
 const TemplateRoute = ({ 
   user, 
   onLoginRequired, 
@@ -34,10 +33,9 @@ const TemplateRoute = ({
   onBack: () => void 
 }) => {
   const { templateId } = useParams();
-  // O(1) lookup instead of O(n) find
   const selectedTemplate = templateId ? TEMPLATES_BY_ID.get(templateId) : undefined;
-  if (!selectedTemplate) return <Navigate to="/" replace />;
   
+  if (!selectedTemplate) return <Navigate to="/" replace />;
   const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
   if (!stack) return <Navigate to="/" replace />;
   
@@ -52,24 +50,26 @@ const TemplateRoute = ({
   );
 };
 
+// --- Main App Component ---
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // --- Global State ---
+  // State
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
+  
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
-  // --- Modals ---
+  // Modals
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // --- Search (debounced to prevent O(n) search on every keystroke) ---
+  // Search
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 250);
   const searchResults = useMemo(
@@ -82,33 +82,28 @@ const App: React.FC = () => {
     []
   );
 
-  // --- Effects ---
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_NAV, activeNav);
-  }, [activeNav]);
-
+  // --- Auth Initialization ---
   useEffect(() => {
     let mounted = true;
-    
-    // INDUSTRY STANDARD PATTERN (from Supabase docs):
-    // 1. Get initial session (reads from localStorage, fast)
-    // 2. Set up listener for future changes
-    
-    // Step 1: Get initial session immediately
-    authService.getCurrentUser().then((initialUser) => {
-      if (mounted) {
-        console.log('[App] Initial user:', initialUser?.email ?? 'none');
-        setUser(initialUser);
-        setIsGlobalLoading(false);
-      }
+
+    // 1. Setup the listener (The single source of truth)
+    const subscription = authService.onAuthStateChange((updatedUser) => {
+      if (!mounted) return;
+      
+      console.log("[App] Auth update:", updatedUser?.email ?? "Logged out");
+      setUser(updatedUser);
+      setIsGlobalLoading(false); // Stop loading once Supabase tells us the state
     });
 
-    // Step 2: Listen for auth changes (sign in, sign out, token refresh)
-    const subscription = authService.onAuthStateChange((updatedUser) => {
-      if (mounted) {
-        console.log('[App] Auth changed:', updatedUser?.email ?? 'none');
-        setUser(updatedUser);
+    // 2. Initial check (Handles cases where listener might be slightly delayed)
+    authService.getCurrentUser().then((initialUser) => {
+      if (mounted && initialUser) {
+        setUser(initialUser);
         setIsGlobalLoading(false);
+      } else if (mounted) {
+         // If no user found initially, we still wait for listener
+         // unless we want to assume logged out immediately.
+         // Usually listener fires 'INITIAL_SESSION' quickly.
       }
     });
 
@@ -117,6 +112,10 @@ const App: React.FC = () => {
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_NAV, activeNav);
+  }, [activeNav]);
 
   // --- Handlers ---
   const handleNavClick = (category: NavCategory) => {
@@ -135,41 +134,50 @@ const App: React.FC = () => {
         setSearchQuery("");
         return;
     }
-
-    // FIX: Split logic so TypeScript knows exactly which overload to use
     if (location.pathname.includes('/template/')) {
-       navigate(-1); // "Go back one step" (Mode: number)
+       navigate(-1);
     } else {
-       navigate('/'); // "Go to home" (Mode: string)
+       navigate('/');
     }
   };
 
-  // Auth & Payments
-  const handleAuthAction = async (action: () => Promise<any>, successMsg?: string) => {
+  const handleAuthAction = async (action: () => Promise<any>) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
       const result = await action();
-      if (result) setUser(result); // If action returns a user
+      // Only set user if the action specifically returns it (like login/signup)
+      if (result && 'id' in result) {
+         setUser(result);
+      }
       setShowAuthModal(false);
     } catch (error: any) {
+      console.error("Auth Error:", error);
       setAuthError(error.message || "Authentication failed");
     } finally {
       setAuthLoading(false);
     }
   };
 
+  if (isGlobalLoading) {
+     // Optional: Render a loading screen here if you want to block the UI
+     // return <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0a] text-white">Loading...</div>;
+  }
+
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
       
-      {/* HEADER */}
       <div className="shrink-0 z-50">
         <Header
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); setUser(null); }}
+          onLogout={async () => { 
+            await authService.logout(); 
+            // Local state update handles via listener, but we can force it for UI snapiness
+            setUser(null); 
+          }}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
           isLoading={isGlobalLoading}
           isSecondaryPage={location.pathname !== '/'}
@@ -179,7 +187,7 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* MODALS */}
+      {/* Modals */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
@@ -196,13 +204,13 @@ const App: React.FC = () => {
           onClose={() => setShowPaymentModal(false)}
           user={user}
           onPaymentSuccess={async () => {
+             // Refresh user profile to get new credits
              const u = await authService.getCurrentUser();
              if (u) setUser(u);
           }}
         />
       )}
       
-      {/* MAIN CONTENT */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
         <Routes>
           <Route 
@@ -236,14 +244,13 @@ const App: React.FC = () => {
         </Routes>
       </main>
 
-      {/* FOOTER */}
       <div className="shrink-0 z-50">
         <BottomNav
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); setUser(null); }}
+          onLogout={async () => { await authService.logout(); }}
         />
       </div>
     </div>

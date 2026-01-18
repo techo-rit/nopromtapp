@@ -1,9 +1,8 @@
 // services/supabaseAuthService.ts
-// INDUSTRY STANDARD: Clean separation of auth state and profile data
 import { supabase } from '../lib/supabase'
 import type { User } from '../types'
 
-// Profile cache to avoid re-fetching on every auth event
+// Cache profile in memory to reduce database calls
 let profileCache: { userId: string; name: string | null; credits: number } | null = null;
 
 export const supabaseAuthService = {
@@ -11,22 +10,16 @@ export const supabaseAuthService = {
    * Sign up new user
    */
   async signUp(email: string, password: string, fullName: string): Promise<User | null> {
-    if (!email || !password || !fullName) throw new Error('All fields are required')
-    if (password.length < 8) throw new Error('Password must be at least 8 characters')
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { full_name: fullName },
-      },
+      options: { data: { full_name: fullName } },
     })
 
     if (error) throw new Error(error.message)
     if (data.user && !data.session) return null // Email confirmation required
     if (!data.user) throw new Error('Sign up failed')
 
-    // Clear cache and fetch fresh profile
     profileCache = null;
     return this._buildUser(data.user)
   },
@@ -40,7 +33,7 @@ export const supabaseAuthService = {
     if (error) throw new Error(error.message)
     if (!data.user) throw new Error('Login failed')
 
-    profileCache = null; // Clear cache on fresh login
+    profileCache = null;
     return this._buildUser(data.user)
   },
 
@@ -51,7 +44,7 @@ export const supabaseAuthService = {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}${window.location.pathname}`,
+        redirectTo: window.location.origin, // Simplified redirect
         queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     });
@@ -59,24 +52,28 @@ export const supabaseAuthService = {
   },
 
   /**
-   * Get Current User - SYNCHRONOUS session read + async profile
+   * Get Current User - ROBUST IMPLEMENTATION
+   * Fixes "Logout on Refresh" by aggressively checking for sessions
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      // Step 1: Read session from localStorage (synchronous, no network)
+      // 1. Try to get the active session
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error || !session?.user) {
-        console.log('[Auth] No session found');
-        return null;
+
+      if (session?.user) {
+        return await this._buildUser(session.user);
       }
 
-      console.log('[Auth] Session found for:', session.user.email);
-      
-      // Step 2: Build user with cached/fetched profile
-      return await this._buildUser(session.user);
+      // 2. Fallback: If no session, try to refresh explicitly (recovers lost sessions)
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      if (refreshData.session?.user) {
+        console.log('[Auth] Session recovered via refresh');
+        return await this._buildUser(refreshData.session.user);
+      }
+
+      return null;
     } catch (e) {
-      console.error("[Auth] getCurrentUser failed:", e);
+      console.warn("[Auth] getCurrentUser error:", e);
       return null;
     }
   },
@@ -87,132 +84,88 @@ export const supabaseAuthService = {
   },
 
   /**
-   * INDUSTRY STANDARD Auth Listener
-   * Simple pattern: trust the session, don't over-engineer
+   * Real-time Auth Listener
    */
   onAuthStateChange(callback: (user: User | null) => void) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[Auth] Event:', event, '| User:', session?.user?.email ?? 'none');
-        
-        // User explicitly signed out
+        console.log(`[Auth Event] ${event}`);
+
+        // Handle explicit sign out
         if (event === 'SIGNED_OUT') {
           profileCache = null;
           callback(null);
           return;
         }
-        
-        // Session exists = user is authenticated
+
+        // Handle Session Available (Sign in, Auto-refresh, or Initial Load)
         if (session?.user) {
           try {
             const user = await this._buildUser(session.user);
             callback(user);
           } catch (e) {
-            // CRITICAL: Never logout due to profile fetch failure
-            console.error('[Auth] Profile error, using basic user:', e);
+            // Fallback if profile fetch fails - keep user logged in!
+            console.error('[Auth] Profile fetch failed, using basic user:', e);
             callback(this._mapBasicUser(session.user));
           }
-          return;
+        } else if (event === 'INITIAL_SESSION') {
+            // Only explicitly send null if it's the initial load and truly no session exists
+            callback(null);
         }
-        
-        // No session and not a sign-out = check if we should show logged out
-        // Only call null if this is truly "no user" (initial load with no auth)
-        if (event === 'INITIAL_SESSION') {
-          // No session on initial load = user is not logged in
-          callback(null);
-        }
-        // For other events without session, don't call callback
-        // (could be transient state during token refresh)
       }
     );
     
+    // Return the subscription object directly so we can unsubscribe later
     return subscription;
   },
 
-  // --- Helper Methods ---
+  // --- Internal Helper Methods ---
 
-  /**
-   * Build complete User object with profile data
-   */
   async _buildUser(supabaseUser: any): Promise<User> {
-    // Use cache if available and matches
+    // 1. Use cache if valid
     if (profileCache && profileCache.userId === supabaseUser.id) {
       return this._mapUser(supabaseUser, profileCache.name, profileCache.credits);
     }
 
-    // Fetch profile from database
+    // 2. Fetch fresh profile
     const { name, credits } = await this._fetchProfile(supabaseUser.id);
     
-    // Update cache
+    // 3. Update cache
     profileCache = { userId: supabaseUser.id, name, credits };
-    
     return this._mapUser(supabaseUser, name, credits);
   },
 
-  /**
-   * Fetch profile with retry logic
-   */
   async _fetchProfile(userId: string): Promise<{ name: string | null; credits: number }> {
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 400;
-
-    for (let i = 0; i < MAX_RETRIES; i++) {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('full_name, credits')
-          .eq('id', userId)
-          .single();
-        
-        if (!error && data) {
-          return { name: data.full_name, credits: data.credits ?? 0 };
-        }
-        
-        if (error) {
-          console.warn(`[Auth] Profile fetch ${i + 1}/${MAX_RETRIES}:`, error.message);
-        }
-      } catch (e) {
-        console.warn(`[Auth] Profile fetch ${i + 1}/${MAX_RETRIES} error:`, e);
+    try {
+      // Simple fetch, no complex retry logic needed for most cases
+      // If it fails, we just return default values so the user stays logged in
+      const { data, error } = await supabase
+        .from('profiles') // Ensure your table is named 'profiles' or 'users'
+        .select('full_name, credits')
+        .eq('id', userId)
+        .single();
+      
+      if (!error && data) {
+        return { name: data.full_name, credits: data.credits ?? 0 };
       }
-
-      if (i < MAX_RETRIES - 1) {
-        await new Promise(r => setTimeout(r, RETRY_DELAY));
-      }
+    } catch (e) {
+      console.warn('[Auth] Error fetching profile:', e);
     }
-
-    // Return defaults if all retries fail
     return { name: null, credits: 0 };
   },
 
-  /**
-   * Map to User type with profile data
-   */
   _mapUser(supabaseUser: any, profileName: string | null, credits: number): User {
     return {
       id: supabaseUser.id,
       email: supabaseUser.email!,
-      name: profileName || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+      name: profileName || supabaseUser.user_metadata?.full_name || 'User',
       credits: credits,
       createdAt: new Date(supabaseUser.created_at),
       lastLogin: new Date(),
     };
   },
 
-  /**
-   * Basic user without profile (fallback)
-   */
   _mapBasicUser(supabaseUser: any): User {
-    return this._mapUser(supabaseUser, null, profileCache?.credits ?? 0);
-  },
-
-  /**
-   * Force refresh profile (call after purchase, etc.)
-   */
-  async refreshProfile(): Promise<void> {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      profileCache = null;
-      await this._buildUser(session.user);
-    }
+    return this._mapUser(supabaseUser, null, 0);
   }
 }
