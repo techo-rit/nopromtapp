@@ -29,8 +29,6 @@ export const supabaseAuthService = {
 
     if (!data.user) throw new Error('Sign up failed')
 
-    // FIX: Fetch the full profile (waits for DB trigger) instead of just mapping the auth user
-    // This ensures we get the credits immediately after signup
     return this._getUserProfile(data.user)
   },
 
@@ -46,7 +44,6 @@ export const supabaseAuthService = {
     if (error) throw new Error(error.message)
     if (!data.user) throw new Error('Login failed')
 
-    // FIX: Fetch the full profile so the user has their credits immediately upon login
     return this._getUserProfile(data.user)
   },
 
@@ -69,20 +66,26 @@ export const supabaseAuthService = {
   },
 
   /**
-   * Get Current User
-   * Uses robust profile fetching to ensure credits are loaded
+   * Get Current User - FIXED VERSION
+   * Uses getUser() to validate token server-side, not just read from localStorage
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      // CRITICAL FIX: getUser() validates the JWT with Supabase server
+      // getSession() only reads localStorage and doesn't verify if token is still valid
+      const { data: { user }, error } = await supabase.auth.getUser();
       
-      if (error || !session?.user) {
+      if (error || !user) {
+        // Only log actual errors, not "no session" cases
+        if (error && error.message !== 'Auth session missing!') {
+          console.error("[Auth] Validation failed:", error.message);
+        }
         return null;
       }
 
-      return await this._getUserProfile(session.user);
+      return await this._getUserProfile(user);
     } catch (e) {
-      console.error("Auth check failed", e);
+      console.error("[Auth] Check failed", e);
       return null;
     }
   },
@@ -91,26 +94,61 @@ export const supabaseAuthService = {
     await supabase.auth.signOut()
   },
 
+  /**
+   * Auth State Change Listener - FIXED VERSION
+   * Properly handles race conditions and avoids unnecessary null callbacks
+   */
   onAuthStateChange(callback: (user: User | null) => void) {
     let cachedUser: User | null = null;
+    let isInitialLoad = true;
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Optimization: If just token refresh, don't refetch profile to avoid flickering
+        console.log('[Auth] Event:', event, 'Session:', !!session);
+        
+        // CRITICAL FIX: Ignore INITIAL_SESSION if we're still loading
+        // This prevents the race condition where null fires before session recovery
+        if (event === 'INITIAL_SESSION' && !session) {
+          // Don't immediately call callback(null) - let getCurrentUser() handle initial load
+          // This prevents logout on page refresh
+          console.log('[Auth] Ignoring empty INITIAL_SESSION - waiting for getCurrentUser');
+          isInitialLoad = false;
+          return;
+        }
+        
+        // Token refresh - just use cached user to avoid flickering
         if (event === 'TOKEN_REFRESHED' && cachedUser && session?.user?.id === cachedUser.id) {
           callback(cachedUser);
           return;
         }
         
+        // User signed out explicitly
+        if (event === 'SIGNED_OUT') {
+          cachedUser = null;
+          callback(null);
+          return;
+        }
+        
+        // User signed in or session recovered
         if (session?.user) {
-          // This will now use the retry logic, ensuring robust profile loading
-          const user = await this._getUserProfile(session.user);
-          cachedUser = user;
-          callback(user);
-        } else {
+          try {
+            const user = await this._getUserProfile(session.user);
+            cachedUser = user;
+            callback(user);
+          } catch (e) {
+            console.error('[Auth] Profile fetch failed:', e);
+            // Still provide basic user info even if profile fetch fails
+            cachedUser = this._mapUser(session.user, null, 0);
+            callback(cachedUser);
+          }
+        } else if (!isInitialLoad) {
+          // Only call null if this isn't the initial load
+          // (initial load is handled by getCurrentUser)
           cachedUser = null;
           callback(null);
         }
+        
+        isInitialLoad = false;
       }
     )
     return subscription
@@ -120,15 +158,13 @@ export const supabaseAuthService = {
 
   /**
    * Fetches user profile with retries to handle database trigger delays.
-   * This fixes the "0 credits" issue immediately after signup.
    */
   async _getUserProfile(supabaseUser: any): Promise<User> {
       let profileName = null;
       let profileCredits = 0;
       
-      // Retry configuration: 3 attempts, 1 second apart
       const MAX_RETRIES = 3;
-      const RETRY_DELAY = 1000; // ms
+      const RETRY_DELAY = 1000;
 
       for (let i = 0; i < MAX_RETRIES; i++) {
         try {
@@ -138,29 +174,23 @@ export const supabaseAuthService = {
             .eq('id', supabaseUser.id)
             .single();
           
-          // If we found the profile, GREAT! Stop looking.
           if (!error && profile) {
             profileName = profile.full_name;
             profileCredits = profile.credits ?? 0;
             break; 
-          } 
+          }
           
-          // If profile is missing (error code PGRST116), the DB trigger might still be running.
-          // We loop again to retry.
+          // Log the actual error for debugging
+          if (error) {
+            console.warn(`[Auth] Profile fetch attempt ${i + 1} failed:`, error.message);
+          }
         } catch (e) {
-          // Ignore error and retry
+          console.warn(`[Auth] Profile fetch attempt ${i + 1} exception:`, e);
         }
 
-        // Wait before next retry (unless it's the last attempt)
         if (i < MAX_RETRIES - 1) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         }
-      }
-
-      // If fetch failed even after retries, log it but return the user anyway.
-      // This prevents the app from crashing.
-      if (profileName === null && profileCredits === 0) {
-        console.warn('Profile fetch incomplete. Using default user data.');
       }
 
       return this._mapUser(supabaseUser, profileName, profileCredits);
@@ -170,7 +200,6 @@ export const supabaseAuthService = {
       return {
         id: supabaseUser.id,
         email: supabaseUser.email!,
-        // Use fetched profile name, OR metadata name, OR fall back to 'User'
         name: profileName || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
         credits: profileCredits || 0, 
         createdAt: new Date(supabaseUser.created_at),

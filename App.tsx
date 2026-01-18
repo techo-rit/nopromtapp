@@ -90,19 +90,24 @@ const App: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     
-    // Initial Load
-    authService.getCurrentUser().then((initialUser) => {
-      if (mounted) {
-        if (initialUser) setUser(initialUser);
-        setIsGlobalLoading(false); 
-      }
-    });
-
-    // Auth Listener
+    // FIXED: Set up listener FIRST, then do initial load
+    // This ensures we don't miss any auth events during startup
     const subscription = authService.onAuthStateChange((updatedUser) => {
       if (mounted) {
         setUser(updatedUser);
         setIsGlobalLoading(false);
+      }
+    });
+
+    // Initial Load - validates session with server (not just localStorage)
+    authService.getCurrentUser().then((initialUser) => {
+      if (mounted) {
+        // Only set user if we got one - don't override with null
+        // if onAuthStateChange already set a user
+        if (initialUser) {
+          setUser(initialUser);
+        }
+        setIsGlobalLoading(false); 
       }
     });
 
