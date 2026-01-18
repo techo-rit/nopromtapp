@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
 
 // Components
@@ -9,7 +9,7 @@ import { AuthModal } from "./components/AuthModal";
 import { PaymentModal } from "./components/PaymentModal";
 import { TemplateExecution } from "./components/TemplateExecution";
 
-// Routes
+// New Routes
 import { Home } from "./routes/Home";
 import { StackView } from "./routes/StackView";
 
@@ -18,11 +18,12 @@ import { authService } from "./services/authService";
 import { searchTemplates } from "./utils/searchLogic";
 import { useDebounce } from "./hooks/useDebounce";
 import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./constants";
-import type { Template, User, NavCategory } from "./types";
+import type { Template, User, NavCategory, Stack } from "./types";
 
+// Storage Helper (Moved here for now, could be in utils)
 const STORAGE_KEY_NAV = "nopromt_nav";
 
-// --- Route Wrapper ---
+// Wrapper for Template Route (keeps access to User/Auth logic)
 const TemplateRoute = ({ 
   user, 
   onLoginRequired, 
@@ -33,9 +34,10 @@ const TemplateRoute = ({
   onBack: () => void 
 }) => {
   const { templateId } = useParams();
+  // O(1) lookup instead of O(n) find
   const selectedTemplate = templateId ? TEMPLATES_BY_ID.get(templateId) : undefined;
-  
   if (!selectedTemplate) return <Navigate to="/" replace />;
+  
   const stack = STACKS.find(s => s.id === selectedTemplate.stackId);
   if (!stack) return <Navigate to="/" replace />;
   
@@ -50,29 +52,24 @@ const TemplateRoute = ({
   );
 };
 
-// --- Main App Component ---
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // State
+  // --- Global State ---
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
-  
   const [user, setUser] = useState<User | null>(null);
-  
-  // INDUSTRY STANDARD: Failsafe Loading State
-  // We default to true, but we GUARANTEE it becomes false eventually.
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
-  // Modals
+  // --- Modals ---
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Search
+  // --- Search (debounced to prevent O(n) search on every keystroke) ---
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 250);
   const searchResults = useMemo(
@@ -85,55 +82,35 @@ const App: React.FC = () => {
     []
   );
 
-  // --- Auth Initialization (FAIL-SAFE) ---
-  useEffect(() => {
-    let mounted = true;
-
-    // 1. FAILSAFE: Force the app to load after 1.5s no matter what.
-    // This prevents the "Blank Screen" if Supabase hangs.
-    const safetyTimer = setTimeout(() => {
-      if (mounted && isGlobalLoading) {
-        console.warn("[App] Auth check timed out - forcing guest mode");
-        setIsGlobalLoading(false);
-      }
-    }, 1500);
-
-    const initAuth = async () => {
-      try {
-        // 2. Check for existing session first (fastest)
-        const currentUser = await authService.getCurrentUser();
-        if (mounted && currentUser) {
-          setUser(currentUser);
-        }
-      } catch (err) {
-        console.warn("[App] Initial auth check failed:", err);
-      } finally {
-        // 3. ALWAYS stop loading after the check, result or not.
-        if (mounted) setIsGlobalLoading(false);
-      }
-    };
-
-    // 4. Start the listener for future updates (Login/Logout)
-    const subscription = authService.onAuthStateChange((updatedUser) => {
-      if (!mounted) return;
-      console.log("[App] Auth State Changed:", updatedUser ? "User Logged In" : "User Logged Out");
-      setUser(updatedUser);
-      setIsGlobalLoading(false); // Ensure loading stops on event
-    });
-
-    // Start the initial check
-    initAuth();
-
-    return () => {
-      mounted = false;
-      clearTimeout(safetyTimer);
-      if (subscription?.unsubscribe) subscription.unsubscribe();
-    };
-  }, []); // Empty dependency array = runs once on mount
-
+  // --- Effects ---
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    // Initial Load
+    authService.getCurrentUser().then((initialUser) => {
+      if (mounted) {
+        if (initialUser) setUser(initialUser);
+        setIsGlobalLoading(false); 
+      }
+    });
+
+    // Auth Listener
+    const subscription = authService.onAuthStateChange((updatedUser) => {
+      if (mounted) {
+        setUser(updatedUser);
+        setIsGlobalLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      if (subscription?.unsubscribe) subscription.unsubscribe();
+    };
+  }, []);
 
   // --- Handlers ---
   const handleNavClick = (category: NavCategory) => {
@@ -152,37 +129,29 @@ const App: React.FC = () => {
         setSearchQuery("");
         return;
     }
+
+    // FIX: Split logic so TypeScript knows exactly which overload to use
     if (location.pathname.includes('/template/')) {
-       navigate(-1);
+       navigate(-1); // "Go back one step" (Mode: number)
     } else {
-       navigate('/');
+       navigate('/'); // "Go to home" (Mode: string)
     }
   };
 
-  const handleAuthAction = async (action: () => Promise<any>) => {
+  // Auth & Payments
+  const handleAuthAction = async (action: () => Promise<any>, successMsg?: string) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
       const result = await action();
-      // Only set user manually if the action returns it immediately
-      // The listener will also catch this, but this makes the UI snappier
-      if (result && 'id' in result) {
-         setUser(result);
-      }
+      if (result) setUser(result); // If action returns a user
       setShowAuthModal(false);
     } catch (error: any) {
-      console.error("Auth Action Error:", error);
       setAuthError(error.message || "Authentication failed");
     } finally {
       setAuthLoading(false);
     }
   };
-
-  // Prevent interactions while loading, but don't show a generic white screen.
-  // We use a dark background to match the theme.
-  if (isGlobalLoading) {
-     return <div className="fixed inset-0 bg-[#0a0a0a] z-[9999]" />;
-  }
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
@@ -194,13 +163,9 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { 
-            await authService.logout(); 
-            // We rely on the listener to clear the user, but we can optimistically clear it here
-            setUser(null); 
-          }}
+          onLogout={async () => { await authService.logout(); setUser(null); }}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
-          isLoading={false} // We handled global loading above
+          isLoading={isGlobalLoading}
           isSecondaryPage={location.pathname !== '/'}
           onBack={handleBack}
           searchQuery={searchQuery}
@@ -225,7 +190,6 @@ const App: React.FC = () => {
           onClose={() => setShowPaymentModal(false)}
           user={user}
           onPaymentSuccess={async () => {
-             // Refresh user profile to get new credits
              const u = await authService.getCurrentUser();
              if (u) setUser(u);
           }}
@@ -273,7 +237,7 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); }}
+          onLogout={async () => { await authService.logout(); setUser(null); }}
         />
       </div>
     </div>
