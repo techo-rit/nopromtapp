@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
 
@@ -49,16 +50,20 @@ const TemplateRoute = ({
   );
 };
 
+// --- Main App Component ---
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // --- Global State ---
+  // State
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
   
   const [user, setUser] = useState<User | null>(null);
+  
+  // INDUSTRY STANDARD: Failsafe Loading State
+  // We default to true, but we GUARANTEE it becomes false eventually.
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
   // Modals
@@ -80,34 +85,51 @@ const App: React.FC = () => {
     []
   );
 
-  // --- Auth Initialization ---
+  // --- Auth Initialization (FAIL-SAFE) ---
   useEffect(() => {
     let mounted = true;
 
-    // 1. Set up the Real-time Listener FIRST (The source of truth)
-    const subscription = authService.onAuthStateChange((updatedUser) => {
-      if (!mounted) return;
-      console.log("[App] Auth update:", updatedUser?.email ?? "Logged out");
-      setUser(updatedUser);
-      setIsGlobalLoading(false); // Valid state received
-    });
-
-    // 2. Perform an initial check to recover session from storage
-    //    We only explicitly stop loading if we find a user. 
-    //    If we don't, we let the listener (step 1) fire its 'INITIAL_SESSION' event to confirm logout.
-    authService.getCurrentUser().then((initialUser) => {
-      if (!mounted) return;
-      if (initialUser) {
-        setUser(initialUser);
+    // 1. FAILSAFE: Force the app to load after 1.5s no matter what.
+    // This prevents the "Blank Screen" if Supabase hangs.
+    const safetyTimer = setTimeout(() => {
+      if (mounted && isGlobalLoading) {
+        console.warn("[App] Auth check timed out - forcing guest mode");
         setIsGlobalLoading(false);
       }
+    }, 1500);
+
+    const initAuth = async () => {
+      try {
+        // 2. Check for existing session first (fastest)
+        const currentUser = await authService.getCurrentUser();
+        if (mounted && currentUser) {
+          setUser(currentUser);
+        }
+      } catch (err) {
+        console.warn("[App] Initial auth check failed:", err);
+      } finally {
+        // 3. ALWAYS stop loading after the check, result or not.
+        if (mounted) setIsGlobalLoading(false);
+      }
+    };
+
+    // 4. Start the listener for future updates (Login/Logout)
+    const subscription = authService.onAuthStateChange((updatedUser) => {
+      if (!mounted) return;
+      console.log("[App] Auth State Changed:", updatedUser ? "User Logged In" : "User Logged Out");
+      setUser(updatedUser);
+      setIsGlobalLoading(false); // Ensure loading stops on event
     });
+
+    // Start the initial check
+    initAuth();
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Empty dependency array = runs once on mount
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_NAV, activeNav);
@@ -142,19 +164,24 @@ const App: React.FC = () => {
     setAuthError(null);
     try {
       const result = await action();
-      if (result && 'id' in result) setUser(result);
+      // Only set user manually if the action returns it immediately
+      // The listener will also catch this, but this makes the UI snappier
+      if (result && 'id' in result) {
+         setUser(result);
+      }
       setShowAuthModal(false);
     } catch (error: any) {
+      console.error("Auth Action Error:", error);
       setAuthError(error.message || "Authentication failed");
     } finally {
       setAuthLoading(false);
     }
   };
 
+  // Prevent interactions while loading, but don't show a generic white screen.
+  // We use a dark background to match the theme.
   if (isGlobalLoading) {
-     // Return a black screen or loader while checking session
-     // This prevents the "flash" of logged-out state
-     return <div className="fixed inset-0 bg-[#0a0a0a]" />;
+     return <div className="fixed inset-0 bg-[#0a0a0a] z-[9999]" />;
   }
 
   return (
@@ -169,10 +196,11 @@ const App: React.FC = () => {
           onSignIn={() => setShowAuthModal(true)}
           onLogout={async () => { 
             await authService.logout(); 
+            // We rely on the listener to clear the user, but we can optimistically clear it here
             setUser(null); 
           }}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
-          isLoading={isGlobalLoading}
+          isLoading={false} // We handled global loading above
           isSecondaryPage={location.pathname !== '/'}
           onBack={handleBack}
           searchQuery={searchQuery}
@@ -197,6 +225,7 @@ const App: React.FC = () => {
           onClose={() => setShowPaymentModal(false)}
           user={user}
           onPaymentSuccess={async () => {
+             // Refresh user profile to get new credits
              const u = await authService.getCurrentUser();
              if (u) setUser(u);
           }}

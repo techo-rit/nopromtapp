@@ -1,3 +1,4 @@
+// services/supabaseAuthService.ts
 import { supabase } from '../lib/supabase'
 import type { User } from '../types'
 
@@ -51,8 +52,8 @@ export const supabaseAuthService = {
   },
 
   /**
-   * Get Current User - ROBUST RECOVERY VERSION
-   * Checks session, then tries refresh token, then gives up.
+   * Get Current User - SAFE MODE
+   * Never throws error, always returns User or null
    */
   async getCurrentUser(): Promise<User | null> {
     try {
@@ -63,17 +64,16 @@ export const supabaseAuthService = {
         return await this._buildUser(session.user);
       }
 
-      // 2. Fallback: Force a refresh. This fixes "logout on refresh" if the
-      //    local token is present but slightly stale or not loaded yet.
-      const { data: refreshData } = await supabase.auth.refreshSession();
-      if (refreshData.session?.user) {
-        console.log('[Auth] Session recovered via refresh token');
+      // 2. Fallback: Force a refresh if no session found (handles stale tokens)
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (!refreshError && refreshData.session?.user) {
         return await this._buildUser(refreshData.session.user);
       }
 
       return null;
     } catch (e) {
-      console.warn("[Auth] Session check failed:", e);
+      console.warn("[Auth] Session check failed, defaulting to guest:", e);
       return null;
     }
   },
@@ -89,26 +89,26 @@ export const supabaseAuthService = {
   onAuthStateChange(callback: (user: User | null) => void) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log(`[Auth Event] ${event}`);
-
+        // Handle explicit sign out
         if (event === 'SIGNED_OUT') {
           profileCache = null;
           callback(null);
           return;
         }
 
+        // Handle Session Available
         if (session?.user) {
           try {
             const user = await this._buildUser(session.user);
             callback(user);
           } catch (e) {
-            // Safety: If profile fetch fails, still log them in with basic data
-            console.error('[Auth] Profile fetch failed, using fallback:', e);
+            console.error('[Auth] Profile build failed:', e);
+            // Even if profile fails, keep them logged in with basic data
             callback(this._mapBasicUser(session.user));
           }
         } else if (event === 'INITIAL_SESSION') {
-          // Only send null if we are SURE there is no session
-          callback(null);
+             // Explicitly handle "no session found"
+             callback(null);
         }
       }
     );
@@ -119,11 +119,15 @@ export const supabaseAuthService = {
   // --- Internal Helper Methods ---
 
   async _buildUser(supabaseUser: any): Promise<User> {
+    // 1. Use cache if valid
     if (profileCache && profileCache.userId === supabaseUser.id) {
       return this._mapUser(supabaseUser, profileCache.name, profileCache.credits);
     }
 
+    // 2. Fetch fresh profile
     const { name, credits } = await this._fetchProfile(supabaseUser.id);
+    
+    // 3. Update cache
     profileCache = { userId: supabaseUser.id, name, credits };
     return this._mapUser(supabaseUser, name, credits);
   },
@@ -140,7 +144,7 @@ export const supabaseAuthService = {
         return { name: data.full_name, credits: data.credits ?? 0 };
       }
     } catch (e) {
-      // Ignore error, return defaults
+      // Ignore error
     }
     return { name: null, credits: 0 };
   },
