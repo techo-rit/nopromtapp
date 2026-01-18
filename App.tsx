@@ -90,8 +90,8 @@ const App: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     
-    // FIXED: Set up listener FIRST, then do initial load
-    // This ensures we don't miss any auth events during startup
+    // INDUSTRY STANDARD: onAuthStateChange is the SINGLE source of truth
+    // It fires INITIAL_SESSION immediately with the persisted session
     const subscription = authService.onAuthStateChange((updatedUser) => {
       if (mounted) {
         setUser(updatedUser);
@@ -99,20 +99,22 @@ const App: React.FC = () => {
       }
     });
 
-    // Initial Load - validates session with server (not just localStorage)
-    authService.getCurrentUser().then((initialUser) => {
-      if (mounted) {
-        // Only set user if we got one - don't override with null
-        // if onAuthStateChange already set a user
-        if (initialUser) {
-          setUser(initialUser);
+    // Fallback: If onAuthStateChange doesn't fire within 2 seconds, check manually
+    // This handles edge cases where the listener might not fire
+    const fallbackTimer = setTimeout(async () => {
+      if (mounted && isGlobalLoading) {
+        console.log('[Auth] Fallback: checking session manually');
+        const currentUser = await authService.getCurrentUser();
+        if (mounted) {
+          if (currentUser) setUser(currentUser);
+          setIsGlobalLoading(false);
         }
-        setIsGlobalLoading(false); 
       }
-    });
+    }, 2000);
 
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
