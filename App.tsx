@@ -1,5 +1,4 @@
-// src/App.tsx
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
 
 // Components
@@ -50,12 +49,11 @@ const TemplateRoute = ({
   );
 };
 
-// --- Main App Component ---
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // State
+  // --- Global State ---
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
@@ -86,24 +84,22 @@ const App: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
-    // 1. Setup the listener (The single source of truth)
+    // 1. Set up the Real-time Listener FIRST (The source of truth)
     const subscription = authService.onAuthStateChange((updatedUser) => {
       if (!mounted) return;
-      
       console.log("[App] Auth update:", updatedUser?.email ?? "Logged out");
       setUser(updatedUser);
-      setIsGlobalLoading(false); // Stop loading once Supabase tells us the state
+      setIsGlobalLoading(false); // Valid state received
     });
 
-    // 2. Initial check (Handles cases where listener might be slightly delayed)
+    // 2. Perform an initial check to recover session from storage
+    //    We only explicitly stop loading if we find a user. 
+    //    If we don't, we let the listener (step 1) fire its 'INITIAL_SESSION' event to confirm logout.
     authService.getCurrentUser().then((initialUser) => {
-      if (mounted && initialUser) {
+      if (!mounted) return;
+      if (initialUser) {
         setUser(initialUser);
         setIsGlobalLoading(false);
-      } else if (mounted) {
-         // If no user found initially, we still wait for listener
-         // unless we want to assume logged out immediately.
-         // Usually listener fires 'INITIAL_SESSION' quickly.
       }
     });
 
@@ -146,13 +142,9 @@ const App: React.FC = () => {
     setAuthError(null);
     try {
       const result = await action();
-      // Only set user if the action specifically returns it (like login/signup)
-      if (result && 'id' in result) {
-         setUser(result);
-      }
+      if (result && 'id' in result) setUser(result);
       setShowAuthModal(false);
     } catch (error: any) {
-      console.error("Auth Error:", error);
       setAuthError(error.message || "Authentication failed");
     } finally {
       setAuthLoading(false);
@@ -160,13 +152,15 @@ const App: React.FC = () => {
   };
 
   if (isGlobalLoading) {
-     // Optional: Render a loading screen here if you want to block the UI
-     // return <div className="h-screen w-full flex items-center justify-center bg-[#0a0a0a] text-white">Loading...</div>;
+     // Return a black screen or loader while checking session
+     // This prevents the "flash" of logged-out state
+     return <div className="fixed inset-0 bg-[#0a0a0a]" />;
   }
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
       
+      {/* HEADER */}
       <div className="shrink-0 z-50">
         <Header
           activeNav={activeNav}
@@ -175,7 +169,6 @@ const App: React.FC = () => {
           onSignIn={() => setShowAuthModal(true)}
           onLogout={async () => { 
             await authService.logout(); 
-            // Local state update handles via listener, but we can force it for UI snapiness
             setUser(null); 
           }}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
@@ -187,7 +180,7 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* Modals */}
+      {/* MODALS */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
@@ -204,13 +197,13 @@ const App: React.FC = () => {
           onClose={() => setShowPaymentModal(false)}
           user={user}
           onPaymentSuccess={async () => {
-             // Refresh user profile to get new credits
              const u = await authService.getCurrentUser();
              if (u) setUser(u);
           }}
         />
       )}
       
+      {/* MAIN CONTENT */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
         <Routes>
           <Route 
@@ -244,6 +237,7 @@ const App: React.FC = () => {
         </Routes>
       </main>
 
+      {/* FOOTER */}
       <div className="shrink-0 z-50">
         <BottomNav
           activeNav={activeNav}

@@ -1,4 +1,3 @@
-// services/supabaseAuthService.ts
 import { supabase } from '../lib/supabase'
 import type { User } from '../types'
 
@@ -44,7 +43,7 @@ export const supabaseAuthService = {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin, // Simplified redirect
+        redirectTo: window.location.origin,
         queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     });
@@ -52,28 +51,29 @@ export const supabaseAuthService = {
   },
 
   /**
-   * Get Current User - ROBUST IMPLEMENTATION
-   * Fixes "Logout on Refresh" by aggressively checking for sessions
+   * Get Current User - ROBUST RECOVERY VERSION
+   * Checks session, then tries refresh token, then gives up.
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      // 1. Try to get the active session
+      // 1. Try standard session retrieval
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (session?.user) {
         return await this._buildUser(session.user);
       }
 
-      // 2. Fallback: If no session, try to refresh explicitly (recovers lost sessions)
+      // 2. Fallback: Force a refresh. This fixes "logout on refresh" if the
+      //    local token is present but slightly stale or not loaded yet.
       const { data: refreshData } = await supabase.auth.refreshSession();
       if (refreshData.session?.user) {
-        console.log('[Auth] Session recovered via refresh');
+        console.log('[Auth] Session recovered via refresh token');
         return await this._buildUser(refreshData.session.user);
       }
 
       return null;
     } catch (e) {
-      console.warn("[Auth] getCurrentUser error:", e);
+      console.warn("[Auth] Session check failed:", e);
       return null;
     }
   },
@@ -91,56 +91,47 @@ export const supabaseAuthService = {
       async (event, session) => {
         console.log(`[Auth Event] ${event}`);
 
-        // Handle explicit sign out
         if (event === 'SIGNED_OUT') {
           profileCache = null;
           callback(null);
           return;
         }
 
-        // Handle Session Available (Sign in, Auto-refresh, or Initial Load)
         if (session?.user) {
           try {
             const user = await this._buildUser(session.user);
             callback(user);
           } catch (e) {
-            // Fallback if profile fetch fails - keep user logged in!
-            console.error('[Auth] Profile fetch failed, using basic user:', e);
+            // Safety: If profile fetch fails, still log them in with basic data
+            console.error('[Auth] Profile fetch failed, using fallback:', e);
             callback(this._mapBasicUser(session.user));
           }
         } else if (event === 'INITIAL_SESSION') {
-            // Only explicitly send null if it's the initial load and truly no session exists
-            callback(null);
+          // Only send null if we are SURE there is no session
+          callback(null);
         }
       }
     );
     
-    // Return the subscription object directly so we can unsubscribe later
     return subscription;
   },
 
   // --- Internal Helper Methods ---
 
   async _buildUser(supabaseUser: any): Promise<User> {
-    // 1. Use cache if valid
     if (profileCache && profileCache.userId === supabaseUser.id) {
       return this._mapUser(supabaseUser, profileCache.name, profileCache.credits);
     }
 
-    // 2. Fetch fresh profile
     const { name, credits } = await this._fetchProfile(supabaseUser.id);
-    
-    // 3. Update cache
     profileCache = { userId: supabaseUser.id, name, credits };
     return this._mapUser(supabaseUser, name, credits);
   },
 
   async _fetchProfile(userId: string): Promise<{ name: string | null; credits: number }> {
     try {
-      // Simple fetch, no complex retry logic needed for most cases
-      // If it fails, we just return default values so the user stays logged in
       const { data, error } = await supabase
-        .from('profiles') // Ensure your table is named 'profiles' or 'users'
+        .from('profiles')
         .select('full_name, credits')
         .eq('id', userId)
         .single();
@@ -149,7 +140,7 @@ export const supabaseAuthService = {
         return { name: data.full_name, credits: data.credits ?? 0 };
       }
     } catch (e) {
-      console.warn('[Auth] Error fetching profile:', e);
+      // Ignore error, return defaults
     }
     return { name: null, credits: 0 };
   },
