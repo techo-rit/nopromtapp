@@ -223,7 +223,8 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
         (isFititStack ? !selfieImage || !wearableImage : !selfieImage);
 
     return (
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-12">
+        <div className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a]">
+            <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-12 pb-24">
             
 
             {!generatedImages && !isLoading && (
@@ -401,6 +402,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 };
