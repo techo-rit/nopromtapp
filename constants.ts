@@ -773,146 +773,14 @@ const animationTemplates: Template[] = [
     name: "Levi Ackerman",
     stackId: "animation",
     imageUrl: "/images/anime_leviAckerman_cover.webp",
-    prompt: {
-      task: "real_life_cosplay_photography",
-
-      rendering_pipeline: [
-        "environment_render_first",
-        "real_world_lighting_setup",
-        "subject_placement",
-        "identity_lock_verification",
-        "imperfection_injection",
-      ],
-
-      reference_image_embeddings: {
-        identity_embedding_strength: 0.95,
-        style_embedding_strength: 0.05,
-        identity_priority: "absolute",
-      },
-
-      identity_constraints: {
-        preserve_exact_face_structure: true,
-        lock_jawline: true,
-        lock_chin_shape: true,
-        lock_eye_spacing: true,
-        lock_nose_shape: true,
-        no_anime_face_translation: true,
-        no_character_face_override: true,
-      },
-
-      cosplay_definition: {
-        character: "Levi Ackerman",
-        mode: "real_human_cosplay",
-        interpretation: "live_action",
-        accuracy_level: "high_but_not_perfect",
-        allow_minor_handmade_imperfections: true,
-      },
-
-      hair: {
-        mode: "real_human_styled_hair",
-        base: "input_person_original_hair",
-        styling_method: "short undercut, hand-styled, slightly uneven",
-        constraints: {
-          no_anime_geometry: true,
-          respect_gravity: true,
-          human_scalp_limits: true,
-        },
-      },
-
-      outfit: {
-        description:
-          "real-world Attack on Titan–inspired outfit: white shirt with wrinkles, dark fitted pants, worn leather-style harness, muted green outer layer with heavy fabric texture",
-        fit: "functional and human",
-        wear_level: "clearly used",
-      },
-
-      pose: {
-        description:
-          "still, disciplined stance with subtle readiness, calm and controlled",
-        no_hero_pose: true,
-        micro_asymmetry: true,
-      },
-
-      environment: {
-        description:
-          "real-world architecture that naturally mirrors the Attack on Titan world: narrow stone or brick streets, old European-style residential blocks, tall walls closing in from both sides, aged masonry, worn staircases, iron railings, small windows, weather stains, moss in cracks, uneven cobblestone or rough concrete ground",
-        anime_world_reference:
-          "inspired by inside-the-walls city layouts, but fully real",
-        location_feel: "dense, enclosed, militaristic civilian zone",
-        composition_rules: {
-          vertical_pressure: true,
-          tight_framing: true,
-          no_open_sky_dominance: true,
-          objects_cut_off_by_frame: true,
-        },
-        interaction: {
-          boots_on_worn_stone: true,
-          cloak_or_jacket_resting_against_wall: true,
-        },
-        atmosphere: {
-          air: "cool and slightly damp",
-          light_bounce: "low due to tall structures",
-          no_color_stylization: true,
-        },
-        background_visibility: "fully_clear",
-        no_background_blur: true,
-        no_environment_cleanup: true,
-        no_fantasy_elements: true,
-      },
-
-      lighting: {
-        type: "natural daylight filtered through buildings",
-        quality: "muted and uneven",
-        direction: "top-down and side-blocked",
-        shadows: "soft but heavy",
-        no_cinematic_lighting: true,
-      },
-
-      camera: {
-        lens_mm: 35,
-        aperture: "f/8",
-        iso: 400,
-        sensor_noise: "subtle_real",
-        focus: "deep",
-      },
-
-      effects: {
-        special_effects: "none",
-      },
-
-      anti_ai_artifacts: {
-        disable_beautification: true,
-        disable_skin_smoothing: true,
-        disable_perfect_symmetry: true,
-        allow_minor_flaws: true,
-      },
-
-      hard_negative_constraints: [
-        "anime art style",
-        "cel shading",
-        "official attack on titan illustration",
-        "fantasy ruins",
-        "cgi walls",
-        "oversized architecture",
-        "cinematic lighting",
-        "studio background",
-        "portrait mode blur",
-      ],
-
-      output: {
-        look: "real_world_anime_adapted_cosplay_photo",
-        identity_match: "strict",
-        environment_realism: "maximum",
-        anime_world_similarity: "structural_not_fantasy",
-        believability: "very_high",
-      },
-    },
-      aspectRatio: "3:4",
-      keywords: [
-        "levi", "ackerman", "attack on titan", "aot", "captain", "scout",
-        "soldier", "anime", "manga", "shingeki", "titan", "killer", "sword",
-        "talwar", "fauji", "cool", "serious"
-      ]
+    prompt:
+      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects, ensure the output figure’s face and hairstyle match sharply with the input figure’s face and hair while preserving the exact chin shape, jawline, and original hairstyle without rounding or reinterpretation, ultra-realistic real-life cosplay photo of the person from the input image as Levi Ackerman in a live-action interpretation standing in a narrow real-world stone or brick street inspired by inside-the-walls cities, the person looks directly into the camera with the same facial structure and same hairstyle as the input image including accurate jawline, identical eyes, nose, lips, eyebrows, identical hairline, identical hair length, identical hair density, identical parting, identical volume distribution, identical natural flyaways and irregularities, and natural skin texture, do not change the haircut, do not idealize the haircut, do not replace it with a generic Levi haircut, apply only minimal real-world styling that preserves the original hair exactly, bring the person slightly closer to the camera, the background MUST NOT be blurry and must show every stone, brick, iron railing, staircase edge, moss detail, and weather stain clearly and sharply with no portrait-mode bokeh, ensure every object in the environment is crisp, detailed, and fully visible, natural daylight filtered through tall buildings with realistic shadows and correct lighting on both the person and the background, the person interacts with the environment with boots firmly on worn stone ground, cloak or jacket lightly resting against a wall, harness naturally creased from use, hyperrealistic real-world cosplay photography style with 8k details and no distortions, NEGATIVES: no blurry background, no portrait mode blur, no bokeh, no depth blur, no soft focus, no blurry objects, no unclear environment, no out-of-focus areas, no low resolution, no low quality, no noise, no pixelation, no warped background, no distortions, no stretched objects, no incorrect scale, no bad proportions, no broken anatomy, no inaccurate facial structure, no rounding of the jawline, no wrong jawline, no warped eyes, no mismatched eyes, no deformed nose, no incorrect lips, no plastic skin, no overly smoothed skin, no artificial texture, no face morphing, no face averaging, no hairstyle replacement, no haircut override, no corrected hairline, no added hair volume, no anime hair, no stylized hair geometry, no CGI hair, no extra fingers, no missing fingers, no fused hands, no duplicate limbs, no hand deformations, no finger artifacts, no AI artifacts, no jpeg artifacts, no halo, no glow outline, no bad mask, no chromatic aberration, no inconsistent lighting, no overexposed, no underexposed, no harsh shadows, no lighting mismatch, no cartoon style, no 3d render look, no waxy skin, no fake smile, no dead eyes, no glowing eyes, no asymmetrical eyes, no duplicate face, no merged face, no misaligned face, no floating objects, no object clipping, no misplaced shadows, no repeated textures, no fabric distortions, no clothing artifacts, no watermark, no text, no signature, no logo, no overlays, no UI elements, no nsfw, no nudity, no gore, no horror elements. ",
+    aspectRatio: "3:4",
+    keywords: [
+      "levi", "ackerman", "attack on titan", "aot", "captain", "scout",
+      "soldier", "anime", "manga", "shingeki", "titan", "killer", "sword",
+      "talwar", "fauji", "cool", "serious"
+    ]
   },
   {
     id: "animation_template_6",
@@ -1072,12 +940,12 @@ const animationTemplates: Template[] = [
         believability: "very_high",
       },
     },
-      aspectRatio: "3:4",
-      keywords: [
-        "gojo", "satoru", "jujutsu kaisen", "jjk", "sorcerer", "blindfold",
-        "teacher", "infinite", "anime", "manga", "white hair", "patti",
-        "guru", "magic", "jadu", "eyes", "coolest", "strongest"
-      ]
+    aspectRatio: "3:4",
+    keywords: [
+      "gojo", "satoru", "jujutsu kaisen", "jjk", "sorcerer", "blindfold",
+      "teacher", "infinite", "anime", "manga", "white hair", "patti",
+      "guru", "magic", "jadu", "eyes", "coolest", "strongest"
+    ]
   },
   {
     id: "animation_template_7",
@@ -1275,12 +1143,12 @@ const animationTemplates: Template[] = [
         iconic_recognition: "clear_without_vfx",
       },
     },
-      aspectRatio: "3:4",
-      keywords: [
-        "tanjiro", "demon slayer", "kimetsu no yaiba", "sword", "katana",
-        "breathing", "anime", "manga", "green", "checkered", "demon",
-        "talwar", "scar", "nishan", "box", "hero"
-      ]
+    aspectRatio: "3:4",
+    keywords: [
+      "tanjiro", "demon slayer", "kimetsu no yaiba", "sword", "katana",
+      "breathing", "anime", "manga", "green", "checkered", "demon",
+      "talwar", "scar", "nishan", "box", "hero"
+    ]
   },
   {
     id: "animation_template_8",
@@ -1289,190 +1157,190 @@ const animationTemplates: Template[] = [
     imageUrl:
       "/images/anime_NezukoKamado_cover.webp",
     prompt: {
-  task: "real_life_cosplay_photography",
+      task: "real_life_cosplay_photography",
 
-  input: {
-    source_image: "person_photo",
-    identity_preservation: {
-      enabled: true,
-      identity_priority: "absolute",
-      strength: 0.95,
-      face_structure_lock: true,
-      lock_jawline: true,
-      lock_eye_spacing: true,
-      lock_nose_shape: true,
-      lock_lip_shape: true,
-      preserve_existing_accessories: true,
-      glasses: {
-        rule: "if_present_do_not_remove",
-        style: "original_glasses_only",
-        no_replacement: true,
-        no_anime_stylization: true,
-        no_transparency_change: true
+      input: {
+        source_image: "person_photo",
+        identity_preservation: {
+          enabled: true,
+          identity_priority: "absolute",
+          strength: 0.95,
+          face_structure_lock: true,
+          lock_jawline: true,
+          lock_eye_spacing: true,
+          lock_nose_shape: true,
+          lock_lip_shape: true,
+          preserve_existing_accessories: true,
+          glasses: {
+            rule: "if_present_do_not_remove",
+            style: "original_glasses_only",
+            no_replacement: true,
+            no_anime_stylization: true,
+            no_transparency_change: true
+          },
+          no_beautification: true,
+          no_style_override_on_face: true
+        }
       },
-      no_beautification: true,
-      no_style_override_on_face: true
-    }
-  },
 
-  character_reference: {
-    character_name: "Nezuko Kamado",
-    usage_rule: "visual inspiration only",
-    apply_to: [
-      "outfit color palette",
-      "outfit layering",
-      "symbolic accessories",
-      "gentle character mood"
-    ],
-    explicitly_exclude: [
-      "anime facial proportions",
-      "anime eyes",
-      "anime skin rendering",
-      "anime head shape",
-      "anime posing"
-    ]
-  },
+      character_reference: {
+        character_name: "Nezuko Kamado",
+        usage_rule: "visual inspiration only",
+        apply_to: [
+          "outfit color palette",
+          "outfit layering",
+          "symbolic accessories",
+          "gentle character mood"
+        ],
+        explicitly_exclude: [
+          "anime facial proportions",
+          "anime eyes",
+          "anime skin rendering",
+          "anime head shape",
+          "anime posing"
+        ]
+      },
 
-  appearance: {
-    face: {
-      mode: "fully real human",
-      eye_size: "normal human proportion",
-      skin: "real human skin with pores, uneven tone, micro texture",
-      respect_glasses_occlusion: true,
-      no_anime_translation: true
-    },
+      appearance: {
+        face: {
+          mode: "fully real human",
+          eye_size: "normal human proportion",
+          skin: "real human skin with pores, uneven tone, micro texture",
+          respect_glasses_occlusion: true,
+          no_anime_translation: true
+        },
 
-    hair: {
-      color: "natural black",
-      length: "long, waist-length",
-      texture: "real human hair, slightly wavy",
-      behavior: "gravity-accurate strands, mild wind interaction"
-    },
+        hair: {
+          color: "natural black",
+          length: "long, waist-length",
+          texture: "real human hair, slightly wavy",
+          behavior: "gravity-accurate strands, mild wind interaction"
+        },
 
-    outfit: {
-      type: "real-world tailored outfit inspired by Nezuko",
-      inner_layer: "pink patterned fabric adapted as a real dress",
-      outer_layer: "dark brown coat inspired by haori silhouette",
-      fit: "modern tailoring, real clothing physics",
-      details: "visible stitching, fabric thickness, weight realism"
-    },
+        outfit: {
+          type: "real-world tailored outfit inspired by Nezuko",
+          inner_layer: "pink patterned fabric adapted as a real dress",
+          outer_layer: "dark brown coat inspired by haori silhouette",
+          fit: "modern tailoring, real clothing physics",
+          details: "visible stitching, fabric thickness, weight realism"
+        },
 
-    accessories: {
-      hair_accessory: "small pink ribbon clip, subtle and realistic",
-      bamboo_element: {
-        mode: "symbolic handheld or waist-hung accessory",
-        rule: "no mouth attachment, no anime exaggeration"
-      }
-    }
-  },
+        accessories: {
+          hair_accessory: "small pink ribbon clip, subtle and realistic",
+          bamboo_element: {
+            mode: "symbolic handheld or waist-hung accessory",
+            rule: "no mouth attachment, no anime exaggeration"
+          }
+        }
+      },
 
-  pose_and_expression: {
-    pose: "interactive Nezuko-inspired real-human action",
-    pose_options: [
-      "one hand gently touching or brushing mulberry leaves",
-      "standing close to the tree trunk with relaxed posture",
-      "slight forward lean while examining leaves",
-      "soft step forward with hand grazing branches"
-    ],
-    interaction_rules: [
-      "hands interact with real environment",
-      "natural finger curl and tension",
-      "no exaggerated anime gestures",
-      "body weight realistically distributed"
-    ],
-    body_language: "gentle, curious, calm, human",
-    expression: "soft neutral face with quiet warmth",
-    eyes: "real iris texture, no shine exaggeration, glasses respected"
-  },
+      pose_and_expression: {
+        pose: "interactive Nezuko-inspired real-human action",
+        pose_options: [
+          "one hand gently touching or brushing mulberry leaves",
+          "standing close to the tree trunk with relaxed posture",
+          "slight forward lean while examining leaves",
+          "soft step forward with hand grazing branches"
+        ],
+        interaction_rules: [
+          "hands interact with real environment",
+          "natural finger curl and tension",
+          "no exaggerated anime gestures",
+          "body weight realistically distributed"
+        ],
+        body_language: "gentle, curious, calm, human",
+        expression: "soft neutral face with quiet warmth",
+        eyes: "real iris texture, no shine exaggeration, glasses respected"
+      },
 
-  environment: {
-    render_priority: "environment_first",
-    setting: "real outdoor rural environment",
-    primary_background_element: {
-      object: "mulberry tree",
-      description: [
-        "real mulberry tree with irregular branching",
-        "natural green leaves, uneven density",
-        "rough bark texture clearly visible",
-        "realistic botanical scale"
-      ],
-      position: "behind and slightly beside the subject",
-      interaction: [
-        "leaves displaced by hand contact",
-        "subtle wind movement",
-        "natural leaf shadow patterns"
+      environment: {
+        render_priority: "environment_first",
+        setting: "real outdoor rural environment",
+        primary_background_element: {
+          object: "mulberry tree",
+          description: [
+            "real mulberry tree with irregular branching",
+            "natural green leaves, uneven density",
+            "rough bark texture clearly visible",
+            "realistic botanical scale"
+          ],
+          position: "behind and slightly beside the subject",
+          interaction: [
+            "leaves displaced by hand contact",
+            "subtle wind movement",
+            "natural leaf shadow patterns"
+          ]
+        },
+        ground: "natural soil or stone path with imperfections",
+        background_behavior: {
+          fully_real_world: true,
+          no_fantasy_elements: true,
+          no_artificial_blur: true
+        }
+      },
+
+      lighting: {
+        type: "natural daylight only",
+        direction: "front-facing or soft overcast",
+        rules: [
+          "sunlight or skylight only",
+          "no artificial lights",
+          "no rim light",
+          "no dramatic contrast",
+          "no glow"
+        ],
+        behavior: [
+          "soft daylight revealing skin texture",
+          "natural shadows from mulberry leaves",
+          "no cinematic shaping"
+        ]
+      },
+
+      camera: {
+        lens: "50mm",
+        angle: "eye level",
+        framing: "medium to full body",
+        distortion: "none"
+      },
+
+      rendering_constraints: {
+        photorealism: "strict",
+        no_anime_rendering: true,
+        no_cgi: true,
+        no_figurine_look: true,
+        no_doll_skin: true
+      },
+
+      quality_control: {
+        grain: "subtle real-camera grain",
+        sharpness: "natural",
+        imperfections_allowed: true
+      },
+
+      negative_prompt: [
+        "remove glasses",
+        "replace glasses",
+        "anime pose",
+        "anime hand gestures",
+        "anime eyes",
+        "cartoon face",
+        "chibi proportions",
+        "doll skin",
+        "figurine",
+        "cgi",
+        "3d render",
+        "plastic texture",
+        "fantasy lighting",
+        "studio glow",
+        "over-smooth skin",
+        "fake trees",
+        "stylized foliage"
       ]
     },
-    ground: "natural soil or stone path with imperfections",
-    background_behavior: {
-      fully_real_world: true,
-      no_fantasy_elements: true,
-      no_artificial_blur: true
-    }
-  },
-
-  lighting: {
-    type: "natural daylight only",
-    direction: "front-facing or soft overcast",
-    rules: [
-      "sunlight or skylight only",
-      "no artificial lights",
-      "no rim light",
-      "no dramatic contrast",
-      "no glow"
-    ],
-    behavior: [
-      "soft daylight revealing skin texture",
-      "natural shadows from mulberry leaves",
-      "no cinematic shaping"
-    ]
-  },
-
-  camera: {
-    lens: "50mm",
-    angle: "eye level",
-    framing: "medium to full body",
-    distortion: "none"
-  },
-
-  rendering_constraints: {
-    photorealism: "strict",
-    no_anime_rendering: true,
-    no_cgi: true,
-    no_figurine_look: true,
-    no_doll_skin: true
-  },
-
-  quality_control: {
-    grain: "subtle real-camera grain",
-    sharpness: "natural",
-    imperfections_allowed: true
-  },
-
-  negative_prompt: [
-    "remove glasses",
-    "replace glasses",
-    "anime pose",
-    "anime hand gestures",
-    "anime eyes",
-    "cartoon face",
-    "chibi proportions",
-    "doll skin",
-    "figurine",
-    "cgi",
-    "3d render",
-    "plastic texture",
-    "fantasy lighting",
-    "studio glow",
-    "over-smooth skin",
-    "fake trees",
-    "stylized foliage"
-  ]
-},
     aspectRatio: "3:4",
     keywords: [
-      "nezuko", "demon slayer", "kimetsu", "cute", "anime", "manga", 
-      "bamboo", "pink", "demon", "sister", "behen", "muh pe bamboo", 
+      "nezuko", "demon slayer", "kimetsu", "cute", "anime", "manga",
+      "bamboo", "pink", "demon", "sister", "behen", "muh pe bamboo",
       "long hair", "kimono", "japan", "cartoon", "cosplay"
     ]
   },
@@ -1485,174 +1353,174 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_warmrusticinterior_cover.webp",
     prompt:
-      {
-  task: "identity_fused_aesthetic_medium_shot_generation",
+    {
+      task: "identity_fused_aesthetic_medium_shot_generation",
 
-  identity_strategy: {
-    mode: "embedding_reconstruction",
-    identity_source: "input_image",
-    face_identity_strength: 0.955,
-    facial_structure_lock: true,
-    proportions_lock: true,
-    skin_detail_preservation: true,
-    avoid_face_overlay: true,
-    rebuild_face_from_latent_identity: true
-  },
+      identity_strategy: {
+        mode: "embedding_reconstruction",
+        identity_source: "input_image",
+        face_identity_strength: 0.955,
+        facial_structure_lock: true,
+        proportions_lock: true,
+        skin_detail_preservation: true,
+        avoid_face_overlay: true,
+        rebuild_face_from_latent_identity: true
+      },
 
-  rendering_pipeline: [
-    "identity_embedding_extraction",
-    "latent_face_reconstruction",
-    "pose_scale_alignment",
-    "medium_shot_scene_projection",
-    "wardrobe_contextual_redesign",
-    "fabric_physics_simulation",
-    "interactive_environment_contact",
-    "global_lighting_simulation",
-    "material_physics_unification",
-    "cinematic_color_grading",
-    "contact_shadow_generation",
-    "aesthetic_composition_pass",
-    "micro_imperfection_injection",
-    "final_photographic_finish"
-  ],
+      rendering_pipeline: [
+        "identity_embedding_extraction",
+        "latent_face_reconstruction",
+        "pose_scale_alignment",
+        "medium_shot_scene_projection",
+        "wardrobe_contextual_redesign",
+        "fabric_physics_simulation",
+        "interactive_environment_contact",
+        "global_lighting_simulation",
+        "material_physics_unification",
+        "cinematic_color_grading",
+        "contact_shadow_generation",
+        "aesthetic_composition_pass",
+        "micro_imperfection_injection",
+        "final_photographic_finish"
+      ],
 
-  scene: {
-    theme: "warm_rustic_interior",
-    environment_type: "cozy rustic indoor space",
-    interaction_context: [
-      "subject casually leaning near wooden wall or furniture",
-      "one hand resting on natural wood surface",
-      "upper body relaxed, comfortable posture"
-    ],
-    materials: [
-      "natural aged wood",
-      "exposed wooden beams",
-      "stone or brick accent wall",
-      "linen and wool fabrics"
-    ],
-    elements: [
-      "warm table lamps",
-      "soft pendant lights",
-      "indoor plants",
-      "ceramic pottery",
-      "wooden shelves"
-    ],
-    color_palette: [
-      "warm brown",
-      "soft beige",
-      "earthy terracotta",
-      "muted olive",
-      "amber highlights"
-    ]
-  },
+      scene: {
+        theme: "warm_rustic_interior",
+        environment_type: "cozy rustic indoor space",
+        interaction_context: [
+          "subject casually leaning near wooden wall or furniture",
+          "one hand resting on natural wood surface",
+          "upper body relaxed, comfortable posture"
+        ],
+        materials: [
+          "natural aged wood",
+          "exposed wooden beams",
+          "stone or brick accent wall",
+          "linen and wool fabrics"
+        ],
+        elements: [
+          "warm table lamps",
+          "soft pendant lights",
+          "indoor plants",
+          "ceramic pottery",
+          "wooden shelves"
+        ],
+        color_palette: [
+          "warm brown",
+          "soft beige",
+          "earthy terracotta",
+          "muted olive",
+          "amber highlights"
+        ]
+      },
 
-  wardrobe: {
-    style: "warm_rustic_casual",
-    outfit_type: "cozy_editorial",
-    upper_wear: [
-      "linen shirt",
-      "soft cotton shirt",
-      "light knit sweater",
-      "rustic flannel"
-    ],
-    layers_optional: [
-      "neutral-toned cardigan",
-      "textured overshirt"
-    ],
-    fabric_properties: [
-      "natural fibers",
-      "soft weave",
-      "matte texture",
-      "subtle wrinkles"
-    ],
-    color_palette: [
-      "cream",
-      "warm beige",
-      "olive green",
-      "rust brown",
-      "muted charcoal"
-    ],
-    fit: "relaxed but well-fitted",
-    avoid: [
-      "streetwear",
-      "synthetic shine",
-      "logos",
-      "formal suits",
-      "bright neon colors"
-    ]
-  },
+      wardrobe: {
+        style: "warm_rustic_casual",
+        outfit_type: "cozy_editorial",
+        upper_wear: [
+          "linen shirt",
+          "soft cotton shirt",
+          "light knit sweater",
+          "rustic flannel"
+        ],
+        layers_optional: [
+          "neutral-toned cardigan",
+          "textured overshirt"
+        ],
+        fabric_properties: [
+          "natural fibers",
+          "soft weave",
+          "matte texture",
+          "subtle wrinkles"
+        ],
+        color_palette: [
+          "cream",
+          "warm beige",
+          "olive green",
+          "rust brown",
+          "muted charcoal"
+        ],
+        fit: "relaxed but well-fitted",
+        avoid: [
+          "streetwear",
+          "synthetic shine",
+          "logos",
+          "formal suits",
+          "bright neon colors"
+        ]
+      },
 
-  lighting: {
-    lighting_model: "cinematic_warm_interior_soft",
-    key_light: "diffused window light",
-    fill_light: "warm ambient bounce",
-    rim_light: "gentle warm edge separation",
-    color_temperature: "3200K–3800K",
-    light_wrap: true,
-    face_environment_light_match: true,
-    shadow_falloff: "soft_natural"
-  },
+      lighting: {
+        lighting_model: "cinematic_warm_interior_soft",
+        key_light: "diffused window light",
+        fill_light: "warm ambient bounce",
+        rim_light: "gentle warm edge separation",
+        color_temperature: "3200K–3800K",
+        light_wrap: true,
+        face_environment_light_match: true,
+        shadow_falloff: "soft_natural"
+      },
 
-  subject_integration: {
-    interaction_type: "casual_physical_contact",
-    scale_match: true,
-    contact_shadows: true,
-    ambient_occlusion: true,
-    environment_color_reflection_on_skin: true,
-    fabric_light_response: "soft_natural",
-    fabric_color_bleed: true,
-    no_cutout_edges: true
-  },
+      subject_integration: {
+        interaction_type: "casual_physical_contact",
+        scale_match: true,
+        contact_shadows: true,
+        ambient_occlusion: true,
+        environment_color_reflection_on_skin: true,
+        fabric_light_response: "soft_natural",
+        fabric_color_bleed: true,
+        no_cutout_edges: true
+      },
 
-  camera: {
-    shot_type: "medium",
-    framing: "chest_up",
-    lens: "35mm",
-    aperture: "f/2.8",
-    focus_point: "face",
-    depth_of_field: "cinematic_but_realistic",
-    composition: "rule_of_thirds",
-    perspective_consistency: true
-  },
+      camera: {
+        shot_type: "medium",
+        framing: "chest_up",
+        lens: "35mm",
+        aperture: "f/2.8",
+        focus_point: "face",
+        depth_of_field: "cinematic_but_realistic",
+        composition: "rule_of_thirds",
+        perspective_consistency: true
+      },
 
-  style: {
-    aesthetic: "editorial warm interior portrait",
-    mood: "cozy, refined, natural",
-    realism_level: "high",
-    contrast: "soft",
-    grain: "subtle_film"
-  },
+      style: {
+        aesthetic: "editorial warm interior portrait",
+        mood: "cozy, refined, natural",
+        realism_level: "high",
+        contrast: "soft",
+        grain: "subtle_film"
+      },
 
-  constraints: {
-    no_pasted_look: true,
-    no_halo_edges: true,
-    no_studio_flash: true,
-    no_over_smoothing: true,
-    no_anime_or_cgi: true
-  },
+      constraints: {
+        no_pasted_look: true,
+        no_halo_edges: true,
+        no_studio_flash: true,
+        no_over_smoothing: true,
+        no_anime_or_cgi: true
+      },
 
-  negative_prompt: [
-    "face cutout",
-    "identity drift",
-    "synthetic clothing",
-    "shiny fabric",
-    "logos",
-    "flat lighting",
-    "plastic skin",
-    "floating hands"
-  ],
+      negative_prompt: [
+        "face cutout",
+        "identity drift",
+        "synthetic clothing",
+        "shiny fabric",
+        "logos",
+        "flat lighting",
+        "plastic skin",
+        "floating hands"
+      ],
 
-  output: {
-    resolution: "high",
-    coherence: "single unified warm rustic interior photograph",
-    final_validation:
-      "exact face preserved, clothing matches rustic aesthetic, natural blend"
-  }
-},
+      output: {
+        resolution: "high",
+        coherence: "single unified warm rustic interior photograph",
+        final_validation:
+          "exact face preserved, clothing matches rustic aesthetic, natural blend"
+      }
+    },
     aspectRatio: "3:4",
     keywords: [
-      "rustic", "interior", "home", "warm", "cozy", "wooden", "ghar", 
-      "kamra", "room", "vintage", "cabin", "indoor", "sofa", "relax", 
+      "rustic", "interior", "home", "warm", "cozy", "wooden", "ghar",
+      "kamra", "room", "vintage", "cabin", "indoor", "sofa", "relax",
       "living room", "sundar ghar", "lakdi", "shanti", "aesthetic", "brown"
     ]
   },
@@ -1662,132 +1530,132 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_urbanalleywaypotrait_cover.webp",
     prompt:
-      {
-  task: "identity_fused_aesthetic_medium_shot_generation",
+    {
+      task: "identity_fused_aesthetic_medium_shot_generation",
 
-  identity_strategy: {
-    mode: "embedding_reconstruction",
-    identity_source: "input_image",
-    face_identity_strength: 0.955,
-    facial_structure_lock: true,
-    proportions_lock: true,
-    skin_detail_preservation: true,
-    avoid_face_overlay: true,
-    rebuild_face_from_latent_identity: true
-  },
+      identity_strategy: {
+        mode: "embedding_reconstruction",
+        identity_source: "input_image",
+        face_identity_strength: 0.955,
+        facial_structure_lock: true,
+        proportions_lock: true,
+        skin_detail_preservation: true,
+        avoid_face_overlay: true,
+        rebuild_face_from_latent_identity: true
+      },
 
-  rendering_pipeline: [
-    "identity_embedding_extraction",
-    "latent_face_reconstruction",
-    "pose_scale_alignment",
-    "medium_shot_scene_projection",
-    "interactive_environment_contact",
-    "global_lighting_simulation",
-    "material_physics_unification",
-    "cinematic_color_grading",
-    "contact_shadow_generation",
-    "aesthetic_composition_pass",
-    "micro_imperfection_injection",
-    "final_photographic_finish"
-  ],
+      rendering_pipeline: [
+        "identity_embedding_extraction",
+        "latent_face_reconstruction",
+        "pose_scale_alignment",
+        "medium_shot_scene_projection",
+        "interactive_environment_contact",
+        "global_lighting_simulation",
+        "material_physics_unification",
+        "cinematic_color_grading",
+        "contact_shadow_generation",
+        "aesthetic_composition_pass",
+        "micro_imperfection_injection",
+        "final_photographic_finish"
+      ],
 
-  scene: {
-    theme: "urban_alleyway",
-    environment_type: "cinematic city alley",
-    interaction_context: [
-      "subject casually leaning near brick wall",
-      "one hand resting on textured surface",
-      "upper body relaxed, natural posture"
-    ],
-    materials: [
-      "aged brick",
-      "layered graffiti",
-      "weathered concrete",
-      "rusted metal details"
-    ],
-    elements: [
-      "soft neon glow",
-      "posters and stickers",
-      "fire escape shadows",
-      "subtle ground reflections"
-    ],
-    color_palette: [
-      "muted teal",
-      "cool gray",
-      "deep blue shadows",
-      "warm amber highlights"
-    ]
-  },
+      scene: {
+        theme: "urban_alleyway",
+        environment_type: "cinematic city alley",
+        interaction_context: [
+          "subject casually leaning near brick wall",
+          "one hand resting on textured surface",
+          "upper body relaxed, natural posture"
+        ],
+        materials: [
+          "aged brick",
+          "layered graffiti",
+          "weathered concrete",
+          "rusted metal details"
+        ],
+        elements: [
+          "soft neon glow",
+          "posters and stickers",
+          "fire escape shadows",
+          "subtle ground reflections"
+        ],
+        color_palette: [
+          "muted teal",
+          "cool gray",
+          "deep blue shadows",
+          "warm amber highlights"
+        ]
+      },
 
-  lighting: {
-    lighting_model: "cinematic_urban_soft",
-    key_light: "diffused streetlight or neon bounce",
-    fill_light: "soft ambient city bounce",
-    rim_light: "gentle edge separation",
-    color_temperature: "4200K–4800K",
-    light_wrap: true,
-    face_environment_light_match: true,
-    shadow_falloff: "soft_natural"
-  },
+      lighting: {
+        lighting_model: "cinematic_urban_soft",
+        key_light: "diffused streetlight or neon bounce",
+        fill_light: "soft ambient city bounce",
+        rim_light: "gentle edge separation",
+        color_temperature: "4200K–4800K",
+        light_wrap: true,
+        face_environment_light_match: true,
+        shadow_falloff: "soft_natural"
+      },
 
-  subject_integration: {
-    interaction_type: "casual_physical_contact",
-    scale_match: true,
-    contact_shadows: true,
-    ambient_occlusion: true,
-    environment_color_reflection_on_skin: true,
-    fabric_light_response: "natural",
-    no_cutout_edges: true
-  },
+      subject_integration: {
+        interaction_type: "casual_physical_contact",
+        scale_match: true,
+        contact_shadows: true,
+        ambient_occlusion: true,
+        environment_color_reflection_on_skin: true,
+        fabric_light_response: "natural",
+        no_cutout_edges: true
+      },
 
-  camera: {
-    shot_type: "medium",
-    framing: "chest_up",
-    lens: "35mm",
-    aperture: "f/2.8",
-    focus_point: "face",
-    depth_of_field: "cinematic_but_realistic",
-    composition: "rule_of_thirds",
-    perspective_consistency: true
-  },
+      camera: {
+        shot_type: "medium",
+        framing: "chest_up",
+        lens: "35mm",
+        aperture: "f/2.8",
+        focus_point: "face",
+        depth_of_field: "cinematic_but_realistic",
+        composition: "rule_of_thirds",
+        perspective_consistency: true
+      },
 
-  style: {
-    aesthetic: "editorial urban portrait",
-    mood: "stylish, calm, cinematic",
-    realism_level: "high",
-    contrast: "soft",
-    grain: "subtle_film"
-  },
+      style: {
+        aesthetic: "editorial urban portrait",
+        mood: "stylish, calm, cinematic",
+        realism_level: "high",
+        contrast: "soft",
+        grain: "subtle_film"
+      },
 
-  constraints: {
-    no_pasted_look: true,
-    no_halo_edges: true,
-    no_studio_lighting: true,
-    no_over_smoothing: true,
-    no_anime_or_cgi: true
-  },
+      constraints: {
+        no_pasted_look: true,
+        no_halo_edges: true,
+        no_studio_lighting: true,
+        no_over_smoothing: true,
+        no_anime_or_cgi: true
+      },
 
-  negative_prompt: [
-    "face cutout",
-    "identity drift",
-    "flat lighting",
-    "harsh flash",
-    "fake blur",
-    "over sharpened skin",
-    "floating limbs"
-  ],
+      negative_prompt: [
+        "face cutout",
+        "identity drift",
+        "flat lighting",
+        "harsh flash",
+        "fake blur",
+        "over sharpened skin",
+        "floating limbs"
+      ],
 
-  output: {
-    resolution: "high",
-    coherence: "single unified aesthetic urban photograph",
-    final_validation:
-      "exact face preserved, medium distance, aesthetic blend"
-  }
-},
+      output: {
+        resolution: "high",
+        coherence: "single unified aesthetic urban photograph",
+        final_validation:
+          "exact face preserved, medium distance, aesthetic blend"
+      }
+    },
     aspectRatio: "3:4",
     keywords: [
-      "urban", "alley", "street", "city", "cool", "dark", "grungy", 
-      "rasta", "gali", "neon", "night", "road", "backstreet", "gangster", 
+      "urban", "alley", "street", "city", "cool", "dark", "grungy",
+      "rasta", "gali", "neon", "night", "road", "backstreet", "gangster",
       "vibe", "andhera", "light", "underground"
     ]
   },
@@ -1800,8 +1668,8 @@ const aestheticsTemplates: Template[] = [
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding.  {input person} sitting inside a vibrant fabric market filled with colorful textiles, patterned cloth rolls, and detailed handmade materials, wearing realistic casual matching travel clothing that fits their body naturally, warm ambient lighting, rich textures, and lively market depth, captured in clean street-photography style.no altered face,no fatty face, no altered jawline, no change in hairstyle, no pasted clothes, no blur background, no cartoon colors, adjust body posture and hand gestures naturally for a market visitor",
     aspectRatio: "3:4",
     keywords: [
-      "market", "fabric", "colorful", "bazar", "bazaar", "cloth", 
-      "textile", "shopping", "desi", "street", "indian market", "dukaan", 
+      "market", "fabric", "colorful", "bazar", "bazaar", "cloth",
+      "textile", "shopping", "desi", "street", "indian market", "dukaan",
       "shop", "bheed", "crowd", "rang biranga", "travel", "culture"
     ]
   },
@@ -1814,8 +1682,8 @@ const aestheticsTemplates: Template[] = [
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} wearing regal attire that perfectly complements the elegant royal surroundings — marble floors, velvet drapes, gold accents, graceful posture, classic Raymond luxury portrait style. bend the person and the background perfectly\nno fantasy castle, no cartoon gold, no bright glare, no blur. no change in hairstyle, no background blur.",
     aspectRatio: "3:4",
     keywords: [
-      "royal", "luxury", "king", "queen", "palace", "mahal", "rich", 
-      "gold", "elegant", "rajwada", "shahi", "expensive", "ameer", 
+      "royal", "luxury", "king", "queen", "palace", "mahal", "rich",
+      "gold", "elegant", "rajwada", "shahi", "expensive", "ameer",
       "classy", "rajkumar", "rajkumari", "fort", "kila", "heritage"
     ]
   },
@@ -1825,187 +1693,187 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/astheics_forestsunlight_cover.webp",
     prompt:
-      {
-  task: "identity_locked_real_world_close_up_photography",
-  theme: "forest_sunlight_with_stream_and_mulberry",
+    {
+      task: "identity_locked_real_world_close_up_photography",
+      theme: "forest_sunlight_with_stream_and_mulberry",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      face_asymmetry: "preserved",
-      head_shape: "locked"
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          face_asymmetry: "preserved",
+          head_shape: "locked"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "facial idealization",
+          "AI facial averaging"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first",
+        "physical_light_solution",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
+      ],
+
+      environment: {
+        location: "natural forest edge with shallow flowing water stream",
+        background_layering: {
+          midground: "water stream and rocks around subject",
+          background: "mulberry tree grove positioned several meters behind the subject"
+        },
+        mulberry_grove_details: {
+          tree_type: "mulberry",
+          distance_from_subject: "5–8 meters behind",
+          leaf_character: "broad, matte green leaves",
+          branch_structure: "slightly irregular, natural spacing",
+          ground_cover: "fallen mulberry leaves and twigs",
+          visibility: "clearly recognizable, not blurred out"
+        },
+        time_of_day: "late morning",
+        lighting: {
+          source: "pure sunlight",
+          behavior:
+            "sunlight filtering through mulberry leaves and forest canopy, unevenly illuminating face, clothes, water",
+          shadow_behavior: "broken and organic",
+          avoid: [
+            "cinematic beams",
+            "volumetric glow",
+            "fantasy haze"
+          ]
+        },
+        elements: [
+          "slow-moving water stream",
+          "wet stones and pebbles",
+          "moss-covered rocks",
+          "floating leaves",
+          "natural forest clutter"
+        ]
+      },
+
+      camera_simulation: {
+        camera_type: "professional mirrorless camera",
+        focal_length_mm: 50,
+        aperture: "f/4",
+        iso: 200,
+        shutter_speed: "1/320",
+        focus_behavior:
+          "real optical depth falloff, background still readable",
+        lens_characteristics: [
+          "natural edge softness",
+          "minor focus breathing",
+          "no portrait mode blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact match to input image",
+        framing: "close-up to medium close-up",
+        pose: "sitting comfortably on a flat rock near the stream",
+        body_language: "relaxed shoulders, slight forward lean",
+        interaction: [
+          "one hand resting in or just above flowing water",
+          "fingers touching wet stones",
+          "other arm resting casually on knee"
+        ],
+        expression: "calm, natural, unposed",
+        occlusion: "light foliage overlap without covering face"
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "professionally designed",
+        style: "forest-appropriate luxury utility wear",
+        materials: [
+          "natural linen blend",
+          "matte cotton",
+          "soft wool accents"
+        ],
+        colors: [
+          "olive green",
+          "earth brown",
+          "muted beige",
+          "washed charcoal"
+        ],
+        fit: "tailored but relaxed",
+        accessories: [
+          "minimal leather strap watch",
+          "subtle metal ring",
+          "canvas utility sling or belt pouch"
+        ],
+        fabric_behavior: [
+          "wrinkling from sitting",
+          "natural folds at elbows and waist",
+          "gentle movement from breeze"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral real-world camera color response",
+        saturation: "slightly muted",
+        white_balance:
+          "mixed daylight with green foliage cast from mulberry leaves",
+        avoid: [
+          "cinematic grading",
+          "teal-orange",
+          "over-saturation"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "controlled",
+        symmetry_breaking: true,
+        imperfection_level: "subtle"
+      },
+
+      noise_and_texture: {
+        sensor_noise: "subtle ISO grain",
+        grain: "fine organic texture"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty filters",
+          "face reshaping",
+          "skin smoothing",
+          "edge halos"
+        ],
+        apply: [
+          "minor contrast roll-off",
+          "tiny exposure inconsistency"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no portrait mode",
+        "no cinematic lighting",
+        "no fantasy effects",
+        "no stylized blur",
+        "no symmetry enforcement"
+      ],
+
+      output_goal:
+        "a realistic yet aesthetic close-up forest photograph where the exact input face is preserved, the person sits comfortably by a sunlit water stream, and a mulberry tree grove appears naturally in the background at a short distance"
     },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "facial idealization",
-      "AI facial averaging"
-    ]
-  },
-
-  rendering_pipeline: [
-    "environment_render_first",
-    "physical_light_solution",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "natural forest edge with shallow flowing water stream",
-    background_layering: {
-      midground: "water stream and rocks around subject",
-      background: "mulberry tree grove positioned several meters behind the subject"
-    },
-    mulberry_grove_details: {
-      tree_type: "mulberry",
-      distance_from_subject: "5–8 meters behind",
-      leaf_character: "broad, matte green leaves",
-      branch_structure: "slightly irregular, natural spacing",
-      ground_cover: "fallen mulberry leaves and twigs",
-      visibility: "clearly recognizable, not blurred out"
-    },
-    time_of_day: "late morning",
-    lighting: {
-      source: "pure sunlight",
-      behavior:
-        "sunlight filtering through mulberry leaves and forest canopy, unevenly illuminating face, clothes, water",
-      shadow_behavior: "broken and organic",
-      avoid: [
-        "cinematic beams",
-        "volumetric glow",
-        "fantasy haze"
-      ]
-    },
-    elements: [
-      "slow-moving water stream",
-      "wet stones and pebbles",
-      "moss-covered rocks",
-      "floating leaves",
-      "natural forest clutter"
-    ]
-  },
-
-  camera_simulation: {
-    camera_type: "professional mirrorless camera",
-    focal_length_mm: 50,
-    aperture: "f/4",
-    iso: 200,
-    shutter_speed: "1/320",
-    focus_behavior:
-      "real optical depth falloff, background still readable",
-    lens_characteristics: [
-      "natural edge softness",
-      "minor focus breathing",
-      "no portrait mode blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact match to input image",
-    framing: "close-up to medium close-up",
-    pose: "sitting comfortably on a flat rock near the stream",
-    body_language: "relaxed shoulders, slight forward lean",
-    interaction: [
-      "one hand resting in or just above flowing water",
-      "fingers touching wet stones",
-      "other arm resting casually on knee"
-    ],
-    expression: "calm, natural, unposed",
-    occlusion: "light foliage overlap without covering face"
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "professionally designed",
-    style: "forest-appropriate luxury utility wear",
-    materials: [
-      "natural linen blend",
-      "matte cotton",
-      "soft wool accents"
-    ],
-    colors: [
-      "olive green",
-      "earth brown",
-      "muted beige",
-      "washed charcoal"
-    ],
-    fit: "tailored but relaxed",
-    accessories: [
-      "minimal leather strap watch",
-      "subtle metal ring",
-      "canvas utility sling or belt pouch"
-    ],
-    fabric_behavior: [
-      "wrinkling from sitting",
-      "natural folds at elbows and waist",
-      "gentle movement from breeze"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral real-world camera color response",
-    saturation: "slightly muted",
-    white_balance:
-      "mixed daylight with green foliage cast from mulberry leaves",
-    avoid: [
-      "cinematic grading",
-      "teal-orange",
-      "over-saturation"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "controlled",
-    symmetry_breaking: true,
-    imperfection_level: "subtle"
-  },
-
-  noise_and_texture: {
-    sensor_noise: "subtle ISO grain",
-    grain: "fine organic texture"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty filters",
-      "face reshaping",
-      "skin smoothing",
-      "edge halos"
-    ],
-    apply: [
-      "minor contrast roll-off",
-      "tiny exposure inconsistency"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no portrait mode",
-    "no cinematic lighting",
-    "no fantasy effects",
-    "no stylized blur",
-    "no symmetry enforcement"
-  ],
-
-  output_goal:
-    "a realistic yet aesthetic close-up forest photograph where the exact input face is preserved, the person sits comfortably by a sunlit water stream, and a mulberry tree grove appears naturally in the background at a short distance"
-},
     aspectRatio: "3:4",
     keywords: [
-      "forest", "nature", "sunlight", "green", "trees", "jungle", 
-      "woods", "ped", "prakriti", "outdoor", "wild", "morning", 
+      "forest", "nature", "sunlight", "green", "trees", "jungle",
+      "woods", "ped", "prakriti", "outdoor", "wild", "morning",
       "dhup", "sukoon", "peace", "natural", "trek", "calm"
     ]
   },
@@ -2015,195 +1883,195 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_ancientmonument_cover.webp",
     prompt:
-      {
-  task: "identity_locked_real_world_close_up_photography",
-  theme: "ancient_monument",
+    {
+      task: "identity_locked_real_world_close_up_photography",
+      theme: "ancient_monument",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      face_asymmetry: "preserved",
-      head_shape: "locked"
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          face_asymmetry: "preserved",
+          head_shape: "locked"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "facial idealization",
+          "AI facial averaging"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first",
+        "physical_light_solution",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
+      ],
+
+      environment: {
+        location: "ancient stone monument complex",
+        architecture_style: "weathered heritage stone architecture",
+        background_layering: {
+          midground: "stone steps and carved walls near subject",
+          background: "large ancient monument structures several meters behind the subject"
+        },
+        material_details: [
+          "aged stone blocks",
+          "hand-carved reliefs",
+          "eroded edges",
+          "surface cracks and discoloration"
+        ],
+        time_of_day: "early morning or late afternoon",
+        lighting: {
+          source: "natural sunlight only",
+          behavior:
+            "angled sunlight grazing stone surfaces, unevenly illuminating subject",
+          shadow_behavior: "hard-to-soft mixed shadows, non-dramatic",
+          avoid: [
+            "cinematic rim light",
+            "volumetric haze",
+            "dramatic sun flares"
+          ]
+        },
+        atmosphere: "dry air, subtle dust presence, no fog"
+      },
+
+      camera_simulation: {
+        camera_type: "professional mirrorless camera",
+        focal_length_mm: 50,
+        aperture: "f/4",
+        iso: 100,
+        shutter_speed: "1/400",
+        focus_behavior:
+          "natural optical depth with monument clearly readable",
+        lens_characteristics: [
+          "minor edge softness",
+          "real contrast falloff",
+          "no portrait mode"
+        ]
+      },
+
+      subject: {
+        identity: "exact match to input image",
+        framing: "close-up to medium close-up",
+        pose: "sitting comfortably on ancient stone steps or ledge",
+        body_language: "relaxed posture, slight forward lean",
+        interaction: [
+          "one hand resting on textured stone surface",
+          "fingers feeling carved grooves or worn edges",
+          "other arm resting casually on knee"
+        ],
+        expression: "calm, contemplative, unposed",
+        occlusion:
+          "architectural elements partially framing subject, no face obstruction"
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "professionally designed heritage-adaptive clothing",
+        style: "modern silhouettes with historical material influence",
+        materials: [
+          "raw linen",
+          "handwoven cotton",
+          "light wool blends"
+        ],
+        colors: [
+          "sand beige",
+          "stone grey",
+          "muted rust",
+          "weathered brown"
+        ],
+        fit: "tailored but relaxed",
+        accessories: [
+          "minimal leather strap watch",
+          "subtle metal ring with matte finish",
+          "simple leather crossbody or satchel"
+        ],
+        fabric_behavior: [
+          "natural creases from sitting",
+          "slight dust contact near edges",
+          "matte texture under sunlight"
+        ],
+        avoid: [
+          "logos",
+          "modern graphics",
+          "synthetic shine"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral real-world camera profile",
+        saturation: "slightly muted",
+        white_balance:
+          "warm daylight reflecting off stone surfaces",
+        avoid: [
+          "teal-orange grading",
+          "cinematic LUTs",
+          "over-contrast"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "controlled",
+        symmetry_breaking: true,
+        imperfection_level: "subtle",
+        details: [
+          "uneven sunlight on face",
+          "minor exposure imbalance",
+          "stone dust texture preserved"
+        ]
+      },
+
+      noise_and_texture: {
+        sensor_noise: "very subtle ISO grain",
+        grain: "fine organic grain",
+        stone_texture:
+          "high-frequency surface detail without sharpening"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "skin smoothing",
+          "face reshaping",
+          "beauty filters",
+          "edge halos"
+        ],
+        apply: [
+          "minor contrast roll-off",
+          "tiny highlight clipping on stone",
+          "realistic tonal compression"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no portrait mode",
+        "no cinematic lighting",
+        "no fantasy atmosphere",
+        "no stylized blur",
+        "no symmetry enforcement",
+        "no modern props"
+      ],
+
+      output_goal:
+        "a realistic yet aesthetic close-up photograph where the exact input face is preserved, the person sits comfortably within an ancient monument environment, and interacts naturally with weathered stone architecture"
     },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "facial idealization",
-      "AI facial averaging"
-    ]
-  },
-
-  rendering_pipeline: [
-    "environment_render_first",
-    "physical_light_solution",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "ancient stone monument complex",
-    architecture_style: "weathered heritage stone architecture",
-    background_layering: {
-      midground: "stone steps and carved walls near subject",
-      background: "large ancient monument structures several meters behind the subject"
-    },
-    material_details: [
-      "aged stone blocks",
-      "hand-carved reliefs",
-      "eroded edges",
-      "surface cracks and discoloration"
-    ],
-    time_of_day: "early morning or late afternoon",
-    lighting: {
-      source: "natural sunlight only",
-      behavior:
-        "angled sunlight grazing stone surfaces, unevenly illuminating subject",
-      shadow_behavior: "hard-to-soft mixed shadows, non-dramatic",
-      avoid: [
-        "cinematic rim light",
-        "volumetric haze",
-        "dramatic sun flares"
-      ]
-    },
-    atmosphere: "dry air, subtle dust presence, no fog"
-  },
-
-  camera_simulation: {
-    camera_type: "professional mirrorless camera",
-    focal_length_mm: 50,
-    aperture: "f/4",
-    iso: 100,
-    shutter_speed: "1/400",
-    focus_behavior:
-      "natural optical depth with monument clearly readable",
-    lens_characteristics: [
-      "minor edge softness",
-      "real contrast falloff",
-      "no portrait mode"
-    ]
-  },
-
-  subject: {
-    identity: "exact match to input image",
-    framing: "close-up to medium close-up",
-    pose: "sitting comfortably on ancient stone steps or ledge",
-    body_language: "relaxed posture, slight forward lean",
-    interaction: [
-      "one hand resting on textured stone surface",
-      "fingers feeling carved grooves or worn edges",
-      "other arm resting casually on knee"
-    ],
-    expression: "calm, contemplative, unposed",
-    occlusion:
-      "architectural elements partially framing subject, no face obstruction"
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "professionally designed heritage-adaptive clothing",
-    style: "modern silhouettes with historical material influence",
-    materials: [
-      "raw linen",
-      "handwoven cotton",
-      "light wool blends"
-    ],
-    colors: [
-      "sand beige",
-      "stone grey",
-      "muted rust",
-      "weathered brown"
-    ],
-    fit: "tailored but relaxed",
-    accessories: [
-      "minimal leather strap watch",
-      "subtle metal ring with matte finish",
-      "simple leather crossbody or satchel"
-    ],
-    fabric_behavior: [
-      "natural creases from sitting",
-      "slight dust contact near edges",
-      "matte texture under sunlight"
-    ],
-    avoid: [
-      "logos",
-      "modern graphics",
-      "synthetic shine"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral real-world camera profile",
-    saturation: "slightly muted",
-    white_balance:
-      "warm daylight reflecting off stone surfaces",
-    avoid: [
-      "teal-orange grading",
-      "cinematic LUTs",
-      "over-contrast"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "controlled",
-    symmetry_breaking: true,
-    imperfection_level: "subtle",
-    details: [
-      "uneven sunlight on face",
-      "minor exposure imbalance",
-      "stone dust texture preserved"
-    ]
-  },
-
-  noise_and_texture: {
-    sensor_noise: "very subtle ISO grain",
-    grain: "fine organic grain",
-    stone_texture:
-      "high-frequency surface detail without sharpening"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "skin smoothing",
-      "face reshaping",
-      "beauty filters",
-      "edge halos"
-    ],
-    apply: [
-      "minor contrast roll-off",
-      "tiny highlight clipping on stone",
-      "realistic tonal compression"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no portrait mode",
-    "no cinematic lighting",
-    "no fantasy atmosphere",
-    "no stylized blur",
-    "no symmetry enforcement",
-    "no modern props"
-  ],
-
-  output_goal:
-    "a realistic yet aesthetic close-up photograph where the exact input face is preserved, the person sits comfortably within an ancient monument environment, and interacts naturally with weathered stone architecture"
-},
     aspectRatio: "3:4",
     keywords: [
-      "monument", "ancient", "history", "old", "stone", "ruins", 
-      "travel", "purana", "place", "tourism", "itihas", "patthar", 
+      "monument", "ancient", "history", "old", "stone", "ruins",
+      "travel", "purana", "place", "tourism", "itihas", "patthar",
       "building", "ghumna", "trip", "heritage", "archaeology"
     ]
   },
@@ -2216,8 +2084,8 @@ const aestheticsTemplates: Template[] = [
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} by the seaside or cliffside boardwalk, wind in hair and fabric, soft golden-hour tones, reflective water highlights, cinematic tranquility.\nno flat sky, no digital artifacts, no over-bright waves, no harsh shadows ,no background blur.",
     aspectRatio: "3:4",
     keywords: [
-      "sea", "ocean", "beach", "sunset", "golden hour", "water", 
-      "samundar", "kinara", "waves", "holiday", "vacation", "sham", 
+      "sea", "ocean", "beach", "sunset", "golden hour", "water",
+      "samundar", "kinara", "waves", "holiday", "vacation", "sham",
       "lehren", "goa", "maldives", "blue", "sun", "sunlight"
     ]
   },
@@ -2227,194 +2095,194 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_artisticstudiopotrait_cover.webp",
     prompt:
-      {
-  task: "identity_locked_real_world_close_up_photography",
-  theme: "artistic_studio",
+    {
+      task: "identity_locked_real_world_close_up_photography",
+      theme: "artistic_studio",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      face_asymmetry: "preserved",
-      head_shape: "locked"
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          face_asymmetry: "preserved",
+          head_shape: "locked"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "facial idealization",
+          "AI facial averaging"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first",
+        "physical_light_solution",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
+      ],
+
+      environment: {
+        location: "working artistic studio",
+        studio_type: "painter / sculptor / mixed-media workspace",
+        background_layering: {
+          midground: "worktable, stools, unfinished artworks",
+          background: "studio walls with paint marks, shelves, and hanging canvases"
+        },
+        elements: [
+          "easel with partially completed canvas",
+          "paint-splattered floor",
+          "jars with brushes and tools",
+          "rolled sketches and papers",
+          "raw wooden furniture"
+        ],
+        lighting: {
+          primary_source: "large north-facing window",
+          secondary_source: "single practical studio lamp",
+          behavior:
+            "soft directional daylight mixed with warm practical light",
+          shadow_behavior: "uneven, layered, non-dramatic",
+          avoid: [
+            "studio beauty lighting",
+            "cinematic rim lights",
+            "perfect symmetry"
+          ]
+        },
+        atmosphere: "slightly dusty air, lived-in workspace"
+      },
+
+      camera_simulation: {
+        camera_type: "professional mirrorless camera",
+        focal_length_mm: 50,
+        aperture: "f/4",
+        iso: 320,
+        shutter_speed: "1/250",
+        focus_behavior: "natural optical depth, background readable",
+        lens_characteristics: [
+          "minor edge softness",
+          "natural contrast roll-off",
+          "no portrait mode"
+        ]
+      },
+
+      subject: {
+        identity: "exact match to input image",
+        framing: "close-up to medium close-up",
+        pose: "sitting comfortably on a wooden stool or chair",
+        body_language: "relaxed posture, slight forward lean",
+        interaction: [
+          "one hand holding a paintbrush or sculpting tool",
+          "other hand resting on knee or worktable",
+          "subtle paint marks on fingers or sleeve"
+        ],
+        expression: "focused, calm, unposed",
+        occlusion:
+          "tools or canvas partially framing subject, face fully visible"
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "professionally designed creative wear",
+        style: "functional artistic studio attire",
+        materials: [
+          "heavy cotton",
+          "raw linen",
+          "canvas fabric"
+        ],
+        colors: [
+          "off-white",
+          "charcoal",
+          "muted navy",
+          "washed olive"
+        ],
+        fit: "relaxed and practical",
+        accessories: [
+          "simple apron or canvas overshirt",
+          "leather strap watch",
+          "subtle metal ring"
+        ],
+        fabric_behavior: [
+          "natural creases from sitting",
+          "minor paint smudges",
+          "matte texture under soft light"
+        ],
+        avoid: [
+          "logos",
+          "fashion exaggeration",
+          "synthetic shine"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral real-world camera profile",
+        saturation: "controlled, slightly muted",
+        white_balance: "mixed daylight and warm practical light",
+        avoid: [
+          "cinematic grading",
+          "teal-orange",
+          "over-saturation"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "controlled",
+        symmetry_breaking: true,
+        imperfection_level: "subtle",
+        details: [
+          "uneven light on face",
+          "minor exposure imbalance",
+          "real skin texture preserved"
+        ]
+      },
+
+      noise_and_texture: {
+        sensor_noise: "subtle ISO grain",
+        grain: "fine organic texture",
+        surface_detail:
+          "visible canvas and wood texture without sharpening"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "skin smoothing",
+          "face reshaping",
+          "beauty filters",
+          "edge halos"
+        ],
+        apply: [
+          "slight contrast roll-off",
+          "minor highlight clipping on bright surfaces",
+          "realistic tonal compression"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no portrait mode",
+        "no studio beauty lighting",
+        "no cinematic effects",
+        "no stylized blur",
+        "no symmetry enforcement",
+        "no artificial props"
+      ],
+
+      output_goal:
+        "a realistic yet aesthetic close-up photograph where the exact input face is preserved, the person sits comfortably inside a working artistic studio, and interacts naturally with creative tools and environment"
     },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "facial idealization",
-      "AI facial averaging"
-    ]
-  },
-
-  rendering_pipeline: [
-    "environment_render_first",
-    "physical_light_solution",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "working artistic studio",
-    studio_type: "painter / sculptor / mixed-media workspace",
-    background_layering: {
-      midground: "worktable, stools, unfinished artworks",
-      background: "studio walls with paint marks, shelves, and hanging canvases"
-    },
-    elements: [
-      "easel with partially completed canvas",
-      "paint-splattered floor",
-      "jars with brushes and tools",
-      "rolled sketches and papers",
-      "raw wooden furniture"
-    ],
-    lighting: {
-      primary_source: "large north-facing window",
-      secondary_source: "single practical studio lamp",
-      behavior:
-        "soft directional daylight mixed with warm practical light",
-      shadow_behavior: "uneven, layered, non-dramatic",
-      avoid: [
-        "studio beauty lighting",
-        "cinematic rim lights",
-        "perfect symmetry"
-      ]
-    },
-    atmosphere: "slightly dusty air, lived-in workspace"
-  },
-
-  camera_simulation: {
-    camera_type: "professional mirrorless camera",
-    focal_length_mm: 50,
-    aperture: "f/4",
-    iso: 320,
-    shutter_speed: "1/250",
-    focus_behavior: "natural optical depth, background readable",
-    lens_characteristics: [
-      "minor edge softness",
-      "natural contrast roll-off",
-      "no portrait mode"
-    ]
-  },
-
-  subject: {
-    identity: "exact match to input image",
-    framing: "close-up to medium close-up",
-    pose: "sitting comfortably on a wooden stool or chair",
-    body_language: "relaxed posture, slight forward lean",
-    interaction: [
-      "one hand holding a paintbrush or sculpting tool",
-      "other hand resting on knee or worktable",
-      "subtle paint marks on fingers or sleeve"
-    ],
-    expression: "focused, calm, unposed",
-    occlusion:
-      "tools or canvas partially framing subject, face fully visible"
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "professionally designed creative wear",
-    style: "functional artistic studio attire",
-    materials: [
-      "heavy cotton",
-      "raw linen",
-      "canvas fabric"
-    ],
-    colors: [
-      "off-white",
-      "charcoal",
-      "muted navy",
-      "washed olive"
-    ],
-    fit: "relaxed and practical",
-    accessories: [
-      "simple apron or canvas overshirt",
-      "leather strap watch",
-      "subtle metal ring"
-    ],
-    fabric_behavior: [
-      "natural creases from sitting",
-      "minor paint smudges",
-      "matte texture under soft light"
-    ],
-    avoid: [
-      "logos",
-      "fashion exaggeration",
-      "synthetic shine"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral real-world camera profile",
-    saturation: "controlled, slightly muted",
-    white_balance: "mixed daylight and warm practical light",
-    avoid: [
-      "cinematic grading",
-      "teal-orange",
-      "over-saturation"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "controlled",
-    symmetry_breaking: true,
-    imperfection_level: "subtle",
-    details: [
-      "uneven light on face",
-      "minor exposure imbalance",
-      "real skin texture preserved"
-    ]
-  },
-
-  noise_and_texture: {
-    sensor_noise: "subtle ISO grain",
-    grain: "fine organic texture",
-    surface_detail:
-      "visible canvas and wood texture without sharpening"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "skin smoothing",
-      "face reshaping",
-      "beauty filters",
-      "edge halos"
-    ],
-    apply: [
-      "slight contrast roll-off",
-      "minor highlight clipping on bright surfaces",
-      "realistic tonal compression"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no portrait mode",
-    "no studio beauty lighting",
-    "no cinematic effects",
-    "no stylized blur",
-    "no symmetry enforcement",
-    "no artificial props"
-  ],
-
-  output_goal:
-    "a realistic yet aesthetic close-up photograph where the exact input face is preserved, the person sits comfortably inside a working artistic studio, and interacts naturally with creative tools and environment"
-},
     aspectRatio: "3:4",
     keywords: [
-      "art", "studio", "creative", "paint", "painter", "artist", 
-      "easel", "canvas", "workshop", "drawing", "kala", "rang", 
+      "art", "studio", "creative", "paint", "painter", "artist",
+      "easel", "canvas", "workshop", "drawing", "kala", "rang",
       "brush", "tasveer", "chitrakar", "painting", "messy"
     ]
   },
@@ -2424,226 +2292,226 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_elegentsilksaree_cover.webp",
     prompt:
-      {
-  task: "identity_locked_cultural_editorial_photography",
-  theme: "elegant_silk_saree",
+    {
+      task: "identity_locked_cultural_editorial_photography",
+      theme: "elegant_silk_saree",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      head_shape: "locked",
-      face_asymmetry: "preserved"
-    },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "AI facial averaging",
-      "symmetry correction",
-      "bridal face stylization"
-    ]
-  },
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          head_shape: "locked",
+          face_asymmetry: "preserved"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "AI facial averaging",
+          "symmetry correction",
+          "bridal face stylization"
+        ]
+      },
 
-  rendering_pipeline: [
-    "environment_render_first",
-    "natural_light_with_reflective_textile_handling",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "silk_fabric_physics_simulation",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "heritage-inspired real-world setting",
-    environment_style: "elegant, calm, culturally grounded",
-    spatial_layers: {
-      foreground: [
-        "stone step edge",
-        "wooden pillar detail",
-        "saree pallu partially crossing frame"
+      rendering_pipeline: [
+        "environment_render_first",
+        "natural_light_with_reflective_textile_handling",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "silk_fabric_physics_simulation",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
       ],
-      midground: [
-        "subject seated or standing gracefully"
+
+      environment: {
+        location: "heritage-inspired real-world setting",
+        environment_style: "elegant, calm, culturally grounded",
+        spatial_layers: {
+          foreground: [
+            "stone step edge",
+            "wooden pillar detail",
+            "saree pallu partially crossing frame"
+          ],
+          midground: [
+            "subject seated or standing gracefully"
+          ],
+          background: [
+            "heritage wall",
+            "arched doorway",
+            "soft courtyard depth"
+          ]
+        },
+        architectural_elements: [
+          "natural stone",
+          "carved wood",
+          "traditional columns or arches"
+        ],
+        lighting: {
+          source: "natural daylight",
+          time_of_day: "late morning or soft afternoon",
+          quality: "diffused, directional, calm",
+          shadow_behavior: "soft with textile-defined contrast",
+          avoid: [
+            "golden wedding glow",
+            "cinematic haze",
+            "spotlight lighting"
+          ]
+        },
+        atmosphere: "graceful, composed, timeless"
+      },
+
+      camera_simulation: {
+        camera_type: "professional editorial fashion camera",
+        focal_length_mm: 50,
+        aperture: "f/8",
+        iso: 100,
+        shutter_speed: "1/250",
+        focus_behavior:
+          "deep focus preserving fabric and environment detail",
+        lens_characteristics: [
+          "natural contrast",
+          "controlled highlights for silk",
+          "no portrait mode blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input image face",
+        framing: "medium shot to medium close-up",
+        pose: "graceful, relaxed, culturally natural",
+        interaction: [
+          "one hand gently holding or adjusting saree pallu",
+          "fingers lightly touching silk pleats",
+          "body angled naturally toward light source"
+        ],
+        body_language: "elegant, composed, grounded",
+        expression: "soft confidence, calm presence",
+        occlusion: [
+          "saree fabric framing lower edge",
+          "architectural foreground element partially visible"
+        ]
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "luxury handcrafted silk saree",
+        saree_style: "traditional elegance with editorial restraint",
+        saree_material: [
+          "pure silk (Kanchipuram / Banarasi / Tussar-inspired)",
+          "authentic weave texture visible"
+        ],
+        colors: [
+          "rich emerald",
+          "deep maroon",
+          "royal blue",
+          "warm gold accents"
+        ],
+        border_detail:
+          "subtle zari or woven border, not oversized",
+        fabric_behavior: [
+          "natural silk sheen",
+          "heavy drape with gravity",
+          "soft creases and folds",
+          "light reflection varying by angle"
+        ],
+        blouse: {
+          design: "tailored, minimal, elegant",
+          material: "silk or raw silk",
+          fit: "structured but comfortable"
+        },
+        accessories: [
+          "traditional gold or antique-finish earrings",
+          "minimal bangle or bracelet",
+          "subtle ring",
+          "small bindi (optional, restrained)"
+        ],
+        interaction_with_clothing: [
+          "pallu adjusted naturally",
+          "pleats resting on lap or leg",
+          "fabric brushing stone or step"
+        ],
+        avoid: [
+          "heavy bridal jewelry",
+          "excessive embroidery",
+          "plastic shine",
+          "costume styling"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral daylight textile-accurate profile",
+        contrast: "moderate, fabric-led",
+        saturation: "rich but controlled",
+        white_balance: "true daylight",
+        avoid: [
+          "wedding color grading",
+          "over-warming",
+          "cinematic saturation"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "moderate",
+        symmetry_breaking: true,
+        imperfection_level: "natural",
+        details: [
+          "minor silk wrinkles",
+          "uneven zari reflection",
+          "natural skin texture preserved"
+        ]
+      },
+
+      noise_and_texture: {
+        sensor_noise: "very subtle",
+        grain: "fine organic",
+        textile_texture:
+          "silk weave and zari detail preserved"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty filters",
+          "skin smoothing",
+          "face reshaping",
+          "glow effects",
+          "plastic fabric finish"
+        ],
+        apply: [
+          "textile-accurate contrast",
+          "natural highlight roll-off on silk",
+          "balanced skin tones"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no beautification",
+        "no bridal glow",
+        "no cinematic haze",
+        "no portrait mode blur",
+        "no costume-like styling",
+        "no artificial silk shine"
       ],
-      background: [
-        "heritage wall",
-        "arched doorway",
-        "soft courtyard depth"
-      ]
+
+      output_goal:
+        "an elegant, realistic editorial photograph where the exact face identity is preserved, a luxurious silk saree behaves authentically with weight and sheen, accessories remain refined and traditional, the subject gently interacts with fabric and architecture, and the overall image feels timeless, graceful, and genuinely real"
     },
-    architectural_elements: [
-      "natural stone",
-      "carved wood",
-      "traditional columns or arches"
-    ],
-    lighting: {
-      source: "natural daylight",
-      time_of_day: "late morning or soft afternoon",
-      quality: "diffused, directional, calm",
-      shadow_behavior: "soft with textile-defined contrast",
-      avoid: [
-        "golden wedding glow",
-        "cinematic haze",
-        "spotlight lighting"
-      ]
-    },
-    atmosphere: "graceful, composed, timeless"
-  },
-
-  camera_simulation: {
-    camera_type: "professional editorial fashion camera",
-    focal_length_mm: 50,
-    aperture: "f/8",
-    iso: 100,
-    shutter_speed: "1/250",
-    focus_behavior:
-      "deep focus preserving fabric and environment detail",
-    lens_characteristics: [
-      "natural contrast",
-      "controlled highlights for silk",
-      "no portrait mode blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input image face",
-    framing: "medium shot to medium close-up",
-    pose: "graceful, relaxed, culturally natural",
-    interaction: [
-      "one hand gently holding or adjusting saree pallu",
-      "fingers lightly touching silk pleats",
-      "body angled naturally toward light source"
-    ],
-    body_language: "elegant, composed, grounded",
-    expression: "soft confidence, calm presence",
-    occlusion: [
-      "saree fabric framing lower edge",
-      "architectural foreground element partially visible"
-    ]
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "luxury handcrafted silk saree",
-    saree_style: "traditional elegance with editorial restraint",
-    saree_material: [
-      "pure silk (Kanchipuram / Banarasi / Tussar-inspired)",
-      "authentic weave texture visible"
-    ],
-    colors: [
-      "rich emerald",
-      "deep maroon",
-      "royal blue",
-      "warm gold accents"
-    ],
-    border_detail:
-      "subtle zari or woven border, not oversized",
-    fabric_behavior: [
-      "natural silk sheen",
-      "heavy drape with gravity",
-      "soft creases and folds",
-      "light reflection varying by angle"
-    ],
-    blouse: {
-      design: "tailored, minimal, elegant",
-      material: "silk or raw silk",
-      fit: "structured but comfortable"
-    },
-    accessories: [
-      "traditional gold or antique-finish earrings",
-      "minimal bangle or bracelet",
-      "subtle ring",
-      "small bindi (optional, restrained)"
-    ],
-    interaction_with_clothing: [
-      "pallu adjusted naturally",
-      "pleats resting on lap or leg",
-      "fabric brushing stone or step"
-    ],
-    avoid: [
-      "heavy bridal jewelry",
-      "excessive embroidery",
-      "plastic shine",
-      "costume styling"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral daylight textile-accurate profile",
-    contrast: "moderate, fabric-led",
-    saturation: "rich but controlled",
-    white_balance: "true daylight",
-    avoid: [
-      "wedding color grading",
-      "over-warming",
-      "cinematic saturation"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "moderate",
-    symmetry_breaking: true,
-    imperfection_level: "natural",
-    details: [
-      "minor silk wrinkles",
-      "uneven zari reflection",
-      "natural skin texture preserved"
-    ]
-  },
-
-  noise_and_texture: {
-    sensor_noise: "very subtle",
-    grain: "fine organic",
-    textile_texture:
-      "silk weave and zari detail preserved"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty filters",
-      "skin smoothing",
-      "face reshaping",
-      "glow effects",
-      "plastic fabric finish"
-    ],
-    apply: [
-      "textile-accurate contrast",
-      "natural highlight roll-off on silk",
-      "balanced skin tones"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no beautification",
-    "no bridal glow",
-    "no cinematic haze",
-    "no portrait mode blur",
-    "no costume-like styling",
-    "no artificial silk shine"
-  ],
-
-  output_goal:
-    "an elegant, realistic editorial photograph where the exact face identity is preserved, a luxurious silk saree behaves authentically with weight and sheen, accessories remain refined and traditional, the subject gently interacts with fabric and architecture, and the overall image feels timeless, graceful, and genuinely real"
-},
     aspectRatio: "3:4",
     keywords: [
-      "saree", "sari", "silk", "traditional", "indian", "ethnic", 
-      "elegant", "woman", "desi", "festival", "wedding guest", "aurat", 
+      "saree", "sari", "silk", "traditional", "indian", "ethnic",
+      "elegant", "woman", "desi", "festival", "wedding guest", "aurat",
       "ladki", "ma", "mom", "bahu", "shadi wear", "kanjivaram", "pattu"
     ]
   },
-  
+
   {
     id: "aesthetics_template_13",
     name: "Bohemian Chic",
@@ -2653,8 +2521,8 @@ const aestheticsTemplates: Template[] = [
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in layered bohemian fabrics and patterns, soft evening sunlight, textured studio or artistic street market setting, natural smile, free-spirited hyper realistic image.\nno neon tones, no clutter, no artificial blur, no plastic texture , no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
     keywords: [
-      "boho", "bohemian", "chic", "hippie", "free", "travel", 
-      "colorful", "gypsy", "festival", "nature", "banjara", 
+      "boho", "bohemian", "chic", "hippie", "free", "travel",
+      "colorful", "gypsy", "festival", "nature", "banjara",
       "phool", "flowers", "artsy", "indie", "music festival",
     ]
   },
@@ -2667,8 +2535,8 @@ const aestheticsTemplates: Template[] = [
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a flowing satin gown, standing in a softly lit ballroom or terrace at twilight, subtle reflections, rich color contrast, high-end magazine style realism.\nno glare, no fantasy glow, no distorted proportions, no over-saturation. no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
     keywords: [
-      "gown", "evening", "party", "dress", "elegant", "night", 
-      "twilight", "fancy", "prom", "ball", "rich", "lamba dress", 
+      "gown", "evening", "party", "dress", "elegant", "night",
+      "twilight", "fancy", "prom", "ball", "rich", "lamba dress",
       "sundar", "beautiful", "pari", "model", "fashion", "luxury"
     ]
   },
@@ -2728,8 +2596,8 @@ const aestheticsTemplates: Template[] = [
     }, // <--- THIS WAS MISSING
     aspectRatio: "3:4",
     keywords: [
-      "city", "casual", "modern", "street", "urban", "daily", 
-      "lifestyle", "smart", "cool", "outdoor", "sheher", "buildings", 
+      "city", "casual", "modern", "street", "urban", "daily",
+      "lifestyle", "smart", "cool", "outdoor", "sheher", "buildings",
       "busy", "road", "walk", "candid", "coffee run"
     ]
   },
@@ -2742,10 +2610,10 @@ const aestheticsTemplates: Template[] = [
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a 1950s-inspired dress, vintage car or old café in background, warm muted tones, nostalgic mood, hyper-realistic Raymond heritage tone.\nno digital artifacts, no bright neon, no blur, no modern elements. no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
     keywords: [
-      "vintage", "1950s", "retro", "classic", "old", "car", 
-      "dress", "fashion", "nostalgia", "timeless", "purana", 
-      "zamana", "retro look", "old school", "antique", "heritage", "retro", "1950s", "old school", "classic", "purana", 
-      "black and white", "nostalgia", "fashion", "purana zamana", 
+      "vintage", "1950s", "retro", "classic", "old", "car",
+      "dress", "fashion", "nostalgia", "timeless", "purana",
+      "zamana", "retro look", "old school", "antique", "heritage", "retro", "1950s", "old school", "classic", "purana",
+      "black and white", "nostalgia", "fashion", "purana zamana",
       "old is gold", "heroine", "actress", "old movie", "cinema"
     ]
   },
@@ -2756,218 +2624,218 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_pastelprofessional_cover.webp",
     prompt:
-      {
-  task: "identity_locked_high_aesthetic_professional_photography",
-  theme: "pastel_professional_enhanced",
+    {
+      task: "identity_locked_high_aesthetic_professional_photography",
+      theme: "pastel_professional_enhanced",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      head_shape: "locked",
-      face_asymmetry: "preserved"
-    },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "AI facial averaging",
-      "symmetry correction"
-    ]
-  },
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          head_shape: "locked",
+          face_asymmetry: "preserved"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "AI facial averaging",
+          "symmetry correction"
+        ]
+      },
 
-  rendering_pipeline: [
-    "environment_render_first",
-    "architectural_daylight_simulation",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "fabric_physics_simulation",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "high-end modern professional interior",
-    environment_style: "pastel architectural, minimal luxury",
-    spatial_layers: {
-      foreground: [
-        "matte desk surface",
-        "architectural edge or railing"
+      rendering_pipeline: [
+        "environment_render_first",
+        "architectural_daylight_simulation",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "fabric_physics_simulation",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
       ],
-      midground: [
-        "subject seated or standing near workspace"
+
+      environment: {
+        location: "high-end modern professional interior",
+        environment_style: "pastel architectural, minimal luxury",
+        spatial_layers: {
+          foreground: [
+            "matte desk surface",
+            "architectural edge or railing"
+          ],
+          midground: [
+            "subject seated or standing near workspace"
+          ],
+          background: [
+            "pastel-toned walls",
+            "large glass panels",
+            "soft geometric architectural forms"
+          ]
+        },
+        design_elements: [
+          "rounded pastel columns",
+          "muted terrazzo or stone flooring",
+          "natural wood accents"
+        ],
+        lighting: {
+          source: "natural daylight",
+          entry: "large windows or skylight",
+          quality: "soft, even, diffused",
+          shadow_behavior: "gentle, realistic",
+          avoid: [
+            "corporate stock lighting",
+            "beauty glow",
+            "cinematic contrast"
+          ]
+        },
+        atmosphere: "calm, refined, confident"
+      },
+
+      camera_simulation: {
+        camera_type: "professional editorial camera",
+        focal_length_mm: 50,
+        aperture: "f/7.1",
+        iso: 100,
+        shutter_speed: "1/200",
+        focus_behavior: "clean focus with spatial clarity",
+        lens_characteristics: [
+          "neutral contrast",
+          "natural sharpness",
+          "no artificial blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input image face",
+        framing: "medium shot",
+        pose: "upright, relaxed, composed",
+        interaction: [
+          "one hand resting on matte desk or railing",
+          "other hand adjusting blazer or holding notebook",
+          "subtle lean into architectural element"
+        ],
+        body_language: "confident, approachable, natural",
+        expression: "focused, calm, professional",
+        occlusion: [
+          "foreground desk or railing partially framing subject"
+        ]
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "luxury contemporary designer tailoring",
+        styling_concept: "pastel power dressing, understated elegance",
+        clothing_layers: [
+          "relaxed-structure pastel blazer",
+          "fine knit or silk-blend inner top",
+          "tailored trousers with soft pleats"
+        ],
+        materials: [
+          "fine wool",
+          "matte silk blend",
+          "structured cotton twill"
+        ],
+        colors: [
+          "powder blue",
+          "soft lilac",
+          "pale sage",
+          "warm ivory",
+          "light stone"
+        ],
+        fabric_behavior: [
+          "clean drape",
+          "soft folds at joints",
+          "subtle texture visible in light"
+        ],
+        accessories: [
+          "minimal luxury wristwatch",
+          "slim metal rings",
+          "structured leather portfolio or bag",
+          "clean leather belt or subtle chain detail"
+        ],
+        interaction_with_clothing: [
+          "jacket slightly open mid-movement",
+          "sleeves gently creased",
+          "fabric responding naturally to posture"
+        ],
+        avoid: [
+          "fast-fashion cuts",
+          "bold patterns",
+          "glossy fabrics",
+          "heavy jewelry"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral professional daylight profile",
+        contrast: "low to moderate",
+        saturation: "soft pastel, controlled",
+        white_balance: "true daylight",
+        avoid: [
+          "over-saturation",
+          "stock-photo grading",
+          "cinematic palettes"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "moderate",
+        symmetry_breaking: true,
+        imperfection_level: "subtle and natural",
+        details: [
+          "uneven wall tones",
+          "minor exposure variation",
+          "natural skin texture preserved"
+        ]
+      },
+
+      noise_and_texture: {
+        sensor_noise: "very subtle",
+        grain: "fine organic",
+        surface_texture: "fabric, stone, wood preserved"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty filters",
+          "skin smoothing",
+          "face reshaping",
+          "glow",
+          "over-sharpening"
+        ],
+        apply: [
+          "clean tonal balance",
+          "gentle contrast shaping",
+          "natural highlight roll-off"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no beautification",
+        "no cinematic lighting",
+        "no portrait mode blur",
+        "no fantasy colors",
+        "no stock-photo look"
       ],
-      background: [
-        "pastel-toned walls",
-        "large glass panels",
-        "soft geometric architectural forms"
-      ]
+
+      output_goal:
+        "a high-aesthetic yet realistic pastel professional portrait where the exact face identity is preserved, designer pastel tailoring and refined accessories elevate the look, the subject interacts naturally with a modern architectural environment, and the image conveys quiet confidence and contemporary professionalism"
     },
-    design_elements: [
-      "rounded pastel columns",
-      "muted terrazzo or stone flooring",
-      "natural wood accents"
-    ],
-    lighting: {
-      source: "natural daylight",
-      entry: "large windows or skylight",
-      quality: "soft, even, diffused",
-      shadow_behavior: "gentle, realistic",
-      avoid: [
-        "corporate stock lighting",
-        "beauty glow",
-        "cinematic contrast"
-      ]
-    },
-    atmosphere: "calm, refined, confident"
-  },
-
-  camera_simulation: {
-    camera_type: "professional editorial camera",
-    focal_length_mm: 50,
-    aperture: "f/7.1",
-    iso: 100,
-    shutter_speed: "1/200",
-    focus_behavior: "clean focus with spatial clarity",
-    lens_characteristics: [
-      "neutral contrast",
-      "natural sharpness",
-      "no artificial blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input image face",
-    framing: "medium shot",
-    pose: "upright, relaxed, composed",
-    interaction: [
-      "one hand resting on matte desk or railing",
-      "other hand adjusting blazer or holding notebook",
-      "subtle lean into architectural element"
-    ],
-    body_language: "confident, approachable, natural",
-    expression: "focused, calm, professional",
-    occlusion: [
-      "foreground desk or railing partially framing subject"
-    ]
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "luxury contemporary designer tailoring",
-    styling_concept: "pastel power dressing, understated elegance",
-    clothing_layers: [
-      "relaxed-structure pastel blazer",
-      "fine knit or silk-blend inner top",
-      "tailored trousers with soft pleats"
-    ],
-    materials: [
-      "fine wool",
-      "matte silk blend",
-      "structured cotton twill"
-    ],
-    colors: [
-      "powder blue",
-      "soft lilac",
-      "pale sage",
-      "warm ivory",
-      "light stone"
-    ],
-    fabric_behavior: [
-      "clean drape",
-      "soft folds at joints",
-      "subtle texture visible in light"
-    ],
-    accessories: [
-      "minimal luxury wristwatch",
-      "slim metal rings",
-      "structured leather portfolio or bag",
-      "clean leather belt or subtle chain detail"
-    ],
-    interaction_with_clothing: [
-      "jacket slightly open mid-movement",
-      "sleeves gently creased",
-      "fabric responding naturally to posture"
-    ],
-    avoid: [
-      "fast-fashion cuts",
-      "bold patterns",
-      "glossy fabrics",
-      "heavy jewelry"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral professional daylight profile",
-    contrast: "low to moderate",
-    saturation: "soft pastel, controlled",
-    white_balance: "true daylight",
-    avoid: [
-      "over-saturation",
-      "stock-photo grading",
-      "cinematic palettes"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "moderate",
-    symmetry_breaking: true,
-    imperfection_level: "subtle and natural",
-    details: [
-      "uneven wall tones",
-      "minor exposure variation",
-      "natural skin texture preserved"
-    ]
-  },
-
-  noise_and_texture: {
-    sensor_noise: "very subtle",
-    grain: "fine organic",
-    surface_texture: "fabric, stone, wood preserved"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty filters",
-      "skin smoothing",
-      "face reshaping",
-      "glow",
-      "over-sharpening"
-    ],
-    apply: [
-      "clean tonal balance",
-      "gentle contrast shaping",
-      "natural highlight roll-off"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no beautification",
-    "no cinematic lighting",
-    "no portrait mode blur",
-    "no fantasy colors",
-    "no stock-photo look"
-  ],
-
-  output_goal:
-    "a high-aesthetic yet realistic pastel professional portrait where the exact face identity is preserved, designer pastel tailoring and refined accessories elevate the look, the subject interacts naturally with a modern architectural environment, and the image conveys quiet confidence and contemporary professionalism"
-},
     aspectRatio: "3:4",
     keywords: [
-      "professional", "office", "business", "casual", "modern", 
-      "pastel", "smart", "work", "lifestyle", "corporate", 
-      "daftar", "meeting", "executive", "formal", "career", 
-      "startup", "entrepreneur", "professional", "office", "work", "pastel", "soft", "clean", 
-      "corporate", "job", "business", "naukri", "formal", "kaam", 
+      "professional", "office", "business", "casual", "modern",
+      "pastel", "smart", "work", "lifestyle", "corporate",
+      "daftar", "meeting", "executive", "formal", "career",
+      "startup", "entrepreneur", "professional", "office", "work", "pastel", "soft", "clean",
+      "corporate", "job", "business", "naukri", "formal", "kaam",
       "boss", "interview", "light color", "elegant", "ceo"
     ]
   },
@@ -2977,221 +2845,221 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_scerenelandscape_cover.webp",
     prompt:
-      {
-  task: "identity_locked_editorial_environmental_photography",
-  theme: "serene_landscape_enhanced",
+    {
+      task: "identity_locked_editorial_environmental_photography",
+      theme: "serene_landscape_enhanced",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      head_shape: "locked",
-      face_asymmetry: "preserved"
-    },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "AI facial averaging",
-      "symmetry correction"
-    ]
-  },
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          head_shape: "locked",
+          face_asymmetry: "preserved"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "AI facial averaging",
+          "symmetry correction"
+        ]
+      },
 
-  rendering_pipeline: [
-    "environment_render_first",
-    "natural_light_simulation",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "fabric_physics_simulation",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "open serene natural landscape",
-    landscape_layers: {
-      foreground: [
-        "soft grass",
-        "small stones",
-        "wild plants brushing frame edge"
+      rendering_pipeline: [
+        "environment_render_first",
+        "natural_light_simulation",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "fabric_physics_simulation",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
       ],
-      midground: [
-        "person seated near shallow water stream",
-        "flat rock or wooden log partially touching water"
+
+      environment: {
+        location: "open serene natural landscape",
+        landscape_layers: {
+          foreground: [
+            "soft grass",
+            "small stones",
+            "wild plants brushing frame edge"
+          ],
+          midground: [
+            "person seated near shallow water stream",
+            "flat rock or wooden log partially touching water"
+          ],
+          background: [
+            "gentle rolling hills",
+            "sparse trees",
+            "soft sky gradient"
+          ]
+        },
+        water_element: {
+          type: "shallow natural stream",
+          behavior: "slow moving, reflective highlights",
+          interaction: "water touching hand or feet lightly"
+        },
+        lighting: {
+          source: "natural sunlight",
+          time_of_day: "early morning or late afternoon",
+          quality: "soft, diffused, clean",
+          shadow_behavior: "soft-edged, realistic",
+          avoid: [
+            "over-glow",
+            "cinematic haze",
+            "fantasy light rays"
+          ]
+        },
+        atmosphere: "open, breathable, calm"
+      },
+
+      camera_simulation: {
+        camera_type: "professional outdoor photography camera",
+        focal_length_mm: 50,
+        aperture: "f/8",
+        iso: 100,
+        shutter_speed: "1/320",
+        focus_behavior: "deep focus with environmental clarity",
+        lens_characteristics: [
+          "neutral contrast",
+          "natural edge softness",
+          "no artificial blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input image face",
+        framing: "medium shot",
+        pose: "seated comfortably and naturally",
+        interaction: [
+          "one hand resting in flowing stream",
+          "other hand supporting body on rock or grass",
+          "bare feet or shoes touching ground naturally"
+        ],
+        body_language: "relaxed, grounded, open posture",
+        expression: "calm, thoughtful, peaceful",
+        occlusion: [
+          "natural foliage partially crossing foreground",
+          "fabric edges overlapping frame naturally"
+        ]
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "high-end minimalist designer wear",
+        styling_concept: "quiet luxury, nature-aligned",
+        clothing_layers: [
+          "lightweight linen overshirt or long tunic",
+          "inner soft cotton or silk-blend top",
+          "relaxed tailored trousers with natural drape"
+        ],
+        materials: [
+          "washed linen",
+          "organic cotton",
+          "soft wool blend",
+          "raw silk accents"
+        ],
+        colors: [
+          "ivory",
+          "sage green",
+          "warm beige",
+          "muted clay"
+        ],
+        fabric_behavior: [
+          "gentle movement in breeze",
+          "soft folds catching sunlight",
+          "natural wrinkling and texture"
+        ],
+        accessories: [
+          "handcrafted leather strap watch",
+          "minimal metal ring",
+          "natural stone or wooden bracelet",
+          "soft leather sandals or barefoot feel"
+        ],
+        interaction_with_clothing: [
+          "sleeves loosely rolled",
+          "fabric touching water edge",
+          "trouser hems brushing grass or stone"
+        ],
+        avoid: [
+          "bold logos",
+          "high-gloss finishes",
+          "heavy jewelry",
+          "urban fashion elements"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral daylight camera profile",
+        contrast: "low to moderate",
+        saturation: "soft and muted",
+        white_balance: "true daylight",
+        avoid: [
+          "cinematic grading",
+          "over-warming",
+          "pastel exaggeration"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "moderate",
+        symmetry_breaking: true,
+        imperfection_level: "natural",
+        details: [
+          "uneven sunlight patches on fabric",
+          "minor exposure variation",
+          "natural skin texture retained"
+        ]
+      },
+
+      noise_and_texture: {
+        sensor_noise: "very subtle",
+        grain: "fine organic",
+        environmental_texture: "grass, stone, water detail preserved"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty filters",
+          "skin smoothing",
+          "face reshaping",
+          "glow effects",
+          "artificial sharpness"
+        ],
+        apply: [
+          "natural tonal balance",
+          "gentle contrast shaping",
+          "realistic highlight roll-off"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no beautification",
+        "no cinematic haze",
+        "no dramatic lighting",
+        "no portrait mode blur",
+        "no stylized fantasy colors",
+        "no artificial environment"
       ],
-      background: [
-        "gentle rolling hills",
-        "sparse trees",
-        "soft sky gradient"
-      ]
+
+      output_goal:
+        "a refined, aesthetically elevated yet realistic serene landscape photograph where the exact face identity is preserved, the subject gently interacts with water and terrain, designer clothing blends naturally with the environment, and the overall image feels calm, breathable, and quietly luxurious"
     },
-    water_element: {
-      type: "shallow natural stream",
-      behavior: "slow moving, reflective highlights",
-      interaction: "water touching hand or feet lightly"
-    },
-    lighting: {
-      source: "natural sunlight",
-      time_of_day: "early morning or late afternoon",
-      quality: "soft, diffused, clean",
-      shadow_behavior: "soft-edged, realistic",
-      avoid: [
-        "over-glow",
-        "cinematic haze",
-        "fantasy light rays"
-      ]
-    },
-    atmosphere: "open, breathable, calm"
-  },
-
-  camera_simulation: {
-    camera_type: "professional outdoor photography camera",
-    focal_length_mm: 50,
-    aperture: "f/8",
-    iso: 100,
-    shutter_speed: "1/320",
-    focus_behavior: "deep focus with environmental clarity",
-    lens_characteristics: [
-      "neutral contrast",
-      "natural edge softness",
-      "no artificial blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input image face",
-    framing: "medium shot",
-    pose: "seated comfortably and naturally",
-    interaction: [
-      "one hand resting in flowing stream",
-      "other hand supporting body on rock or grass",
-      "bare feet or shoes touching ground naturally"
-    ],
-    body_language: "relaxed, grounded, open posture",
-    expression: "calm, thoughtful, peaceful",
-    occlusion: [
-      "natural foliage partially crossing foreground",
-      "fabric edges overlapping frame naturally"
-    ]
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "high-end minimalist designer wear",
-    styling_concept: "quiet luxury, nature-aligned",
-    clothing_layers: [
-      "lightweight linen overshirt or long tunic",
-      "inner soft cotton or silk-blend top",
-      "relaxed tailored trousers with natural drape"
-    ],
-    materials: [
-      "washed linen",
-      "organic cotton",
-      "soft wool blend",
-      "raw silk accents"
-    ],
-    colors: [
-      "ivory",
-      "sage green",
-      "warm beige",
-      "muted clay"
-    ],
-    fabric_behavior: [
-      "gentle movement in breeze",
-      "soft folds catching sunlight",
-      "natural wrinkling and texture"
-    ],
-    accessories: [
-      "handcrafted leather strap watch",
-      "minimal metal ring",
-      "natural stone or wooden bracelet",
-      "soft leather sandals or barefoot feel"
-    ],
-    interaction_with_clothing: [
-      "sleeves loosely rolled",
-      "fabric touching water edge",
-      "trouser hems brushing grass or stone"
-    ],
-    avoid: [
-      "bold logos",
-      "high-gloss finishes",
-      "heavy jewelry",
-      "urban fashion elements"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral daylight camera profile",
-    contrast: "low to moderate",
-    saturation: "soft and muted",
-    white_balance: "true daylight",
-    avoid: [
-      "cinematic grading",
-      "over-warming",
-      "pastel exaggeration"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "moderate",
-    symmetry_breaking: true,
-    imperfection_level: "natural",
-    details: [
-      "uneven sunlight patches on fabric",
-      "minor exposure variation",
-      "natural skin texture retained"
-    ]
-  },
-
-  noise_and_texture: {
-    sensor_noise: "very subtle",
-    grain: "fine organic",
-    environmental_texture: "grass, stone, water detail preserved"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty filters",
-      "skin smoothing",
-      "face reshaping",
-      "glow effects",
-      "artificial sharpness"
-    ],
-    apply: [
-      "natural tonal balance",
-      "gentle contrast shaping",
-      "realistic highlight roll-off"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no beautification",
-    "no cinematic haze",
-    "no dramatic lighting",
-    "no portrait mode blur",
-    "no stylized fantasy colors",
-    "no artificial environment"
-  ],
-
-  output_goal:
-    "a refined, aesthetically elevated yet realistic serene landscape photograph where the exact face identity is preserved, the subject gently interacts with water and terrain, designer clothing blends naturally with the environment, and the overall image feels calm, breathable, and quietly luxurious"
-},
     aspectRatio: "3:4",
     keywords: [
-      "landscape", "nature", "serene", "calm", "outdoor", 
-      "scenic", "peaceful", "environment", "pahad", "nadi", 
-      "jungle", "hariyali", "shanti", "tranquil", "natural", 
-      "open", "fresh air", "hills", "river", "woods", "trees", "landscape", "nature", "serene", "calm", "peace", "sukoon", 
-      "view", "scenery", "outdoor", "quiet", "pahad", "nadi", 
+      "landscape", "nature", "serene", "calm", "outdoor",
+      "scenic", "peaceful", "environment", "pahad", "nadi",
+      "jungle", "hariyali", "shanti", "tranquil", "natural",
+      "open", "fresh air", "hills", "river", "woods", "trees", "landscape", "nature", "serene", "calm", "peace", "sukoon",
+      "view", "scenery", "outdoor", "quiet", "pahad", "nadi",
       "river", "hills", "relax", "meditation", "wide shot"
     ]
   },
@@ -3201,219 +3069,219 @@ const aestheticsTemplates: Template[] = [
     stackId: "aesthetics",
     imageUrl: "/images/asthetics_dramaticstudiopotrait_cover.webp",
     prompt:
-      {
-  task: "identity_locked_editorial_close_up_photography",
-  theme: "dramatic_studio_enhanced",
+    {
+      task: "identity_locked_editorial_close_up_photography",
+      theme: "dramatic_studio_enhanced",
 
-  identity_control: {
-    source: "input_person_image",
-    identity_lock: true,
-    identity_priority: "absolute",
-    identity_weight: 0.95,
-    style_weight: 0.05,
-    face_recognition_enforced: true,
-    facial_landmark_constraints: {
-      jawline: "locked",
-      chin_shape: "locked",
-      eye_distance: "locked",
-      nose_width: "locked",
-      lip_ratio: "locked",
-      head_shape: "locked",
-      face_asymmetry: "preserved"
+      identity_control: {
+        source: "input_person_image",
+        identity_lock: true,
+        identity_priority: "absolute",
+        identity_weight: 0.95,
+        style_weight: 0.05,
+        face_recognition_enforced: true,
+        facial_landmark_constraints: {
+          jawline: "locked",
+          chin_shape: "locked",
+          eye_distance: "locked",
+          nose_width: "locked",
+          lip_ratio: "locked",
+          head_shape: "locked",
+          face_asymmetry: "preserved"
+        },
+        forbid: [
+          "face morphing",
+          "beautification",
+          "AI face averaging",
+          "symmetry correction"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first",
+        "physical_light_blocking",
+        "contrast_sculpting",
+        "camera_optics_simulation",
+        "identity_projection",
+        "subject_environment_interaction",
+        "fabric_physics_simulation",
+        "micro_imperfection_injection",
+        "post_generation_realism_pass"
+      ],
+
+      environment: {
+        location: "editorial fashion studio",
+        studio_character: "dark, textured, dramatic but real",
+        spatial_elements: [
+          "large fabric backdrops",
+          "raw concrete walls",
+          "metal stands",
+          "wooden blocks or low platforms"
+        ],
+        background_layers: {
+          foreground: "fabric folds or studio prop edges",
+          midground: "subject interacting with props",
+          background: "textured wall or layered cloth backdrop"
+        },
+        lighting: {
+          primary_source: "directional studio key light",
+          light_position: "side or top-side angle",
+          secondary_source: "weak bounce or flag-controlled fill",
+          shadow_behavior: "hard edges with gradual falloff",
+          avoid: [
+            "rim glow",
+            "beauty dish softness",
+            "cinematic haze",
+            "perfect symmetry lighting"
+          ]
+        },
+        atmosphere: "tense, quiet, editorial intensity"
+      },
+
+      camera_simulation: {
+        camera_type: "full-frame professional camera",
+        focal_length_mm: 50,
+        aperture: "f/5.6",
+        iso: 200,
+        shutter_speed: "1/250",
+        focus_behavior: "sharp face, natural depth falloff",
+        lens_characteristics: [
+          "high micro-contrast",
+          "natural edge softness",
+          "no artificial blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input image face",
+        framing: "tight close-up to medium close-up",
+        pose: "grounded, asymmetric, deliberate",
+        interaction: [
+          "one hand gripping heavy fabric",
+          "fingers pressing into garment folds",
+          "leaning slightly against a studio prop",
+          "forearm resting on knee or platform"
+        ],
+        body_language: "controlled tension, natural weight shift",
+        expression: "serious, focused, introspective",
+        occlusion: [
+          "partial shadow sculpting face",
+          "fabric crossing lower frame edge"
+        ]
+      },
+
+      wardrobe_and_accessories: {
+        design_level: "high-fashion editorial, custom-designed",
+        clothing_layers: [
+          "structured long coat or oversized blazer",
+          "inner textured garment with deep folds",
+          "tailored trousers or heavy draped fabric"
+        ],
+        materials: [
+          "heavy wool",
+          "raw silk",
+          "dense cotton twill",
+          "leather accents"
+        ],
+        colors: [
+          "deep black",
+          "charcoal",
+          "dark olive",
+          "burnt umber"
+        ],
+        fabric_behavior: [
+          "visible weight and gravity",
+          "sharp folds catching directional light",
+          "deep shadows inside creases"
+        ],
+        accessories: [
+          "bold metal rings",
+          "thick leather cuff or bracelet",
+          "statement chain (matte, non-reflective)",
+          "structured belt or harness-style element"
+        ],
+        interaction_with_clothing: [
+          "fabric being pulled or compressed by hand",
+          "collar adjusted mid-motion",
+          "sleeves partially rolled or folded"
+        ],
+        avoid: [
+          "logos",
+          "glossy finishes",
+          "decorative excess",
+          "runway fantasy elements"
+        ]
+      },
+
+      color_science: {
+        profile: "neutral professional camera profile",
+        contrast: "moderate-high but controlled",
+        saturation: "low",
+        white_balance: "neutral to slightly cool",
+        avoid: [
+          "cinematic grading",
+          "teal-orange",
+          "over-crushed blacks"
+        ]
+      },
+
+      realism_enforcement: {
+        anti_aesthetic_bias: "moderate-high",
+        symmetry_breaking: true,
+        imperfection_level: "intentional but subtle",
+        details: [
+          "uneven shadow edges",
+          "minor exposure imbalance",
+          "natural skin texture retained"
+        ]
+      },
+
+      noise_and_texture: {
+        sensor_noise: "subtle real ISO grain",
+        grain: "fine organic",
+        compression_artifacts: "very minimal"
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty filters",
+          "skin smoothing",
+          "face reshaping",
+          "glow",
+          "perfect edges"
+        ],
+        apply: [
+          "contrast shaping only",
+          "shadow detail preservation",
+          "natural highlight roll-off"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "no face change",
+        "no beautification",
+        "no cinematic haze",
+        "no rim glow",
+        "no portrait mode",
+        "no stylized blur",
+        "no fantasy lighting",
+        "no symmetry enforcement"
+      ],
+
+      output_goal:
+        "a high-drama editorial studio photograph where the exact face identity is preserved, the clothing and accessories carry visual weight, the subject physically interacts with fabric and space, and realism is maintained through controlled light, texture, and imperfection"
     },
-    forbid: [
-      "face morphing",
-      "beautification",
-      "AI face averaging",
-      "symmetry correction"
-    ]
-  },
-
-  rendering_pipeline: [
-    "environment_render_first",
-    "physical_light_blocking",
-    "contrast_sculpting",
-    "camera_optics_simulation",
-    "identity_projection",
-    "subject_environment_interaction",
-    "fabric_physics_simulation",
-    "micro_imperfection_injection",
-    "post_generation_realism_pass"
-  ],
-
-  environment: {
-    location: "editorial fashion studio",
-    studio_character: "dark, textured, dramatic but real",
-    spatial_elements: [
-      "large fabric backdrops",
-      "raw concrete walls",
-      "metal stands",
-      "wooden blocks or low platforms"
-    ],
-    background_layers: {
-      foreground: "fabric folds or studio prop edges",
-      midground: "subject interacting with props",
-      background: "textured wall or layered cloth backdrop"
-    },
-    lighting: {
-      primary_source: "directional studio key light",
-      light_position: "side or top-side angle",
-      secondary_source: "weak bounce or flag-controlled fill",
-      shadow_behavior: "hard edges with gradual falloff",
-      avoid: [
-        "rim glow",
-        "beauty dish softness",
-        "cinematic haze",
-        "perfect symmetry lighting"
-      ]
-    },
-    atmosphere: "tense, quiet, editorial intensity"
-  },
-
-  camera_simulation: {
-    camera_type: "full-frame professional camera",
-    focal_length_mm: 50,
-    aperture: "f/5.6",
-    iso: 200,
-    shutter_speed: "1/250",
-    focus_behavior: "sharp face, natural depth falloff",
-    lens_characteristics: [
-      "high micro-contrast",
-      "natural edge softness",
-      "no artificial blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input image face",
-    framing: "tight close-up to medium close-up",
-    pose: "grounded, asymmetric, deliberate",
-    interaction: [
-      "one hand gripping heavy fabric",
-      "fingers pressing into garment folds",
-      "leaning slightly against a studio prop",
-      "forearm resting on knee or platform"
-    ],
-    body_language: "controlled tension, natural weight shift",
-    expression: "serious, focused, introspective",
-    occlusion: [
-      "partial shadow sculpting face",
-      "fabric crossing lower frame edge"
-    ]
-  },
-
-  wardrobe_and_accessories: {
-    design_level: "high-fashion editorial, custom-designed",
-    clothing_layers: [
-      "structured long coat or oversized blazer",
-      "inner textured garment with deep folds",
-      "tailored trousers or heavy draped fabric"
-    ],
-    materials: [
-      "heavy wool",
-      "raw silk",
-      "dense cotton twill",
-      "leather accents"
-    ],
-    colors: [
-      "deep black",
-      "charcoal",
-      "dark olive",
-      "burnt umber"
-    ],
-    fabric_behavior: [
-      "visible weight and gravity",
-      "sharp folds catching directional light",
-      "deep shadows inside creases"
-    ],
-    accessories: [
-      "bold metal rings",
-      "thick leather cuff or bracelet",
-      "statement chain (matte, non-reflective)",
-      "structured belt or harness-style element"
-    ],
-    interaction_with_clothing: [
-      "fabric being pulled or compressed by hand",
-      "collar adjusted mid-motion",
-      "sleeves partially rolled or folded"
-    ],
-    avoid: [
-      "logos",
-      "glossy finishes",
-      "decorative excess",
-      "runway fantasy elements"
-    ]
-  },
-
-  color_science: {
-    profile: "neutral professional camera profile",
-    contrast: "moderate-high but controlled",
-    saturation: "low",
-    white_balance: "neutral to slightly cool",
-    avoid: [
-      "cinematic grading",
-      "teal-orange",
-      "over-crushed blacks"
-    ]
-  },
-
-  realism_enforcement: {
-    anti_aesthetic_bias: "moderate-high",
-    symmetry_breaking: true,
-    imperfection_level: "intentional but subtle",
-    details: [
-      "uneven shadow edges",
-      "minor exposure imbalance",
-      "natural skin texture retained"
-    ]
-  },
-
-  noise_and_texture: {
-    sensor_noise: "subtle real ISO grain",
-    grain: "fine organic",
-    compression_artifacts: "very minimal"
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty filters",
-      "skin smoothing",
-      "face reshaping",
-      "glow",
-      "perfect edges"
-    ],
-    apply: [
-      "contrast shaping only",
-      "shadow detail preservation",
-      "natural highlight roll-off"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "no face change",
-    "no beautification",
-    "no cinematic haze",
-    "no rim glow",
-    "no portrait mode",
-    "no stylized blur",
-    "no fantasy lighting",
-    "no symmetry enforcement"
-  ],
-
-  output_goal:
-    "a high-drama editorial studio photograph where the exact face identity is preserved, the clothing and accessories carry visual weight, the subject physically interacts with fabric and space, and realism is maintained through controlled light, texture, and imperfection"
-},
     aspectRatio: "3:4",
     keywords: [
-      "dramatic", "studio", "portrait", "fashion", "editorial", 
-      "dark", "intense", "serious", "model", "photoshoot", 
-      "glamour", "high fashion", "moody", "artistic", "professional", 
-      "lighting", "camera", "photoshoot", "modeling", "studio", "portrait", "dramatic", "intense", "fashion", 
-      "glamour", "photoshoot", "moody", "artistic", "professional", 
-      "model", "camera", "lighting", "dramatic", "studio", "dark", "moody", "portrait", "model", 
-      "photoshoot", "fashion", "cool", "intense", "serious", "gussa", 
+      "dramatic", "studio", "portrait", "fashion", "editorial",
+      "dark", "intense", "serious", "model", "photoshoot",
+      "glamour", "high fashion", "moody", "artistic", "professional",
+      "lighting", "camera", "photoshoot", "modeling", "studio", "portrait", "dramatic", "intense", "fashion",
+      "glamour", "photoshoot", "moody", "artistic", "professional",
+      "model", "camera", "lighting", "dramatic", "studio", "dark", "moody", "portrait", "model",
+      "photoshoot", "fashion", "cool", "intense", "serious", "gussa",
       "attitude", "shadow", "black", "artistic", "portfolio"
-    ] 
+    ]
   },
 ];
 
@@ -3453,8 +3321,7 @@ const celebrationTemplates: Template[] = [
     stackId: "celebration",
     imageUrl: "/images/celebration_holi_cover.webp",
     prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding.Ultra-realistic RAW photograph of the same person from the input image, keeping the exact facial structure, jawline, skin tone, hair texture, and proportions. The person is slightly closer to the camera and looking directly at the lens. Set outdoors during a real Holi celebration. Background MUST be fully sharp, fully in focus, and NOT blurred at all — every object, building, and person visible with clear edges. Real Indian street/open area environment with people throwing dry gulal, walking, laughing, children playing, natural sunlight, and dust particles. The person interacts naturally — holding a plate of colors or lightly applying color to someone. Color powder must be dry, realistic, matte, not neon. Lighting is pure natural daylight (no depth blur, no lens blur, no portrait blur). The entire scene looks like a candid photo taken with aperture f/8–f/16 on a DSLR for maximum background clarity. NEGATIVE_PROMPT: no_blur_background no_depth_of_field_blur no_bokeh no_soft_focus no_portrait_mode_effect no_blurred_people no_blurred_objects no_haze_blur no_foggy_edges no_artificial_glow no_neon_colors no_fantasy_colors no_cartoon_look no_plastic_skin no_face_rounding no_wrong_face_structure no_color_smoke_clouds no_over_saturation no_airbrush no_distorted_hands no_wrong_ethnicity no_ai_artifacts.",
-    aspectRatio: "3:4",
+      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects, ensure the output figure’s face matches sharply with the input figure’s face while preserving the exact chin shape and jawline without rounding, ultra-realistic RAW photograph of the person from the input image participating in a real Holi celebration outdoors in India, the person looks directly into the camera with the same facial structure and same hairstyle as the input image including accurate jawline, identical eyes, nose, lips, eyebrows, identical skin tone, identical hair texture, identical hairline, identical hair length and density, natural facial proportions, and real skin texture, the face and hair must remain completely unaltered, bring the person slightly closer to the camera, the background MUST NOT be blurry and must show every building, street surface, wall, passerby, child, and crowd detail clearly and sharply with no portrait-mode bokeh, ensure every object and person in the environment is crisp, detailed, and fully visible with clean edges, natural daylight only in a real Indian street or open-area environment during Holi with people throwing dry gulal, walking, laughing, children playing, and dust particles suspended in sunlight, lighting must match true outdoor daylight conditions with no artificial glow or stylization and the entire scene should look like a candid photo shot at f/8–f/16 for maximum depth of field and background clarity, the person interacts naturally with the scene by holding a plate of dry color powder or gently applying color to someone nearby with color powder that is dry, realistic, matte, and physically grounded on skin and clothing with no neon colors, no fantasy hues, and no smoke-like color clouds, hyperrealistic candid festival photography with a RAW DSLR look, maximum realism, and no distortions, NEGATIVES: no blurry background, no portrait mode blur, no depth blur, no bokeh, no soft focus, no blurred people, no blurred objects, no haze blur, no foggy edges, no artificial glow, no neon colors, no fantasy colors, no cartoon look, no plastic skin, no face rounding, no wrong face structure, no altered face, no hairstyle change, no hair replacement, no color smoke clouds, no over-saturation, no airbrush, no distorted hands, no incorrect proportions, no wrong ethnicity, no AI artifacts, no jpeg artifacts, no halo, no glow outline, no bad mask, no chromatic aberration, no inconsistent lighting, no overexposed, no underexposed, no harsh shadows mismatch, no lighting mismatch, no 3d render look, no waxy skin, no duplicate face, no merged face, no misaligned face, no floating objects, no object clipping, no repeated textures, no clothing artifacts, no watermark, no text, no signature, no logo, no overlays, no UI elements, no nsfw, no nudity, no gore, no horror elements.",    aspectRatio: "3:4",
     keywords: [
       "holi", "colors", "rang", "festival", "indian", "pichkari", "gulal",
       "fun", "celebration", "tyohaar", "dhuleti", "paani", "water",
@@ -4278,263 +4145,263 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_luxurysuperbikerider_cover.webp",
     prompt:
-      {
-  task: "absolute_identity_and_body_locked_real_world_editorial_photography",
-  theme: "luxury_superbike_high_flex_final_locked_halfbody",
+    {
+      task: "absolute_identity_and_body_locked_real_world_editorial_photography",
+      theme: "luxury_superbike_high_flex_final_locked_halfbody",
 
-  global_lock_policy: {
-    lock_everything_except_person: true,
-    person_is_only_dynamic_element: true
-  },
-
-  identity_and_body_control: {
-    source: "input_person_image",
-    priority_order: [
-      "face_identity",
-      "facial_structure",
-      "micro_facial_features",
-      "body_structure",
-      "natural_pose"
-    ],
-
-    face_identity_lock: {
-      enabled: true,
-      identity_weight: 0.98,
-      style_weight: 0.02,
-      face_recognition_enforced: true,
-      facial_landmark_constraints: "absolute_hard_lock",
-      preserve_asymmetry: true,
-      forbid: [
-        "beautification",
-        "symmetry_correction",
-        "feature_enhancement",
-        "face_morphing",
-        "skin_smoothing"
-      ]
-    },
-
-    body_structure_analysis: {
-      derive_from_input: true,
-      calculate: [
-        "shoulder_width",
-        "torso_length",
-        "arm_length",
-        "neck_length",
-        "posture_bias"
-      ],
-      respect_real_proportions: true,
-      no_model_scaling: true,
-      no_body_retargeting: true
-    }
-  },
-
-  accessory_consistency_control: {
-    derive_from_input_image: true,
-    eyewear_policy: {
-      if_input_has_glasses: {
-        preserve_exact_glasses: true,
-        do_not_add_new_glasses: true,
-        do_not_replace_style: true
+      global_lock_policy: {
+        lock_everything_except_person: true,
+        person_is_only_dynamic_element: true
       },
-      if_input_has_no_glasses: {
-        do_not_add_glasses: true
-      }
-    },
-    hard_prevent: [
-      "duplicate_eyewear",
-      "ai_invented_frames",
-      "lens_tint_changes"
-    ]
-  },
 
-  rendering_pipeline: [
-    "environment_render_first_locked",
-    "real_world_light_solution_locked",
-    "camera_physics_simulation",
-    "identity_projection_strict",
-    "micro_facial_detail_preservation",
-    "body_structure_projection",
-    "subject_vehicle_environment_interaction",
-    "fabric_physics_realistic",
-    "imperfection_pass",
-    "minimal_post_processing"
-  ],
+      identity_and_body_control: {
+        source: "input_person_image",
+        priority_order: [
+          "face_identity",
+          "facial_structure",
+          "micro_facial_features",
+          "body_structure",
+          "natural_pose"
+        ],
 
-  environment: {
-    lock: true,
-    location: "elite urban-superbike zone",
-    style: "ultra-luxury automotive editorial realism",
-    architectural_elements: [
-      "modern glass-and-concrete building",
-      "polished stone plaza",
-      "minimal metal railings"
-    ],
-    color_palette_lock: [
-      "charcoal",
-      "stone grey",
-      "matte black",
-      "steel silver"
-    ],
-    background_behavior: {
-      clearly_visible: true,
-      no_fake_blur: true,
-      scale_and_perspective_correct: true
-    },
-    details: {
-      ground: "clean stone or asphalt with subtle texture",
-      reflections: "soft architectural reflections",
-      depth: "visible layers of urban space"
+        face_identity_lock: {
+          enabled: true,
+          identity_weight: 0.98,
+          style_weight: 0.02,
+          face_recognition_enforced: true,
+          facial_landmark_constraints: "absolute_hard_lock",
+          preserve_asymmetry: true,
+          forbid: [
+            "beautification",
+            "symmetry_correction",
+            "feature_enhancement",
+            "face_morphing",
+            "skin_smoothing"
+          ]
+        },
+
+        body_structure_analysis: {
+          derive_from_input: true,
+          calculate: [
+            "shoulder_width",
+            "torso_length",
+            "arm_length",
+            "neck_length",
+            "posture_bias"
+          ],
+          respect_real_proportions: true,
+          no_model_scaling: true,
+          no_body_retargeting: true
+        }
+      },
+
+      accessory_consistency_control: {
+        derive_from_input_image: true,
+        eyewear_policy: {
+          if_input_has_glasses: {
+            preserve_exact_glasses: true,
+            do_not_add_new_glasses: true,
+            do_not_replace_style: true
+          },
+          if_input_has_no_glasses: {
+            do_not_add_glasses: true
+          }
+        },
+        hard_prevent: [
+          "duplicate_eyewear",
+          "ai_invented_frames",
+          "lens_tint_changes"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first_locked",
+        "real_world_light_solution_locked",
+        "camera_physics_simulation",
+        "identity_projection_strict",
+        "micro_facial_detail_preservation",
+        "body_structure_projection",
+        "subject_vehicle_environment_interaction",
+        "fabric_physics_realistic",
+        "imperfection_pass",
+        "minimal_post_processing"
+      ],
+
+      environment: {
+        lock: true,
+        location: "elite urban-superbike zone",
+        style: "ultra-luxury automotive editorial realism",
+        architectural_elements: [
+          "modern glass-and-concrete building",
+          "polished stone plaza",
+          "minimal metal railings"
+        ],
+        color_palette_lock: [
+          "charcoal",
+          "stone grey",
+          "matte black",
+          "steel silver"
+        ],
+        background_behavior: {
+          clearly_visible: true,
+          no_fake_blur: true,
+          scale_and_perspective_correct: true
+        },
+        details: {
+          ground: "clean stone or asphalt with subtle texture",
+          reflections: "soft architectural reflections",
+          depth: "visible layers of urban space"
+        }
+      },
+
+      vehicle: {
+        lock: true,
+        type: "luxury superbike",
+        style_lock: true,
+        color_lock: "factory_original_only",
+        finish_lock: "real_paint_and_metal_only",
+        state: "parked prominently",
+        visibility: "entire bike visible in frame",
+        details: [
+          "exposed engine components",
+          "precision-machined metal parts",
+          "real brake discs and calipers",
+          "authentic tire tread"
+        ],
+        avoid: [
+          "concept_bike_design",
+          "cgi_gloss",
+          "color_changes",
+          "aftermarket_visual_mods"
+        ]
+      },
+
+      camera_simulation: {
+        camera_type: "real full-frame camera",
+        focal_length_mm: 35,
+        aperture: "f/8",
+        iso: 100,
+        shutter_speed: "1/400",
+
+        framing: {
+          shot_type: "half_body",
+          composition: "person_and_superbike_balanced",
+          subject_height_in_frame: "50_to_65_percent",
+          face_clearly_visible: true,
+          eye_level: true
+        },
+
+        field_of_view_behavior: {
+          wide_but_natural: true,
+          no_face_distortion: true,
+          no_body_warping: true
+        },
+
+        behavior: [
+          "sharp facial plane",
+          "entire bike readable",
+          "environment fully visible",
+          "no portrait_mode_blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input face",
+        pose: "confident half-body stance or seated sideways on bike",
+        interaction: [
+          "one hand gripping handlebar or resting firmly on fuel tank",
+          "other hand adjusting glove, jacket cuff, or watch",
+          "body leaning naturally into bike with real weight transfer",
+          "foot grounded with realistic stance width"
+        ],
+        expression: "calm dominance, unforced confidence",
+        gaze: "direct or slightly off-axis",
+        micro_details: [
+          "natural skin texture",
+          "real eye size",
+          "no facial exaggeration"
+        ]
+      },
+
+      wardrobe_and_accessories: {
+        lock_style: true,
+        lock_color_palette: true,
+        style: "high-flex luxury riding editorial",
+        clothing_layers: [
+          "statement luxury leather or technical riding jacket",
+          "designer inner layer (silk-knit or premium tee)",
+          "tailored riding trousers or premium denim"
+        ],
+        materials: [
+          "full-grain leather",
+          "technical performance fabric",
+          "matte metal hardware"
+        ],
+        behavior: [
+          "natural leather creasing",
+          "jacket tension at shoulders and elbows",
+          "minor wind interaction"
+        ],
+        accessories: {
+          watch: "high-end luxury watch (preserve if present)",
+          gloves: "premium riding gloves (only if present in input)",
+          helmet: "present only if present in input image"
+        },
+        avoid: [
+          "random_accessory_addition",
+          "style_drift",
+          "cheap_shine",
+          "overdesigned_race_costume"
+        ]
+      },
+
+      color_science: {
+        lock: true,
+        profile: "neutral daylight",
+        contrast: "moderate-high but controlled",
+        saturation: "realistic with luxury depth",
+        skin_tone_policy: "match_input_exactly"
+      },
+
+      imperfection_pass: {
+        add: [
+          "minor exposure imbalance",
+          "non-perfect reflections on metal surfaces",
+          "natural shadow transitions",
+          "real skin micro-texture"
+        ]
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty_filters",
+          "face_reshaping",
+          "over_sharpening",
+          "glow"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "NO_face_change",
+        "NO_facial_feature_change",
+        "NO_beautification",
+        "NO_body_change",
+        "NO_environment_change",
+        "NO_vehicle_change",
+        "NO_ai_polish"
+      ],
+
+      output_goal:
+        "a high-flex, half-body luxury superbike editorial photograph where the face is clearly visible and instantly recognizable as the same person from the input image, designer clothing and accessories amplify power and status, the subject physically interacts with the superbike and environment, and everything except the person remains fully locked in color, style, and structure"
     }
-  },
-
-  vehicle: {
-    lock: true,
-    type: "luxury superbike",
-    style_lock: true,
-    color_lock: "factory_original_only",
-    finish_lock: "real_paint_and_metal_only",
-    state: "parked prominently",
-    visibility: "entire bike visible in frame",
-    details: [
-      "exposed engine components",
-      "precision-machined metal parts",
-      "real brake discs and calipers",
-      "authentic tire tread"
-    ],
-    avoid: [
-      "concept_bike_design",
-      "cgi_gloss",
-      "color_changes",
-      "aftermarket_visual_mods"
-    ]
-  },
-
-  camera_simulation: {
-    camera_type: "real full-frame camera",
-    focal_length_mm: 35,
-    aperture: "f/8",
-    iso: 100,
-    shutter_speed: "1/400",
-
-    framing: {
-      shot_type: "half_body",
-      composition: "person_and_superbike_balanced",
-      subject_height_in_frame: "50_to_65_percent",
-      face_clearly_visible: true,
-      eye_level: true
-    },
-
-    field_of_view_behavior: {
-      wide_but_natural: true,
-      no_face_distortion: true,
-      no_body_warping: true
-    },
-
-    behavior: [
-      "sharp facial plane",
-      "entire bike readable",
-      "environment fully visible",
-      "no portrait_mode_blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input face",
-    pose: "confident half-body stance or seated sideways on bike",
-    interaction: [
-      "one hand gripping handlebar or resting firmly on fuel tank",
-      "other hand adjusting glove, jacket cuff, or watch",
-      "body leaning naturally into bike with real weight transfer",
-      "foot grounded with realistic stance width"
-    ],
-    expression: "calm dominance, unforced confidence",
-    gaze: "direct or slightly off-axis",
-    micro_details: [
-      "natural skin texture",
-      "real eye size",
-      "no facial exaggeration"
-    ]
-  },
-
-  wardrobe_and_accessories: {
-    lock_style: true,
-    lock_color_palette: true,
-    style: "high-flex luxury riding editorial",
-    clothing_layers: [
-      "statement luxury leather or technical riding jacket",
-      "designer inner layer (silk-knit or premium tee)",
-      "tailored riding trousers or premium denim"
-    ],
-    materials: [
-      "full-grain leather",
-      "technical performance fabric",
-      "matte metal hardware"
-    ],
-    behavior: [
-      "natural leather creasing",
-      "jacket tension at shoulders and elbows",
-      "minor wind interaction"
-    ],
-    accessories: {
-      watch: "high-end luxury watch (preserve if present)",
-      gloves: "premium riding gloves (only if present in input)",
-      helmet: "present only if present in input image"
-    },
-    avoid: [
-      "random_accessory_addition",
-      "style_drift",
-      "cheap_shine",
-      "overdesigned_race_costume"
-    ]
-  },
-
-  color_science: {
-    lock: true,
-    profile: "neutral daylight",
-    contrast: "moderate-high but controlled",
-    saturation: "realistic with luxury depth",
-    skin_tone_policy: "match_input_exactly"
-  },
-
-  imperfection_pass: {
-    add: [
-      "minor exposure imbalance",
-      "non-perfect reflections on metal surfaces",
-      "natural shadow transitions",
-      "real skin micro-texture"
-    ]
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty_filters",
-      "face_reshaping",
-      "over_sharpening",
-      "glow"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "NO_face_change",
-    "NO_facial_feature_change",
-    "NO_beautification",
-    "NO_body_change",
-    "NO_environment_change",
-    "NO_vehicle_change",
-    "NO_ai_polish"
-  ],
-
-  output_goal:
-    "a high-flex, half-body luxury superbike editorial photograph where the face is clearly visible and instantly recognizable as the same person from the input image, designer clothing and accessories amplify power and status, the subject physically interacts with the superbike and environment, and everything except the person remains fully locked in color, style, and structure"
-}
-  ,
+    ,
     aspectRatio: "3:4",
     keywords: [
-      "luxury", "superbike", "editorial", "fashion", "motorcycle", 
-      "leather", "riding gear", "power", "status", "confidence", "bike", "superbike", "motorcycle", "rider", "helmet", "race", 
-      "fast", "cool", "biker", "sports bike", "ducati", "kawasaki", 
+      "luxury", "superbike", "editorial", "fashion", "motorcycle",
+      "leather", "riding gear", "power", "status", "confidence", "bike", "superbike", "motorcycle", "rider", "helmet", "race",
+      "fast", "cool", "biker", "sports bike", "ducati", "kawasaki",
       "hayabusa", "bhagana", "road trip", "jacket", "speed", "racing"
-    ] 
+    ]
   },
   {
     id: "flex_template_3",
@@ -4542,13 +4409,12 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_icerink_cover.webp",
     prompt:
-       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} gliding across a glassy ice rink wearing a stylish winter outfit — wool coat, gloves, and scarf, soft white lighting, reflections on ice, hyper-real fabric and frost details, serene elegance, each background object should be clearly visible. no background blur, no fantasy snow, no overexposure, no messy reflections.no change in hairstyle , no blur background, change the hand gestures accordingly.",
-    aspectRatio: "3:4",
+      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects, ensure the output figure’s face matches sharply with the input figure’s face while preserving the exact chin shape and jawline without rounding, ultra-realistic photo of the person from the input image gliding across a real indoor or outdoor ice rink while wearing a stylish winter outfit, the person looks toward the camera with the same facial structure and same hairstyle as the input image including accurate jawline, identical eyes, nose, lips, eyebrows, identical hairline, identical hair length, identical hair density, identical parting, natural flyaways, and natural skin texture, the hairstyle must not be changed, replaced, stylized, or idealized in any way, bring the person slightly closer to the camera, the background MUST NOT be blurry and must show the ice rink boards, railings, seating, lights, architectural structure, and distant skaters clearly and sharply with no portrait-mode bokeh, ensure every object in the environment is crisp, detailed, and fully visible, soft white winter lighting with realistic reflections on the ice surface that are even, natural, and physically consistent across the person and the environment with clean and controlled reflections and no overexposure or artificial glow, the person interacts naturally with the scene with balanced skating posture, knees slightly bent, arms positioned realistically for glide and stability, and appropriate hand gestures that are not posed or static, clothing is realistic winter wear including a wool coat, gloves, scarf, and layered fabrics with visible texture and subtle frost consistent with cold conditions, hyperrealistic lifestyle photography with a serene and elegant mood, 8k details, and no distortions, NEGATIVES: no blurry background, no portrait mode blur, no depth blur, no bokeh, no soft focus, no blurry objects, no unclear environment, no out-of-focus areas, no low resolution, no low quality, no noise, no pixelation, no warped background, no distortions, no stretched objects, no incorrect scale, no bad proportions, no broken anatomy, no inaccurate facial structure, no rounding of the jawline, no wrong jawline, no warped eyes, no mismatched eyes, no deformed nose, no incorrect lips, no plastic skin, no overly smoothed skin, no artificial texture, no altered face, no face morphing, no hairstyle change, no hair replacement, no fantasy snow, no exaggerated frost, no messy reflections, no extra fingers, no missing fingers, no fused hands, no duplicate limbs, no hand deformations, no finger artifacts, no AI artifacts, no jpeg artifacts, no halo, no glow outline, no bad mask, no chromatic aberration, no inconsistent lighting, no overexposed, no underexposed, no harsh shadows, no lighting mismatch, no cartoon style, no 3d render look, no waxy skin, no fake smile, no dead eyes, no glowing eyes, no asymmetrical eyes, no duplicate face, no merged face, no misaligned face, no floating objects, no object clipping, no misplaced shadows, no repeated textures, no fabric distortions, no clothing artifacts, no watermark, no text, no signature, no logo, no overlays, no UI elements, no nsfw, no nudity, no gore, no horror elements.",    aspectRatio: "3:4",
     keywords: [
       "ice rink", "skating", "winter", "elegance", "grace", "cold",
       "fashion", "coat", "scarf", "gloves", "frost", "snow", "chill",
-      "style", "figure skating","ice", "skate", "winter", "rink", "cold", "snow", "luxury", 
-      "sport", "fun", "barf", "holiday", "skating", "white", 
+      "style", "figure skating", "ice", "skate", "winter", "rink", "cold", "snow", "luxury",
+      "sport", "fun", "barf", "holiday", "skating", "white",
       "frozen", "dance"
     ]
 
@@ -4559,219 +4425,219 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_deepdive_cover.webp",
     prompt:
-      {
-  task: "absolute_identity_and_body_locked_real_world_editorial_photography",
-  theme: "deep_sea_diver_elite_flex_final_locked_halfbody",
+    {
+      task: "absolute_identity_and_body_locked_real_world_editorial_photography",
+      theme: "deep_sea_diver_elite_flex_final_locked_halfbody",
 
-  global_lock_policy: {
-    lock_everything_except_person: true,
-    person_is_only_dynamic_element: true
-  },
+      global_lock_policy: {
+        lock_everything_except_person: true,
+        person_is_only_dynamic_element: true
+      },
 
-  identity_and_body_control: {
-    source: "input_person_image",
-    priority_order: [
-      "face_identity",
-      "facial_structure",
-      "micro_facial_features",
-      "body_structure",
-      "natural_pose"
-    ],
+      identity_and_body_control: {
+        source: "input_person_image",
+        priority_order: [
+          "face_identity",
+          "facial_structure",
+          "micro_facial_features",
+          "body_structure",
+          "natural_pose"
+        ],
 
-    face_identity_lock: {
-      enabled: true,
-      identity_weight: 0.99,
-      style_weight: 0.01,
-      face_recognition_enforced: true,
-      facial_landmark_constraints: "absolute_hard_lock",
-      preserve_asymmetry: true,
-      forbid: [
-        "beautification",
-        "symmetry_correction",
-        "feature_enhancement",
-        "face_morphing",
-        "skin_smoothing"
-      ]
-    },
+        face_identity_lock: {
+          enabled: true,
+          identity_weight: 0.99,
+          style_weight: 0.01,
+          face_recognition_enforced: true,
+          facial_landmark_constraints: "absolute_hard_lock",
+          preserve_asymmetry: true,
+          forbid: [
+            "beautification",
+            "symmetry_correction",
+            "feature_enhancement",
+            "face_morphing",
+            "skin_smoothing"
+          ]
+        },
 
-    body_structure_analysis: {
-      derive_from_input: true,
-      calculate: [
-        "shoulder_width",
-        "torso_length",
-        "arm_length",
-        "neck_length",
-        "posture_bias"
+        body_structure_analysis: {
+          derive_from_input: true,
+          calculate: [
+            "shoulder_width",
+            "torso_length",
+            "arm_length",
+            "neck_length",
+            "posture_bias"
+          ],
+          respect_real_proportions: true,
+          no_model_scaling: true,
+          no_body_retargeting: true
+        }
+      },
+
+      accessory_consistency_control: {
+        derive_from_input_image: true,
+        hard_prevent: [
+          "duplicate_masks",
+          "ai_invented_facegear",
+          "lens_shape_changes"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first_locked",
+        "deep_ocean_light_physics_solution",
+        "underwater_camera_physics",
+        "identity_projection_strict",
+        "micro_facial_detail_preservation",
+        "body_structure_projection",
+        "subject_environment_interaction",
+        "fluid_dynamics_and_gear_physics",
+        "imperfection_pass",
+        "minimal_post_processing"
       ],
-      respect_real_proportions: true,
-      no_model_scaling: true,
-      no_body_retargeting: true
+
+      environment: {
+        lock: true,
+        location: "elite deep-sea expedition zone",
+        style: "real deep ocean exploration realism",
+        depth_level: "advanced human-accessible depth",
+        environment_flex_elements: [
+          "research submersible partially visible",
+          "deep-sea lighting rig mounted on structure",
+          "anchored exploration cables"
+        ],
+        color_palette_lock: [
+          "deep ocean blue",
+          "pressure-dark teal",
+          "steel grey",
+          "subtle cyan highlights"
+        ],
+        details: {
+          water: "dense particulate matter, plankton, micro debris",
+          light: "focused exploration lamps cutting through darkness",
+          seafloor: "rocky formations, sediment clouds, metal structures",
+          scale: "vast depth visible beyond subject"
+        }
+      },
+
+      camera_simulation: {
+        camera_type: "professional deep-sea underwater camera housing",
+        focal_length_mm: 35,
+        aperture: "f/8",
+        iso: 500,
+        shutter_speed: "1/250",
+
+        framing: {
+          shot_type: "half_body",
+          composition: "diver_dominant_with_massive_environment",
+          subject_height_in_frame: "55_to_70_percent",
+          face_clearly_visible: true,
+          eye_level: true
+        },
+
+        behavior: [
+          "natural underwater softness",
+          "sharp face through mask",
+          "depth falloff due to water density",
+          "no artificial blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input face visible through high-end mask",
+        pose: "controlled neutral-buoyancy posture",
+        interaction: [
+          "one hand gripping reinforced dive cable or structure",
+          "other hand adjusting advanced wrist-mounted dive computer",
+          "subtle fin movement maintaining position",
+          "air bubbles escaping naturally from regulator"
+        ],
+        expression: "focused, calm, elite professionalism",
+        gaze: "forward or toward exploration equipment"
+      },
+
+      wardrobe_and_accessories: {
+        lock_style: true,
+        lock_color_palette: true,
+        style: "elite expedition-grade diving system",
+        clothing_layers: [
+          "custom professional deep-sea diving suit",
+          "reinforced thermal underlayer",
+          "advanced buoyancy control vest"
+        ],
+        materials: [
+          "high-density neoprene",
+          "carbon-reinforced composite panels",
+          "brushed titanium fittings"
+        ],
+        flex_accessories: [
+          "high-end dive computer with glowing data",
+          "titanium pressure-rated oxygen system",
+          "precision depth gauge",
+          "integrated helmet lighting module"
+        ],
+        behavior: [
+          "hoses floating naturally",
+          "fabric tension responding to pressure",
+          "metal surfaces slightly dulled by seawater"
+        ],
+        avoid: [
+          "sci_fi_designs",
+          "fantasy_suits",
+          "neon_colors",
+          "overstyled_costumes"
+        ]
+      },
+
+      color_science: {
+        lock: true,
+        profile: "deep_water_corrected_neutral",
+        contrast: "moderate",
+        saturation: "depth-accurate",
+        skin_tone_policy: "match_input_with_underwater_absorption"
+      },
+
+      imperfection_pass: {
+        add: [
+          "backscatter particles",
+          "non-uniform lamp falloff",
+          "sediment movement",
+          "minor color absorption artifacts"
+        ]
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty_filters",
+          "face_reshaping",
+          "over_sharpening",
+          "cinematic_glow"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "NO_face_change",
+        "NO_facial_feature_change",
+        "NO_beautification",
+        "NO_body_change",
+        "NO_environment_change",
+        "NO_fantasy_elements",
+        "NO_ai_polish"
+      ],
+
+      output_goal:
+        "a high-flex, half-body deep-sea diver editorial photograph where the face is unmistakably the same as the input person, elite expedition-grade gear and instruments signal extreme status, the subject physically interacts with cables, equipment, and water physics, the environment conveys immense depth and pressure, and the image feels like a real elite exploration photograph—not an AI fantasy"
     }
-  },
-
-  accessory_consistency_control: {
-    derive_from_input_image: true,
-    hard_prevent: [
-      "duplicate_masks",
-      "ai_invented_facegear",
-      "lens_shape_changes"
-    ]
-  },
-
-  rendering_pipeline: [
-    "environment_render_first_locked",
-    "deep_ocean_light_physics_solution",
-    "underwater_camera_physics",
-    "identity_projection_strict",
-    "micro_facial_detail_preservation",
-    "body_structure_projection",
-    "subject_environment_interaction",
-    "fluid_dynamics_and_gear_physics",
-    "imperfection_pass",
-    "minimal_post_processing"
-  ],
-
-  environment: {
-    lock: true,
-    location: "elite deep-sea expedition zone",
-    style: "real deep ocean exploration realism",
-    depth_level: "advanced human-accessible depth",
-    environment_flex_elements: [
-      "research submersible partially visible",
-      "deep-sea lighting rig mounted on structure",
-      "anchored exploration cables"
-    ],
-    color_palette_lock: [
-      "deep ocean blue",
-      "pressure-dark teal",
-      "steel grey",
-      "subtle cyan highlights"
-    ],
-    details: {
-      water: "dense particulate matter, plankton, micro debris",
-      light: "focused exploration lamps cutting through darkness",
-      seafloor: "rocky formations, sediment clouds, metal structures",
-      scale: "vast depth visible beyond subject"
-    }
-  },
-
-  camera_simulation: {
-    camera_type: "professional deep-sea underwater camera housing",
-    focal_length_mm: 35,
-    aperture: "f/8",
-    iso: 500,
-    shutter_speed: "1/250",
-
-    framing: {
-      shot_type: "half_body",
-      composition: "diver_dominant_with_massive_environment",
-      subject_height_in_frame: "55_to_70_percent",
-      face_clearly_visible: true,
-      eye_level: true
-    },
-
-    behavior: [
-      "natural underwater softness",
-      "sharp face through mask",
-      "depth falloff due to water density",
-      "no artificial blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input face visible through high-end mask",
-    pose: "controlled neutral-buoyancy posture",
-    interaction: [
-      "one hand gripping reinforced dive cable or structure",
-      "other hand adjusting advanced wrist-mounted dive computer",
-      "subtle fin movement maintaining position",
-      "air bubbles escaping naturally from regulator"
-    ],
-    expression: "focused, calm, elite professionalism",
-    gaze: "forward or toward exploration equipment"
-  },
-
-  wardrobe_and_accessories: {
-    lock_style: true,
-    lock_color_palette: true,
-    style: "elite expedition-grade diving system",
-    clothing_layers: [
-      "custom professional deep-sea diving suit",
-      "reinforced thermal underlayer",
-      "advanced buoyancy control vest"
-    ],
-    materials: [
-      "high-density neoprene",
-      "carbon-reinforced composite panels",
-      "brushed titanium fittings"
-    ],
-    flex_accessories: [
-      "high-end dive computer with glowing data",
-      "titanium pressure-rated oxygen system",
-      "precision depth gauge",
-      "integrated helmet lighting module"
-    ],
-    behavior: [
-      "hoses floating naturally",
-      "fabric tension responding to pressure",
-      "metal surfaces slightly dulled by seawater"
-    ],
-    avoid: [
-      "sci_fi_designs",
-      "fantasy_suits",
-      "neon_colors",
-      "overstyled_costumes"
-    ]
-  },
-
-  color_science: {
-    lock: true,
-    profile: "deep_water_corrected_neutral",
-    contrast: "moderate",
-    saturation: "depth-accurate",
-    skin_tone_policy: "match_input_with_underwater_absorption"
-  },
-
-  imperfection_pass: {
-    add: [
-      "backscatter particles",
-      "non-uniform lamp falloff",
-      "sediment movement",
-      "minor color absorption artifacts"
-    ]
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty_filters",
-      "face_reshaping",
-      "over_sharpening",
-      "cinematic_glow"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "NO_face_change",
-    "NO_facial_feature_change",
-    "NO_beautification",
-    "NO_body_change",
-    "NO_environment_change",
-    "NO_fantasy_elements",
-    "NO_ai_polish"
-  ],
-
-  output_goal:
-    "a high-flex, half-body deep-sea diver editorial photograph where the face is unmistakably the same as the input person, elite expedition-grade gear and instruments signal extreme status, the subject physically interacts with cables, equipment, and water physics, the environment conveys immense depth and pressure, and the image feels like a real elite exploration photograph—not an AI fantasy"
-}
-  ,
+    ,
     aspectRatio: "3:4",
     keywords: [
-      "diver", "deep sea", "ocean", "underwater", "exploration", 
-      "adventure", "scuba", "marine", "dive gear", "submarine", 
-      "aquatic", "water", "diving", "coral reef", "sea life", 
-      "underwater photography", "freediving", "snorkeling", 
-      "deep dive", "ocean life","diver", "ocean", "sea", "underwater", "scuba", "swim", "water", 
-      "paani", "adventure", "deep", "tairna", "fish", "explore", 
+      "diver", "deep sea", "ocean", "underwater", "exploration",
+      "adventure", "scuba", "marine", "dive gear", "submarine",
+      "aquatic", "water", "diving", "coral reef", "sea life",
+      "underwater photography", "freediving", "snorkeling",
+      "deep dive", "ocean life", "diver", "ocean", "sea", "underwater", "scuba", "swim", "water",
+      "paani", "adventure", "deep", "tairna", "fish", "explore",
       "samundar ke niche", "oxygen", "marine"
     ]
   },
@@ -4786,11 +4652,11 @@ const flexTemplates: Template[] = [
     keywords: [
       "private jet", "luxury", "travel", "wealth", "rich", "expensive",
       "lifestyle", "aviation", "pilot", "airplane", "flight", "sky",
-      "business", "success", "billionaire","jet", "plane", "aircraft", 
-      "fly", "travel", "luxury", "rich", "wealth", "business", 
-      "expensive", "first class", "pilot", "sky", "airline", 
-      "boarding", "takeoff", "landing", "jet", "private jet", "plane", "flight", "luxury", "rich", "travel", 
-      "airport", "ameer", "business", "hawai jahaz", "udna", "fly", "vip", 
+      "business", "success", "billionaire", "jet", "plane", "aircraft",
+      "fly", "travel", "luxury", "rich", "wealth", "business",
+      "expensive", "first class", "pilot", "sky", "airline",
+      "boarding", "takeoff", "landing", "jet", "private jet", "plane", "flight", "luxury", "rich", "travel",
+      "airport", "ameer", "business", "hawai jahaz", "udna", "fly", "vip",
       "ceo", "trip", "vacation", "millionaire"
     ]
   },
@@ -4805,11 +4671,11 @@ const flexTemplates: Template[] = [
     keywords: [
       "yacht", "boat", "ocean", "sea", "luxury", "travel", "wealth",
       "rich", "expensive", "lifestyle", "sailing", "vacation", "cruise",
-      "sunshine", "blue water","yacht", "boat", "sea", "ocean", 
-      "luxury", "travel", "rich", "wealth", "expensive", "lifestyle", 
-      "sailing", "vacation", "cruise", "sun", "blue water", 
-      "adventure", "island", "holiday", "sail", "deck", "marine", "yacht", "boat", "ship", "sea", "ocean", "luxury", "rich", "party", 
-      "vacation", "cruise", "paani", "samundar", "holiday", "sailing", 
+      "sunshine", "blue water", "yacht", "boat", "sea", "ocean",
+      "luxury", "travel", "rich", "wealth", "expensive", "lifestyle",
+      "sailing", "vacation", "cruise", "sun", "blue water",
+      "adventure", "island", "holiday", "sail", "deck", "marine", "yacht", "boat", "ship", "sea", "ocean", "luxury", "rich", "party",
+      "vacation", "cruise", "paani", "samundar", "holiday", "sailing",
       "captain", "deck", "summer"
     ]
   },
@@ -4824,12 +4690,12 @@ const flexTemplates: Template[] = [
     keywords: [
       "supercar", "lamborghini", "mclaren", "car", "night", "city",
       "neon", "luxury", "wealth", "rich", "expensive", "lifestyle",
-      "drive", "speed", "fast", "urban", "flex","supercar", "car", "lamborghini", 
-      "mclaren", "night", "city", "neon", "luxury", "rich", 
-      "wealth", "expensive", "lifestyle", "drive", "speed", 
-      "fast", "urban", "flex", "road", "ride", "travel", 
-      "automobile", "gadi", "race", "power", "status", "supercar", "car", "lamborghini", "night", "city", "neon", "drive", 
-      "gadi", "fast", "cool", "tashan", "club", "party", "long drive", 
+      "drive", "speed", "fast", "urban", "flex", "supercar", "car", "lamborghini",
+      "mclaren", "night", "city", "neon", "luxury", "rich",
+      "wealth", "expensive", "lifestyle", "drive", "speed",
+      "fast", "urban", "flex", "road", "ride", "travel",
+      "automobile", "gadi", "race", "power", "status", "supercar", "car", "lamborghini", "night", "city", "neon", "drive",
+      "gadi", "fast", "cool", "tashan", "club", "party", "long drive",
       "rich boy", "sports car"
     ]
   },
@@ -4844,15 +4710,15 @@ const flexTemplates: Template[] = [
     keywords: [
       "ATV", "desert", "adventure", "offroad", "vehicle", "sand",
       "outdoors", "exploration", "ride", "travel", "fun", "sport",
-      "dunes", "sunshine","atv", "desert", "offroad", "vehicle", 
-      "sand", "outdoors", "adventure", "exploration", "ride", 
-      "travel", "fun", "sport", "dunes", "sunshine", "4x4", 
-      "all terrain", "quad bike", "mud", "trail", "nature", 
-      "wilderness", "explore", "atv", "desert", "sand", "offroad", 
-      "vehicle", "adventure", "travel", "fun", "ride", "explore", 
-      "dunes", "sun", "outdoors", "nature", "quad bike", 
-      "all terrain vehicle","atv", "quad bike", "desert", "sand", "offroad", "adventure", 
-      "safari", "dubai", "ride", "ret", "jeep", "4x4", "action", 
+      "dunes", "sunshine", "atv", "desert", "offroad", "vehicle",
+      "sand", "outdoors", "adventure", "exploration", "ride",
+      "travel", "fun", "sport", "dunes", "sunshine", "4x4",
+      "all terrain", "quad bike", "mud", "trail", "nature",
+      "wilderness", "explore", "atv", "desert", "sand", "offroad",
+      "vehicle", "adventure", "travel", "fun", "ride", "explore",
+      "dunes", "sun", "outdoors", "nature", "quad bike",
+      "all terrain vehicle", "atv", "quad bike", "desert", "sand", "offroad", "adventure",
+      "safari", "dubai", "ride", "ret", "jeep", "4x4", "action",
       "dunes", "biking"
     ]
   },
@@ -4862,254 +4728,254 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_sunsetdrive_cover.webp",
     prompt:
-      {
-  task: "absolute_identity_and_body_locked_real_world_editorial_photography",
-  theme: "sunset_convertible_parked_ultra_max_flex_final_locked_halfbody_face_to_camera",
+    {
+      task: "absolute_identity_and_body_locked_real_world_editorial_photography",
+      theme: "sunset_convertible_parked_ultra_max_flex_final_locked_halfbody_face_to_camera",
 
-  global_lock_policy: {
-    lock_everything_except_person: true,
-    person_is_only_dynamic_element: true
-  },
-
-  identity_and_body_control: {
-    source: "input_person_image",
-    priority_order: [
-      "face_identity",
-      "facial_structure",
-      "micro_facial_features",
-      "body_structure",
-      "natural_pose"
-    ],
-    face_identity_lock: {
-      enabled: true,
-      identity_weight: 0.995,
-      style_weight: 0.005,
-      face_recognition_enforced: true,
-      facial_landmark_constraints: "absolute_hard_lock",
-      preserve_asymmetry: true,
-      forbid: [
-        "beautification",
-        "symmetry_correction",
-        "feature_enhancement",
-        "face_morphing",
-        "skin_smoothing"
-      ]
-    },
-    body_structure_analysis: {
-      derive_from_input: true,
-      respect_real_proportions: true,
-      no_model_scaling: true,
-      no_body_retargeting: true
-    }
-  },
-
-  accessory_consistency_control: {
-    derive_from_input_image: true,
-    eyewear_policy: {
-      if_input_has_eyewear: {
-        preserve_exact_eyewear: true,
-        do_not_add_new_eyewear: true,
-        do_not_replace_style: true
+      global_lock_policy: {
+        lock_everything_except_person: true,
+        person_is_only_dynamic_element: true
       },
-      if_input_has_no_eyewear: {
-        do_not_add_eyewear: true
-      }
-    },
-    hard_prevent: [
-      "duplicate_eyewear",
-      "ai_invented_frames",
-      "lens_tint_changes"
-    ]
-  },
 
-  rendering_pipeline: [
-    "environment_render_first_locked",
-    "sunset_golden_hour_light_physics_locked",
-    "camera_physics_simulation",
-    "identity_projection_strict",
-    "micro_facial_detail_preservation",
-    "body_structure_projection",
-    "subject_vehicle_environment_interaction",
-    "wind_motion_and_fabric_dynamics",
-    "imperfection_pass",
-    "minimal_post_processing"
-  ],
+      identity_and_body_control: {
+        source: "input_person_image",
+        priority_order: [
+          "face_identity",
+          "facial_structure",
+          "micro_facial_features",
+          "body_structure",
+          "natural_pose"
+        ],
+        face_identity_lock: {
+          enabled: true,
+          identity_weight: 0.995,
+          style_weight: 0.005,
+          face_recognition_enforced: true,
+          facial_landmark_constraints: "absolute_hard_lock",
+          preserve_asymmetry: true,
+          forbid: [
+            "beautification",
+            "symmetry_correction",
+            "feature_enhancement",
+            "face_morphing",
+            "skin_smoothing"
+          ]
+        },
+        body_structure_analysis: {
+          derive_from_input: true,
+          respect_real_proportions: true,
+          no_model_scaling: true,
+          no_body_retargeting: true
+        }
+      },
 
-  environment: {
-    lock: true,
-    location: "exclusive coastal cliffside road turnout",
-    style: "ultra-elite golden-hour roadside lifestyle",
-    environment_layers: {
-      foreground: [
-        "parked convertible aligned parallel to road edge",
-        "painted road shoulder line",
-        "low stone barrier or guardrail"
+      accessory_consistency_control: {
+        derive_from_input_image: true,
+        eyewear_policy: {
+          if_input_has_eyewear: {
+            preserve_exact_eyewear: true,
+            do_not_add_new_eyewear: true,
+            do_not_replace_style: true
+          },
+          if_input_has_no_eyewear: {
+            do_not_add_eyewear: true
+          }
+        },
+        hard_prevent: [
+          "duplicate_eyewear",
+          "ai_invented_frames",
+          "lens_tint_changes"
+        ]
+      },
+
+      rendering_pipeline: [
+        "environment_render_first_locked",
+        "sunset_golden_hour_light_physics_locked",
+        "camera_physics_simulation",
+        "identity_projection_strict",
+        "micro_facial_detail_preservation",
+        "body_structure_projection",
+        "subject_vehicle_environment_interaction",
+        "wind_motion_and_fabric_dynamics",
+        "imperfection_pass",
+        "minimal_post_processing"
       ],
-      midground: [
-        "luxury convertible parked at roadside",
-        "subject positioned in or beside the parked car"
+
+      environment: {
+        lock: true,
+        location: "exclusive coastal cliffside road turnout",
+        style: "ultra-elite golden-hour roadside lifestyle",
+        environment_layers: {
+          foreground: [
+            "parked convertible aligned parallel to road edge",
+            "painted road shoulder line",
+            "low stone barrier or guardrail"
+          ],
+          midground: [
+            "luxury convertible parked at roadside",
+            "subject positioned in or beside the parked car"
+          ],
+          background: [
+            "open ocean horizon",
+            "coastal cliffs and winding road",
+            "setting sun partially below horizon",
+            "soft marine haze catching light"
+          ]
+        },
+        color_palette_lock: [
+          "sunset amber",
+          "burnt gold",
+          "soft rose",
+          "deep navy shadows",
+          "metallic car tones"
+        ],
+        lighting: {
+          source: "natural golden-hour sunlight",
+          time_of_day: "sunset",
+          behavior:
+            "low-angle warm light with long shadows and natural flare",
+          avoid: [
+            "hdr skies",
+            "cinematic glow",
+            "artificial grading"
+          ]
+        }
+      },
+
+      vehicle: {
+        lock: true,
+        type: "ultra-luxury convertible grand tourer",
+        style_lock: true,
+        color_lock: "factory_original_only",
+        finish_lock: "real_paint_leather_metal_only",
+        roof_state: "fully_open",
+        vehicle_state: "parked_engine_off",
+        details: [
+          "front wheels turned slightly toward curb",
+          "hand-stitched leather interior visible",
+          "brushed metal controls catching sunset light",
+          "subtle road dust on lower panels"
+        ],
+        avoid: [
+          "concept_designs",
+          "aftermarket_bodykits",
+          "cgi_gloss",
+          "fantasy_reflections"
+        ]
+      },
+
+      camera_simulation: {
+        camera_type: "real high-end lifestyle editorial camera",
+        focal_length_mm: 35,
+        aperture: "f/8",
+        iso: 100,
+        shutter_speed: "1/500",
+        framing: {
+          shot_type: "half_body_with_parked_convertible",
+          composition: "subject_car_sunset_roadside_balance",
+          subject_height_in_frame: "55_to_65_percent",
+          vehicle_visibility: "full_side_and_cabin_visible",
+          face_clearly_visible: true,
+          eye_level: true
+        },
+        behavior: [
+          "sharp facial plane",
+          "parked car clearly readable",
+          "natural optical depth",
+          "no portrait_mode_blur"
+        ]
+      },
+
+      subject: {
+        identity: "exact input face",
+        pose: "relaxed roadside luxury posture",
+        interaction: [
+          "one arm resting on open door or windshield frame",
+          "other hand adjusting luxury watch or collar",
+          "body leaning comfortably against parked car",
+          "hair and fabric moving gently in coastal breeze",
+          "weight shifted casually onto one leg"
+        ],
+        expression: "calm confidence, composed presence",
+        gaze:
+          "directly toward camera (face squarely oriented, eyes clearly visible)"
+      },
+
+      wardrobe_and_accessories: {
+        lock_style: true,
+        lock_color_palette: true,
+        style: "ultra-max-flex sunset roadside couture",
+        clothing_layers: [
+          "tailored lightweight blazer or silk jacket",
+          "designer silk shirt or fine-knit polo",
+          "precision-tailored trousers or premium denim"
+        ],
+        materials: [
+          "Italian silk",
+          "linen-silk blend",
+          "lightweight cashmere",
+          "soft leather accents"
+        ],
+        accessories: [
+          "high-complication luxury wristwatch",
+          "designer sunglasses only if present in input",
+          "minimal high-jewelry ring or chain"
+        ]
+      },
+
+      color_science: {
+        lock: true,
+        profile: "true golden-hour daylight",
+        contrast: "moderate",
+        saturation: "warm yet restrained",
+        skin_tone_policy: "match_input_exactly"
+      },
+
+      imperfection_pass: {
+        add: [
+          "natural lens flare from low sun angle",
+          "minor exposure imbalance due to backlighting",
+          "non-perfect paint reflections",
+          "real skin texture under warm light"
+        ]
+      },
+
+      post_processing_constraints: {
+        remove: [
+          "beauty_filters",
+          "face_reshaping",
+          "over_sharpening",
+          "cinematic_effects"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "NO_face_change",
+        "NO_facial_feature_change",
+        "NO_beautification",
+        "NO_body_change",
+        "NO_environment_change",
+        "NO_vehicle_change",
+        "NO_ai_polish"
       ],
-      background: [
-        "open ocean horizon",
-        "coastal cliffs and winding road",
-        "setting sun partially below horizon",
-        "soft marine haze catching light"
-      ]
-    },
-    color_palette_lock: [
-      "sunset amber",
-      "burnt gold",
-      "soft rose",
-      "deep navy shadows",
-      "metallic car tones"
-    ],
-    lighting: {
-      source: "natural golden-hour sunlight",
-      time_of_day: "sunset",
-      behavior:
-        "low-angle warm light with long shadows and natural flare",
-      avoid: [
-        "hdr skies",
-        "cinematic glow",
-        "artificial grading"
-      ]
+
+      output_goal:
+        "an ultra-maximum-flex sunset convertible roadside editorial photograph with the car parked at the side of the road, the subject facing directly toward the camera so the identity is unmistakable, luxury fashion and accessories elevated, natural interaction with the parked convertible and coastal environment, and a result that looks like a real high-end golden-hour lifestyle photograph"
     }
-  },
-
-  vehicle: {
-    lock: true,
-    type: "ultra-luxury convertible grand tourer",
-    style_lock: true,
-    color_lock: "factory_original_only",
-    finish_lock: "real_paint_leather_metal_only",
-    roof_state: "fully_open",
-    vehicle_state: "parked_engine_off",
-    details: [
-      "front wheels turned slightly toward curb",
-      "hand-stitched leather interior visible",
-      "brushed metal controls catching sunset light",
-      "subtle road dust on lower panels"
-    ],
-    avoid: [
-      "concept_designs",
-      "aftermarket_bodykits",
-      "cgi_gloss",
-      "fantasy_reflections"
-    ]
-  },
-
-  camera_simulation: {
-    camera_type: "real high-end lifestyle editorial camera",
-    focal_length_mm: 35,
-    aperture: "f/8",
-    iso: 100,
-    shutter_speed: "1/500",
-    framing: {
-      shot_type: "half_body_with_parked_convertible",
-      composition: "subject_car_sunset_roadside_balance",
-      subject_height_in_frame: "55_to_65_percent",
-      vehicle_visibility: "full_side_and_cabin_visible",
-      face_clearly_visible: true,
-      eye_level: true
-    },
-    behavior: [
-      "sharp facial plane",
-      "parked car clearly readable",
-      "natural optical depth",
-      "no portrait_mode_blur"
-    ]
-  },
-
-  subject: {
-    identity: "exact input face",
-    pose: "relaxed roadside luxury posture",
-    interaction: [
-      "one arm resting on open door or windshield frame",
-      "other hand adjusting luxury watch or collar",
-      "body leaning comfortably against parked car",
-      "hair and fabric moving gently in coastal breeze",
-      "weight shifted casually onto one leg"
-    ],
-    expression: "calm confidence, composed presence",
-    gaze:
-      "directly toward camera (face squarely oriented, eyes clearly visible)"
-  },
-
-  wardrobe_and_accessories: {
-    lock_style: true,
-    lock_color_palette: true,
-    style: "ultra-max-flex sunset roadside couture",
-    clothing_layers: [
-      "tailored lightweight blazer or silk jacket",
-      "designer silk shirt or fine-knit polo",
-      "precision-tailored trousers or premium denim"
-    ],
-    materials: [
-      "Italian silk",
-      "linen-silk blend",
-      "lightweight cashmere",
-      "soft leather accents"
-    ],
-    accessories: [
-      "high-complication luxury wristwatch",
-      "designer sunglasses only if present in input",
-      "minimal high-jewelry ring or chain"
-    ]
-  },
-
-  color_science: {
-    lock: true,
-    profile: "true golden-hour daylight",
-    contrast: "moderate",
-    saturation: "warm yet restrained",
-    skin_tone_policy: "match_input_exactly"
-  },
-
-  imperfection_pass: {
-    add: [
-      "natural lens flare from low sun angle",
-      "minor exposure imbalance due to backlighting",
-      "non-perfect paint reflections",
-      "real skin texture under warm light"
-    ]
-  },
-
-  post_processing_constraints: {
-    remove: [
-      "beauty_filters",
-      "face_reshaping",
-      "over_sharpening",
-      "cinematic_effects"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "NO_face_change",
-    "NO_facial_feature_change",
-    "NO_beautification",
-    "NO_body_change",
-    "NO_environment_change",
-    "NO_vehicle_change",
-    "NO_ai_polish"
-  ],
-
-  output_goal:
-    "an ultra-maximum-flex sunset convertible roadside editorial photograph with the car parked at the side of the road, the subject facing directly toward the camera so the identity is unmistakable, luxury fashion and accessories elevated, natural interaction with the parked convertible and coastal environment, and a result that looks like a real high-end golden-hour lifestyle photograph"
-}
-  ,
+    ,
     aspectRatio: "3:4",
     keywords: [
       "convertible", "sunset", "drive", "car", "luxury", "travel",
       "wealth", "rich", "expensive", "lifestyle", "roadside",
-      "coastal", "ocean", "fashion","convertible", "car", "sunset", 
-      "drive", "luxury", "rich", "wealth", "expensive", "lifestyle", 
-      "roadside", "coastal", "ocean", "fashion", "travel", 
-      "automobile", "ride", "cruise", "scenic", "freedom", 
-      "adventure", "holiday", "vacation", "speed", "open top", 
-      "gadi", "beach", "nature", "explore", "convertible", "car", "sunset", "drive", "luxury", "travel", "rich", "wealth", "expensive", "lifestyle", 
-      "roadside", "coastal", "ocean", "fashion", "gadi", "ride", 
-      "cruise", "holiday", "vacation", "open top", "freedom", "convertible", "car", "drive", "sunset", "road", "open roof", 
-      "luxury", "gadi", "travel", "khuli chhat", "style", "hawa", 
+      "coastal", "ocean", "fashion", "convertible", "car", "sunset",
+      "drive", "luxury", "rich", "wealth", "expensive", "lifestyle",
+      "roadside", "coastal", "ocean", "fashion", "travel",
+      "automobile", "ride", "cruise", "scenic", "freedom",
+      "adventure", "holiday", "vacation", "speed", "open top",
+      "gadi", "beach", "nature", "explore", "convertible", "car", "sunset", "drive", "luxury", "travel", "rich", "wealth", "expensive", "lifestyle",
+      "roadside", "coastal", "ocean", "fashion", "gadi", "ride",
+      "cruise", "holiday", "vacation", "open top", "freedom", "convertible", "car", "drive", "sunset", "road", "open roof",
+      "luxury", "gadi", "travel", "khuli chhat", "style", "hawa",
       "sham", "long drive", "highway", "golden hour"
     ]
   },
@@ -5124,8 +4990,8 @@ const flexTemplates: Template[] = [
     keywords: [
       "luxury", "hotel", "lounge", "formal", "blazer", "elegant", "dress",
       "warm lighting", "marble", "golden tones", "cinematic", "Raymond",
-      "grace", "poise", "no harsh light", "no blur", "no busy crowd", "hotel", "lounge", "luxury", "rich", "waiting", "lobby", "classy", 
-      "expensive", "suit", "baithna", "coffee", "meeting", "5 star", 
+      "grace", "poise", "no harsh light", "no blur", "no busy crowd", "hotel", "lounge", "luxury", "rich", "waiting", "lobby", "classy",
+      "expensive", "suit", "baithna", "coffee", "meeting", "5 star",
       "vip", "business"
 
     ]
@@ -5141,14 +5007,14 @@ const flexTemplates: Template[] = [
     keywords: [
       "wristwatch", "luxury", "premium", "rolex", "omega", "suit",
       "golden light", "metallic", "texture", "class", "Raymond",
-      "editorial", "clarity","wristwatch", "watch", "luxury", 
-      "premium", "rolex", "omega", "suit", "golden light", 
-      "metallic", "texture", "class", "elegance", "style", 
-      "timepiece", "accessory", "fashion", "status", "wealth", 
-      "rich", "expensive", "gadi", "bracelet", "dial", "mechanical", 
-      "automatic", "chronograph", "wrist", "band", "designer", 
-      "limited edition", "collectible", "investment", "watchmaking", "watch", "wristwatch", "rolex", "luxury", "time", "ghadi", 
-      "expensive", "hand", "accessory", "gold watch", "omega", 
+      "editorial", "clarity", "wristwatch", "watch", "luxury",
+      "premium", "rolex", "omega", "suit", "golden light",
+      "metallic", "texture", "class", "elegance", "style",
+      "timepiece", "accessory", "fashion", "status", "wealth",
+      "rich", "expensive", "gadi", "bracelet", "dial", "mechanical",
+      "automatic", "chronograph", "wrist", "band", "designer",
+      "limited edition", "collectible", "investment", "watchmaking", "watch", "wristwatch", "rolex", "luxury", "time", "ghadi",
+      "expensive", "hand", "accessory", "gold watch", "omega",
       "businessman", "show off", "flex", "jewellery"
     ]
   },
@@ -5163,18 +5029,18 @@ const flexTemplates: Template[] = [
     keywords: [
       "shopping", "luxury", "boutique", "branded bags", "fashion",
       "style", "wealth", "rich", "expensive", "lifestyle", "district",
-      "modern outfit","shopping", "luxury", "boutique", 
-      "branded bags", "fashion", "style", "wealth", "rich", 
-      "expensive", "lifestyle", "district", "modern outfit", 
-      "retail therapy", "mall", "designer", "clothes", 
-      "accessories", "shopping spree", "high end", "exclusive", 
-      "vip", "shopaholic", "gadi", "shopping bags", "store", 
-      "fashionista", "style", "trend", "urban", "city", 
-      "downtown", "luxury shopping", "shopping", "boutique", "luxury", "fashion", "style", "rich", "expensive", 
-      "lifestyle", "branded bags", "mall", "retail therapy", 
-      "designer", "clothes", "accessories", "vip", "shopaholic", 
-      "shopping bags", "store", "trend", "urban", "shopping", "bags", "mall", "luxury", "brand", "rich", "buy", 
-      "kharcha", "money", "gucci", "prada", "louis vuitton", 
+      "modern outfit", "shopping", "luxury", "boutique",
+      "branded bags", "fashion", "style", "wealth", "rich",
+      "expensive", "lifestyle", "district", "modern outfit",
+      "retail therapy", "mall", "designer", "clothes",
+      "accessories", "shopping spree", "high end", "exclusive",
+      "vip", "shopaholic", "gadi", "shopping bags", "store",
+      "fashionista", "style", "trend", "urban", "city",
+      "downtown", "luxury shopping", "shopping", "boutique", "luxury", "fashion", "style", "rich", "expensive",
+      "lifestyle", "branded bags", "mall", "retail therapy",
+      "designer", "clothes", "accessories", "vip", "shopaholic",
+      "shopping bags", "store", "trend", "urban", "shopping", "bags", "mall", "luxury", "brand", "rich", "buy",
+      "kharcha", "money", "gucci", "prada", "louis vuitton",
       "fashion", "market", "kharidna", "retail therapy"
     ]
   },
@@ -5188,12 +5054,12 @@ const flexTemplates: Template[] = [
     aspectRatio: "3:4",
     keywords: [
       "infinity pool", "villa", "luxury", "relaxing", "linen attire",
-      "golden sunlight", "water reflection", 
-      "vacation", "realism","infinity pool", "villa", "luxury", 
-      "relaxing", "linen attire", "golden sunlight", 
-      "water reflection", "Raymond lifestyle", "vacation", 
-      "realism", "swimming pool", "resort", "tropical", "pool", "swimming", "villa", "luxury", "vacation", "water", 
-      "relax", "holiday", "rich", "hotel", "resort", "nahana", 
+      "golden sunlight", "water reflection",
+      "vacation", "realism", "infinity pool", "villa", "luxury",
+      "relaxing", "linen attire", "golden sunlight",
+      "water reflection", "Raymond lifestyle", "vacation",
+      "realism", "swimming pool", "resort", "tropical", "pool", "swimming", "villa", "luxury", "vacation", "water",
+      "relax", "holiday", "rich", "hotel", "resort", "nahana",
       "paani", "view", "bali", "maldives", "summer"
     ]
   },
@@ -5208,10 +5074,10 @@ const flexTemplates: Template[] = [
     keywords: [
       "coffee", "journal", "morning light", "wooden table", "casual",
       "refined outfit", "Raymond", "editorial", "lifestyle", "clarity",
-      "coffee", "journal", "morning light", "wooden table", 
-      "casual", "refined outfit", "Raymond", "editorial", 
-      "coffee", "morning", "journal", "diary", "cafe", "relax", 
-      "breakfast", "chai", "peace", "subah", "nashta", "read", 
+      "coffee", "journal", "morning light", "wooden table",
+      "casual", "refined outfit", "Raymond", "editorial",
+      "coffee", "morning", "journal", "diary", "cafe", "relax",
+      "breakfast", "chai", "peace", "subah", "nashta", "read",
       "book", "start day", "aesthetic", "work"
     ]
   },
@@ -5221,217 +5087,217 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_moderngym_cover.webp",
     prompt:
-      {
-  task: "absolute_identity_and_body_locked_real_world_editorial_photography",
-  theme: "modern_gym_session_ultra_elite_signature_max_flex_plus_final",
+    {
+      task: "absolute_identity_and_body_locked_real_world_editorial_photography",
+      theme: "modern_gym_session_ultra_elite_signature_max_flex_plus_final",
 
-  global_lock_policy: {
-    lock_everything_except_person: true,
-    person_is_only_dynamic_element: true
-  },
+      global_lock_policy: {
+        lock_everything_except_person: true,
+        person_is_only_dynamic_element: true
+      },
 
-  identity_and_body_control: {
-    source: "input_person_image",
-    priority_order: [
-      "face_identity",
-      "facial_structure",
-      "micro_facial_features",
-      "body_structure",
-      "elite_training_body_language_accuracy"
-    ],
+      identity_and_body_control: {
+        source: "input_person_image",
+        priority_order: [
+          "face_identity",
+          "facial_structure",
+          "micro_facial_features",
+          "body_structure",
+          "elite_training_body_language_accuracy"
+        ],
 
-    face_identity_lock: {
-      enabled: true,
-      identity_weight: 0.997,
-      style_weight: 0.003,
-      face_recognition_enforced: true,
-      facial_landmark_constraints: "absolute_hard_lock",
-      preserve_asymmetry: true,
-      forbid: [
-        "beautification",
-        "symmetry_correction",
-        "feature_enhancement",
-        "face_morphing",
-        "skin_smoothing"
-      ]
-    },
+        face_identity_lock: {
+          enabled: true,
+          identity_weight: 0.997,
+          style_weight: 0.003,
+          face_recognition_enforced: true,
+          facial_landmark_constraints: "absolute_hard_lock",
+          preserve_asymmetry: true,
+          forbid: [
+            "beautification",
+            "symmetry_correction",
+            "feature_enhancement",
+            "face_morphing",
+            "skin_smoothing"
+          ]
+        },
 
-    body_structure_analysis: {
-      derive_from_input: true,
-      respect_real_proportions: true,
-      no_model_scaling: true,
-      no_body_retargeting: true
+        body_structure_analysis: {
+          derive_from_input: true,
+          respect_real_proportions: true,
+          no_model_scaling: true,
+          no_body_retargeting: true
+        }
+      },
+
+      pose_and_interaction: {
+        orientation: "mid_set_or_between_sets_slight_angle_to_camera",
+        body_posture: {
+          stance: "stable_power_position",
+          spine: "neutral_with_core_engaged",
+          shoulders: "set_and_controlled",
+          hips: "balanced_under_load",
+          legs: [
+            "feet_planted_shoulder_width",
+            "or_split_stance_for_balance"
+          ],
+          overall_energy: "quiet_intensity_and_control"
+        },
+        arm_and_hand_interaction: {
+          primary_actions: [
+            "gripping_heavy_dumbbells_or_barbell_mid_set",
+            "hands_resting_on_thighs_or_knees_between_sets"
+          ],
+          secondary_actions: [
+            "tightening_lifting_straps_or_wraps",
+            "chalk_residue_visible_on_palms_and_knuckles",
+            "towel_wiped_across_forehead_or_neck"
+          ],
+          interaction_physics: [
+            "visible_forearm_and_hand_tension",
+            "muscle_engagement_under_load",
+            "micro_shake_from_weight_resistance",
+            "fabric_stretch_and_sweat_absorption"
+          ]
+        },
+        expression: {
+          mood: "focused_dominance",
+          emotion: "discipline_and_control",
+          jaw: "lightly_set_not_clenched",
+          gaze: "toward_weight_or_soft_camera_glance_between_sets"
+        }
+      },
+
+      environment: {
+        lock: true,
+        location: "private_ultra_luxury_modern_gym_or_penthouse_training_suite",
+        style: "ultra_high_net_worth_fitness_architecture_realism",
+        environment_layers: {
+          foreground: [
+            "premium_free_weights_with_brushed_metal_finish",
+            "training_bench_or_power_rack_in_matte_black",
+            "rubberized_or_polished_concrete_floor"
+          ],
+          midground: [
+            "subject_centered_with_space_around",
+            "mirrored_or_textured_concrete_wall",
+            "minimal_equipment_layout_with_intentional_spacing"
+          ],
+          background: [
+            "architectural_gym_design_in_steel_wood_and_glass",
+            "large_windows_or_frosted_glass_panels",
+            "soft_indirect_ceiling_lighting"
+          ]
+        },
+        elite_context_elements: [
+          "private_training_zone_no_public_presence",
+          "designer_equipment_branding_subtle",
+          "clean_high_value_materials",
+          "controlled_acoustics_and_light"
+        ],
+        color_palette_lock: [
+          "matte_black",
+          "charcoal_grey",
+          "brushed_steel",
+          "warm_wood",
+          "neutral_concrete"
+        ]
+      },
+
+      wardrobe_and_style: {
+        lock_style: true,
+        overall_style: "ultra_signature_designer_athletic_couture",
+        upper_body: [
+          "precision_fitted_high_end_performance_top",
+          "or_sleeveless_technical_layer_with_clean_edges",
+          "optional_lightweight_designer_training_jacket_unzipped"
+        ],
+        lower_body: [
+          "tailored_performance_training_pants_or_premium_shorts"
+        ],
+        footwear: [
+          "elite_training_shoes_with_sculpted_silhouette"
+        ],
+        materials: [
+          "advanced_moisture_wicking_fabrics",
+          "compression_panels",
+          "laser_cut_mesh"
+        ],
+        flex_accessories: [
+          "minimal_luxury_wristwatch_only_if_training_realistic",
+          "leather_or_technical_gym_bag_nearby",
+          "high_end_water_bottle_in_brushed_metal_or_glass",
+          "designer_towel_with_subtle_texture"
+        ]
+      },
+
+      camera_simulation: {
+        camera_type: "real_high_end_fitness_editorial_camera",
+        focal_length_mm: 35,
+        aperture: "f/8",
+        iso: 400,
+        shutter_speed: "1/1000",
+        framing: {
+          shot_type: "half_body_or_three_quarter",
+          composition: "subject_weight_environment_power_balance",
+          face_clearly_visible: true,
+          muscle_engagement_readable: true,
+          eye_level_or_slight_low_angle: true
+        }
+      },
+
+      lighting: {
+        type: "architectural_gym_lighting",
+        behavior: "directional_top_and_side_light_sculpting_form_without_glow",
+        avoid: [
+          "neon_colors",
+          "cinematic_rim_glow",
+          "over_hdr"
+        ]
+      },
+
+      color_science: {
+        lock: true,
+        profile: "luxury_fitness_editorial_neutral",
+        contrast: "moderate",
+        saturation: "controlled_and_real",
+        skin_tone_policy: "match_input_exactly"
+      },
+
+      imperfection_pass: {
+        add: [
+          "light_sweat_sheen_not_glossy",
+          "chalk_dust_on_hands_and_equipment",
+          "fabric_wrinkles_from_motion",
+          "authentic_skin_texture"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "NO_bodybuilding_pose",
+        "NO_mirror_selfie",
+        "NO_face_change",
+        "NO_body_change",
+        "NO_beautification",
+        "NO_public_gym_clutter",
+        "NO_ai_polish"
+      ],
+
+      output_goal:
+        "an ultra-elite modern gym session editorial photograph where the subject’s face is unmistakably identical to the input person, designer athletic wear and premium accessories elevate status, the private gym environment signals extreme wealth, the subject actively interacts with heavy equipment mid-session, and the image feels like a real high-net-worth training moment captured by a professional editorial photographer"
     }
-  },
-
-  pose_and_interaction: {
-    orientation: "mid_set_or_between_sets_slight_angle_to_camera",
-    body_posture: {
-      stance: "stable_power_position",
-      spine: "neutral_with_core_engaged",
-      shoulders: "set_and_controlled",
-      hips: "balanced_under_load",
-      legs: [
-        "feet_planted_shoulder_width",
-        "or_split_stance_for_balance"
-      ],
-      overall_energy: "quiet_intensity_and_control"
-    },
-    arm_and_hand_interaction: {
-      primary_actions: [
-        "gripping_heavy_dumbbells_or_barbell_mid_set",
-        "hands_resting_on_thighs_or_knees_between_sets"
-      ],
-      secondary_actions: [
-        "tightening_lifting_straps_or_wraps",
-        "chalk_residue_visible_on_palms_and_knuckles",
-        "towel_wiped_across_forehead_or_neck"
-      ],
-      interaction_physics: [
-        "visible_forearm_and_hand_tension",
-        "muscle_engagement_under_load",
-        "micro_shake_from_weight_resistance",
-        "fabric_stretch_and_sweat_absorption"
-      ]
-    },
-    expression: {
-      mood: "focused_dominance",
-      emotion: "discipline_and_control",
-      jaw: "lightly_set_not_clenched",
-      gaze: "toward_weight_or_soft_camera_glance_between_sets"
-    }
-  },
-
-  environment: {
-    lock: true,
-    location: "private_ultra_luxury_modern_gym_or_penthouse_training_suite",
-    style: "ultra_high_net_worth_fitness_architecture_realism",
-    environment_layers: {
-      foreground: [
-        "premium_free_weights_with_brushed_metal_finish",
-        "training_bench_or_power_rack_in_matte_black",
-        "rubberized_or_polished_concrete_floor"
-      ],
-      midground: [
-        "subject_centered_with_space_around",
-        "mirrored_or_textured_concrete_wall",
-        "minimal_equipment_layout_with_intentional_spacing"
-      ],
-      background: [
-        "architectural_gym_design_in_steel_wood_and_glass",
-        "large_windows_or_frosted_glass_panels",
-        "soft_indirect_ceiling_lighting"
-      ]
-    },
-    elite_context_elements: [
-      "private_training_zone_no_public_presence",
-      "designer_equipment_branding_subtle",
-      "clean_high_value_materials",
-      "controlled_acoustics_and_light"
-    ],
-    color_palette_lock: [
-      "matte_black",
-      "charcoal_grey",
-      "brushed_steel",
-      "warm_wood",
-      "neutral_concrete"
-    ]
-  },
-
-  wardrobe_and_style: {
-    lock_style: true,
-    overall_style: "ultra_signature_designer_athletic_couture",
-    upper_body: [
-      "precision_fitted_high_end_performance_top",
-      "or_sleeveless_technical_layer_with_clean_edges",
-      "optional_lightweight_designer_training_jacket_unzipped"
-    ],
-    lower_body: [
-      "tailored_performance_training_pants_or_premium_shorts"
-    ],
-    footwear: [
-      "elite_training_shoes_with_sculpted_silhouette"
-    ],
-    materials: [
-      "advanced_moisture_wicking_fabrics",
-      "compression_panels",
-      "laser_cut_mesh"
-    ],
-    flex_accessories: [
-      "minimal_luxury_wristwatch_only_if_training_realistic",
-      "leather_or_technical_gym_bag_nearby",
-      "high_end_water_bottle_in_brushed_metal_or_glass",
-      "designer_towel_with_subtle_texture"
-    ]
-  },
-
-  camera_simulation: {
-    camera_type: "real_high_end_fitness_editorial_camera",
-    focal_length_mm: 35,
-    aperture: "f/8",
-    iso: 400,
-    shutter_speed: "1/1000",
-    framing: {
-      shot_type: "half_body_or_three_quarter",
-      composition: "subject_weight_environment_power_balance",
-      face_clearly_visible: true,
-      muscle_engagement_readable: true,
-      eye_level_or_slight_low_angle: true
-    }
-  },
-
-  lighting: {
-    type: "architectural_gym_lighting",
-    behavior: "directional_top_and_side_light_sculpting_form_without_glow",
-    avoid: [
-      "neon_colors",
-      "cinematic_rim_glow",
-      "over_hdr"
-    ]
-  },
-
-  color_science: {
-    lock: true,
-    profile: "luxury_fitness_editorial_neutral",
-    contrast: "moderate",
-    saturation: "controlled_and_real",
-    skin_tone_policy: "match_input_exactly"
-  },
-
-  imperfection_pass: {
-    add: [
-      "light_sweat_sheen_not_glossy",
-      "chalk_dust_on_hands_and_equipment",
-      "fabric_wrinkles_from_motion",
-      "authentic_skin_texture"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "NO_bodybuilding_pose",
-    "NO_mirror_selfie",
-    "NO_face_change",
-    "NO_body_change",
-    "NO_beautification",
-    "NO_public_gym_clutter",
-    "NO_ai_polish"
-  ],
-
-  output_goal:
-    "an ultra-elite modern gym session editorial photograph where the subject’s face is unmistakably identical to the input person, designer athletic wear and premium accessories elevate status, the private gym environment signals extreme wealth, the subject actively interacts with heavy equipment mid-session, and the image feels like a real high-net-worth training moment captured by a professional editorial photographer"
-}
-,
+    ,
     aspectRatio: "3:4",
     keywords: [
       "gym", "fitness", "workout", "luxury", "training", "health",
       "wealth", "rich", "expensive", "lifestyle", "exercise",
-      "muscle", "strength","gym", "fitness", "workout", 
-      "luxury", "training", "health", "wealth", "rich", 
-      "expensive", "lifestyle", "exercise", "muscle", 
-      "strength", "bodybuilding", "personal trainer", 
-      "high-end", "wellness", "active", "fit", "gym", 
-      "fitness", "workout", "luxury", "training","gym", "workout", "fitness", "body", "muscle", "exercise", 
-      "training", "weights", "dumbbells", "dole", "bodybuilder", 
+      "muscle", "strength", "gym", "fitness", "workout",
+      "luxury", "training", "health", "wealth", "rich",
+      "expensive", "lifestyle", "exercise", "muscle",
+      "strength", "bodybuilding", "personal trainer",
+      "high-end", "wellness", "active", "fit", "gym",
+      "fitness", "workout", "luxury", "training", "gym", "workout", "fitness", "body", "muscle", "exercise",
+      "training", "weights", "dumbbells", "dole", "bodybuilder",
       "kasrat", "sehat", "fit", "strong", "gym shark"
     ]
   },
@@ -5441,205 +5307,205 @@ const flexTemplates: Template[] = [
     stackId: "flex",
     imageUrl: "/images/flex_finedining_cover.webp",
     prompt:
-     {
-  task: "absolute_identity_and_body_locked_real_world_editorial_photography",
-  theme: "fine_dining_experience_ultra_signature_max_flex_aesthetic_refined_final",
+    {
+      task: "absolute_identity_and_body_locked_real_world_editorial_photography",
+      theme: "fine_dining_experience_ultra_signature_max_flex_aesthetic_refined_final",
 
-  global_lock_policy: {
-    lock_everything_except_person: true,
-    person_is_only_dynamic_element: true
-  },
+      global_lock_policy: {
+        lock_everything_except_person: true,
+        person_is_only_dynamic_element: true
+      },
 
-  identity_and_body_control: {
-    source: "input_person_image",
-    priority_order: [
-      "face_identity",
-      "facial_structure",
-      "micro_facial_features",
-      "body_structure",
-      "refined_dining_body_language_accuracy"
-    ],
-    face_identity_lock: {
-      enabled: true,
-      identity_weight: 0.997,
-      style_weight: 0.003,
-      face_recognition_enforced: true,
-      facial_landmark_constraints: "absolute_hard_lock",
-      preserve_asymmetry: true,
-      forbid: [
-        "beautification",
-        "symmetry_correction",
-        "feature_enhancement",
-        "face_morphing",
-        "skin_smoothing"
-      ]
+      identity_and_body_control: {
+        source: "input_person_image",
+        priority_order: [
+          "face_identity",
+          "facial_structure",
+          "micro_facial_features",
+          "body_structure",
+          "refined_dining_body_language_accuracy"
+        ],
+        face_identity_lock: {
+          enabled: true,
+          identity_weight: 0.997,
+          style_weight: 0.003,
+          face_recognition_enforced: true,
+          facial_landmark_constraints: "absolute_hard_lock",
+          preserve_asymmetry: true,
+          forbid: [
+            "beautification",
+            "symmetry_correction",
+            "feature_enhancement",
+            "face_morphing",
+            "skin_smoothing"
+          ]
+        }
+      },
+
+      pose_and_interaction: {
+        orientation: "seated_at_private_fine_dining_table_slight_diagonal",
+        body_posture: {
+          torso: "upright_with_soft_forward_engagement",
+          shoulders: "relaxed_and_open",
+          overall_energy: "quiet_confident_refinement"
+        },
+        arm_and_hand_interaction: {
+          primary_actions: [
+            "one_hand_holding_crystal_stemware_by_the_stem",
+            "other_hand_using_cutlery_mid-course_or_paused_above_plate"
+          ],
+          secondary_actions: [
+            "lightly_adjusting_jacket_cuff_or_watch",
+            "placing_cutlery_down_between_bites"
+          ],
+          interaction_physics: [
+            "gentle_glass_weight_and_refraction",
+            "micro_angle_changes_of_cutlery",
+            "fabric_tension_at_cuffs"
+          ]
+        },
+        expression: {
+          mood: "refined_appreciation",
+          gaze: "soft_camera_or_plate_focus"
+        }
+      },
+
+      environment: {
+        lock: true,
+        location: "private_chef_table_or_secluded_michelin_star_dining_room",
+        style: "ultra_high_net_worth_culinary_artistry_realism",
+
+        table_aesthetics: {
+          table_linen:
+            "custom_bone_white_or_champagne_linen_with_soft_texture",
+          place_setting:
+            "perfectly_spaced_minimalist_high_fine_dining_layout",
+          table_geometry: "clean_edges_generous_negative_space"
+        },
+
+        food_presentation: {
+          plating_style: "modern_michelin_fine_art_plating",
+          dish_characteristics: [
+            "sculptural_composition",
+            "negative_space_plating",
+            "precision_sauce_brush_strokes",
+            "microgreens_and_edible_flower_accents",
+            "clean_height_and_geometry"
+          ],
+          plate_materials: [
+            "handcrafted_ceramic",
+            "stoneware_with_matte_finish",
+            "subtle_irregular_edges"
+          ]
+        },
+
+        cutlery_and_glassware: {
+          cutlery: [
+            "bespoke_slim_profile_silverware",
+            "soft_brushed_or_mirror_polish",
+            "perfect_alignment_parallel_to_plate"
+          ],
+          glassware: [
+            "ultra_thin_crystal_stemware",
+            "precise_bowl_shape_for_wine_or_water",
+            "subtle_light_refraction_no_glare"
+          ]
+        },
+
+        environment_layers: {
+          foreground: [
+            "artfully_plated_course",
+            "aligned_cutlery_and_stemware",
+            "linen_napkin_folded_with_intent"
+          ],
+          midground: [
+            "subject_seated_in_upholstered_chair",
+            "bread_service_with_sculpted_butter",
+            "minimal_candle_or_table_lamp"
+          ],
+          background: [
+            "rich_textured_walls_or_wood_panels",
+            "abstract_or_classic_artwork",
+            "discreet_service_movement_far_depth"
+          ]
+        }
+      },
+
+      lighting: {
+        type: "fine_dining_architectural_lighting",
+        key_light:
+          "soft_directional_warm_key_focused_on_face_and_plate",
+        table_light:
+          "low_level_table_or_candle_light_for_food_highlights",
+        ambient_light:
+          "warm_layered_fill_with_soft_falloff",
+        behavior: [
+          "gentle_specular_highlights_on_glass_and_cutlery",
+          "no_hard_shadows",
+          "no_hdr_or_glow_effects"
+        ],
+        color_temperature: "2800K_to_3200K"
+      },
+
+      wardrobe_and_style: {
+        lock_style: true,
+        overall_style: "ultra_signature_evening_dining_couture",
+        flex_accessories: [
+          "high_complication_luxury_wristwatch",
+          "minimal_high_jewelry_ring_or_cufflink",
+          "discreet_pocket_square_or_chain"
+        ]
+      },
+
+      camera_simulation: {
+        camera_type: "high_end_culinary_editorial_camera",
+        focal_length_mm: 50,
+        aperture: "f/8",
+        iso: 400,
+        shutter_speed: "1/200",
+        framing: {
+          shot_type: "half_body_seated_with_table_focus",
+          face_clearly_visible: true,
+          food_and_hands_prominent: true
+        }
+      },
+
+      color_science: {
+        lock: true,
+        profile: "warm_fine_dining_editorial",
+        contrast: "moderate",
+        saturation: "rich_but_restrained"
+      },
+
+      imperfection_pass: {
+        add: [
+          "subtle_linen_fold_variation",
+          "non_perfect_candle_flicker",
+          "natural_glass_reflections",
+          "authentic_skin_texture"
+        ]
+      },
+
+      hard_negative_constraints: [
+        "NO_over_stylized_food",
+        "NO_fake_glow",
+        "NO_plastic_food_textures",
+        "NO_face_change",
+        "NO_beautification",
+        "NO_ai_polish"
+      ],
+
+      output_goal:
+        "an ultra-signature fine dining editorial photograph where the food presentation, cutlery, tableware, and lighting reach Michelin-level aesthetic refinement, the subject interacts naturally mid-course, the environment feels intimate and elite, and the entire scene looks indistinguishable from a real chef’s-table dining photograph captured by a world-class culinary editorial photographer"
     }
-  },
-
-  pose_and_interaction: {
-    orientation: "seated_at_private_fine_dining_table_slight_diagonal",
-    body_posture: {
-      torso: "upright_with_soft_forward_engagement",
-      shoulders: "relaxed_and_open",
-      overall_energy: "quiet_confident_refinement"
-    },
-    arm_and_hand_interaction: {
-      primary_actions: [
-        "one_hand_holding_crystal_stemware_by_the_stem",
-        "other_hand_using_cutlery_mid-course_or_paused_above_plate"
-      ],
-      secondary_actions: [
-        "lightly_adjusting_jacket_cuff_or_watch",
-        "placing_cutlery_down_between_bites"
-      ],
-      interaction_physics: [
-        "gentle_glass_weight_and_refraction",
-        "micro_angle_changes_of_cutlery",
-        "fabric_tension_at_cuffs"
-      ]
-    },
-    expression: {
-      mood: "refined_appreciation",
-      gaze: "soft_camera_or_plate_focus"
-    }
-  },
-
-  environment: {
-    lock: true,
-    location: "private_chef_table_or_secluded_michelin_star_dining_room",
-    style: "ultra_high_net_worth_culinary_artistry_realism",
-
-    table_aesthetics: {
-      table_linen:
-        "custom_bone_white_or_champagne_linen_with_soft_texture",
-      place_setting:
-        "perfectly_spaced_minimalist_high_fine_dining_layout",
-      table_geometry: "clean_edges_generous_negative_space"
-    },
-
-    food_presentation: {
-      plating_style: "modern_michelin_fine_art_plating",
-      dish_characteristics: [
-        "sculptural_composition",
-        "negative_space_plating",
-        "precision_sauce_brush_strokes",
-        "microgreens_and_edible_flower_accents",
-        "clean_height_and_geometry"
-      ],
-      plate_materials: [
-        "handcrafted_ceramic",
-        "stoneware_with_matte_finish",
-        "subtle_irregular_edges"
-      ]
-    },
-
-    cutlery_and_glassware: {
-      cutlery: [
-        "bespoke_slim_profile_silverware",
-        "soft_brushed_or_mirror_polish",
-        "perfect_alignment_parallel_to_plate"
-      ],
-      glassware: [
-        "ultra_thin_crystal_stemware",
-        "precise_bowl_shape_for_wine_or_water",
-        "subtle_light_refraction_no_glare"
-      ]
-    },
-
-    environment_layers: {
-      foreground: [
-        "artfully_plated_course",
-        "aligned_cutlery_and_stemware",
-        "linen_napkin_folded_with_intent"
-      ],
-      midground: [
-        "subject_seated_in_upholstered_chair",
-        "bread_service_with_sculpted_butter",
-        "minimal_candle_or_table_lamp"
-      ],
-      background: [
-        "rich_textured_walls_or_wood_panels",
-        "abstract_or_classic_artwork",
-        "discreet_service_movement_far_depth"
-      ]
-    }
-  },
-
-  lighting: {
-    type: "fine_dining_architectural_lighting",
-    key_light:
-      "soft_directional_warm_key_focused_on_face_and_plate",
-    table_light:
-      "low_level_table_or_candle_light_for_food_highlights",
-    ambient_light:
-      "warm_layered_fill_with_soft_falloff",
-    behavior: [
-      "gentle_specular_highlights_on_glass_and_cutlery",
-      "no_hard_shadows",
-      "no_hdr_or_glow_effects"
-    ],
-    color_temperature: "2800K_to_3200K"
-  },
-
-  wardrobe_and_style: {
-    lock_style: true,
-    overall_style: "ultra_signature_evening_dining_couture",
-    flex_accessories: [
-      "high_complication_luxury_wristwatch",
-      "minimal_high_jewelry_ring_or_cufflink",
-      "discreet_pocket_square_or_chain"
-    ]
-  },
-
-  camera_simulation: {
-    camera_type: "high_end_culinary_editorial_camera",
-    focal_length_mm: 50,
-    aperture: "f/8",
-    iso: 400,
-    shutter_speed: "1/200",
-    framing: {
-      shot_type: "half_body_seated_with_table_focus",
-      face_clearly_visible: true,
-      food_and_hands_prominent: true
-    }
-  },
-
-  color_science: {
-    lock: true,
-    profile: "warm_fine_dining_editorial",
-    contrast: "moderate",
-    saturation: "rich_but_restrained"
-  },
-
-  imperfection_pass: {
-    add: [
-      "subtle_linen_fold_variation",
-      "non_perfect_candle_flicker",
-      "natural_glass_reflections",
-      "authentic_skin_texture"
-    ]
-  },
-
-  hard_negative_constraints: [
-    "NO_over_stylized_food",
-    "NO_fake_glow",
-    "NO_plastic_food_textures",
-    "NO_face_change",
-    "NO_beautification",
-    "NO_ai_polish"
-  ],
-
-  output_goal:
-    "an ultra-signature fine dining editorial photograph where the food presentation, cutlery, tableware, and lighting reach Michelin-level aesthetic refinement, the subject interacts naturally mid-course, the environment feels intimate and elite, and the entire scene looks indistinguishable from a real chef’s-table dining photograph captured by a world-class culinary editorial photographer"
-}
-,
+    ,
     aspectRatio: "3:4",
     keywords: [
       "fine dining", "luxury", "restaurant", "gourmet", "elegant",
       "refined", "culinary", "wealth", "rich", "expensive",
-      "lifestyle", "Michelin","fine dining", "luxury", 
-      "restaurant", "gourmet", "elegant", "refined","dinner", "dining", "restaurant", "food", "luxury", "date", 
-      "wine", "eating", "hotel", "party", "khana", "candle light", 
+      "lifestyle", "Michelin", "fine dining", "luxury",
+      "restaurant", "gourmet", "elegant", "refined", "dinner", "dining", "restaurant", "food", "luxury", "date",
+      "wine", "eating", "hotel", "party", "khana", "candle light",
       "mehenga", "romantic", "chef", "gourmet"
     ]
   },
@@ -5653,8 +5519,8 @@ const flexTemplates: Template[] = [
     aspectRatio: "3:4",
     keywords: [
       "luxury", "hotel", "suite", "elegant", "interior", "silk",
-      "bedding", "refined", "comfort", "cinematic", "hotel", "suite", "room", "luxury", "bed", "rich", "stay", 
-      "vacation", "classy", "kamra", "sona", "sleep", "bedroom", 
+      "bedding", "refined", "comfort", "cinematic", "hotel", "suite", "room", "luxury", "bed", "rich", "stay",
+      "vacation", "classy", "kamra", "sona", "sleep", "bedroom",
       "5 star", "comfort", "presidential"
     ]
   },
@@ -5669,8 +5535,8 @@ const flexTemplates: Template[] = [
     keywords: [
       "car", "race track", "Ferrari", "luxury", "speed", "fashion",
       "sunlight", "reflections", "dynamic", "tailored", "race suit",
-      "hyper-realistic", "Raymond", "luxury tone", "pit stop", "motorsport", "ferrari", "race", "car", "track", "fast", "red car", "speed", 
-      "sport", "f1", "laal gadi", "tez", "driver", "helmet", "circuit", 
+      "hyper-realistic", "Raymond", "luxury tone", "pit stop", "motorsport", "ferrari", "race", "car", "track", "fast", "red car", "speed",
+      "sport", "f1", "laal gadi", "tez", "driver", "helmet", "circuit",
       "racing", "formula 1"
     ]
   },
@@ -5701,7 +5567,7 @@ const monumentsTemplates: Template[] = [
     stackId: "monuments",
     imageUrl: "/images/monuments_pyramidsofgyza_cover.webp",
     prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Create a grand, adventurous shot of the person from the photo, seamlessly integrated into the scene at the Pyramids of Giza. Their face, features, and hairstyle must remain identical to the uploaded photo and not be altered. They must be standing firmly on the desert sand, with the bright desert sun casting strong, realistic shadows that ground them in the environment. The lighting on the person must match the harsh, direct sunlight of the desert. Ensure their edges are cleanly blended against the background. Position them as an explorer in practical clothing. The final image should feel like a still from an epic adventure movie. \nno altered faces, no changed facial features.",
+      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects, ensure the output figure’s face matches sharply with the input figure’s face while preserving the exact chin shape and jawline without rounding, ultra-realistic photo of the person from the input image standing at the Pyramids of Giza and integrated naturally into the desert environment, the person looks toward the camera with the same facial structure and same hairstyle as the input image including accurate jawline, identical eyes, nose, lips, eyebrows, identical hairline, identical hair length, identical hair density, identical parting, natural flyaways, and natural skin texture, the face, features, and hairstyle must not be altered in any way, bring the person slightly closer to the camera, the background MUST NOT be blurry and must show every stone block of the pyramids, erosion marks, sand texture, footprints, and the distant desert horizon clearly and sharply with no portrait-mode bokeh, ensure every object in the environment is crisp, detailed, and fully visible, bright desert sunlight with harsh direct illumination and strong realistic shadows falling on the sand and on the person with lighting that precisely matches the desert sun direction and intensity and no cinematic glow or artificial rim light, the person interacts with the environment by standing firmly on desert sand with visible compression around the feet, subtle sand displacement, and clearly grounded body weight, clothing is practical explorer attire suitable for desert conditions with lightweight layers, muted earth tones, functional fit, and lightly dusted sand, ultra-realistic adventure photography with epic but grounded film-still realism without CGI exaggeration, 8k details, clean edge blending, and no distortions, NEGATIVES: no blurry background, no portrait mode blur, no bokeh, no depth blur, no soft focus, no blurry objects, no unclear environment, no out-of-focus areas, no low resolution, no low quality, no noise, no pixelation, no warped background, no distortions, no stretched objects, no incorrect scale, no bad proportions, no broken anatomy, no inaccurate facial structure, no rounding of the jawline, no wrong jawline, no warped eyes, no mismatched eyes, no deformed nose, no incorrect lips, no plastic skin, no overly smoothed skin, no artificial texture, no altered face, no changed facial features, no face morphing, no hairstyle change, no hair replacement, no corrected hairline, no added hair volume, no extra fingers, no missing fingers, no fused hands, no duplicate limbs, no hand deformations, no finger artifacts, no AI artifacts, no jpeg artifacts, no halo, no glow outline, no bad mask, no chromatic aberration, no inconsistent lighting, no overexposed, no underexposed, no harsh shadows mismatch, no lighting mismatch, no cartoon style, no 3d render look, no waxy skin, no fake smile, no dead eyes, no glowing eyes, no asymmetrical eyes, no duplicate face, no merged face, no misaligned face, no floating objects, no object clipping, no misplaced shadows, no repeated textures, no fabric distortions, no clothing artifacts, no watermark, no text, no signature, no logo, no overlays, no UI elements, no nsfw, no nudity, no gore, no horror elements.",
     aspectRatio: "3:4",
   },
   {
@@ -5767,8 +5633,7 @@ const sceneriesTemplates: Template[] = [
     stackId: "sceneries",
     imageUrl: "/images/sceneries_saharadesertwalk_cover.webp",
     prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. A photo of {input person} walking across vast golden dunes in the Sahara Desert, carrying a backpack. The person's face, features, and hairstyle must be an exact match to the provided photo and must not be altered. Scene details: soft sunlight casting long shadows, sand patterns crisp and realistic, warm tones, National Geographic composition, cinematic atmosphere.\nno mirage effects, no sandstorm, no missing limbs, no unnatural shadows, no change in hairstyle, no background blur, no altered faces, no changed facial features.",
-    aspectRatio: "3:4",
+      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects, ensure the output figure’s face matches sharply with the input figure’s face while preserving the exact chin shape and jawline without rounding, ultra-realistic photo of the person from the input image walking across vast golden dunes in the Sahara Desert carrying a backpack, the person looks directly into the camera with the same facial structure and same hairstyle as the input image including accurate jawline, identical eyes, nose, lips, eyebrows, identical hairline, identical hair length, identical hair density, identical parting, natural flyaways, and natural skin texture, the hairstyle must not be altered or idealized in any way, bring the person slightly closer to the camera, the background MUST NOT be blurry and must show every sand ripple, dune ridge, footprint, wind-carved pattern, and distant horizon clearly and sharply with no portrait-mode bokeh, ensure every object in the environment is crisp, detailed, and fully visible, natural desert sunlight with warm tones and realistic long shadows cast across the dunes with correct lighting on both the person and the environment, no cinematic exaggeration and no artificial glow, the person interacts with the scene with boots or desert footwear pressing into soft sand, one hand holding or adjusting a travel backpack strap, subtle sand displacement around the feet, clothing is realistic for desert travel with lightweight long-sleeve fabric, breathable materials, muted earth tones, practical fit, lightly dusted with sand, hyperrealistic travel photography style with National Geographic–level realism, 8k details, and no distortions, NEGATIVES: no blurry background, no portrait mode blur, no bokeh, no depth blur, no soft focus, no blurry objects, no unclear environment, no out-of-focus areas, no low resolution, no low quality, no noise, no pixelation, no warped background, no distortions, no stretched objects, no incorrect scale, no bad proportions, no broken anatomy, no inaccurate facial structure, no rounding of the jawline, no wrong jawline, no warped eyes, no mismatched eyes, no deformed nose, no incorrect lips, no plastic skin, no overly smoothed skin, no artificial texture, no altered face, no face morphing, no hairstyle change, no hair replacement, no added hair volume, no corrected hairline, no extra fingers, no missing fingers, no fused hands, no duplicate limbs, no hand deformations, no finger artifacts, no AI artifacts, no jpeg artifacts, no halo, no glow outline, no bad mask, no chromatic aberration, no inconsistent lighting, no overexposed, no underexposed, no harsh shadows, no lighting mismatch, no cartoon style, no 3d render look, no waxy skin, no fake smile, no dead eyes, no glowing eyes, no asymmetrical eyes, no duplicate face, no merged face, no misaligned face, no floating objects, no object clipping, no misplaced shadows, no repeated textures, no fabric distortions, no clothing artifacts, no mirage effects, no sandstorm, no watermark, no text, no signature, no logo, no overlays, no UI elements, no nsfw, no nudity, no gore, no horror elements.", aspectRatio: "3:4",
   },
   {
     id: "sceneries_template_3",
