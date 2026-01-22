@@ -1,3 +1,5 @@
+// techo-rit/nopromtapp/nopromtapp-main/api/generate.ts
+
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { getGenerateRateLimiter, checkRateLimit } from './_lib/ratelimit.js';
@@ -139,74 +141,72 @@ export default async function handler(req: any, res: any) {
         }
 
         const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
-        
+        const aspectRatio = templateOptions?.aspectRatio || '1:1';
+
         // DYNAMIC PROMPT LOGIC
-        // If a wearable is provided, we switch to explicit Try-On instructions.
         let coreInstruction = '';
         
         if (validWearable) {
             coreInstruction = `
-            TASK: VIRTUAL TRY-ON (CLOTHING TRANSFER).
+            TASK: VIRTUAL TRY-ON (Identity Preserved).
             
             INPUTS:
-            - IMAGE 1: The model/person (Reference Identity).
-            - IMAGE 2: The garment/clothing (Reference Style).
+            - Image 1: "The Subject" (Preserve this person's face and identity exactly).
+            - Image 2: "The Garment" (Apply this clothing to the Subject).
             
             INSTRUCTIONS:
-            1. Generate an image of the PERSON from Image 1 wearing the CLOTHING from Image 2.
-            2. RETAIN the face, hair, and body proportions of the person in Image 1 exactly.
-            3. RETAIN the texture, color, and design of the clothing in Image 2 exactly.
-            4. Merge them realistically. The lighting on the clothes should match the person's environment.
+            1. Generate a photorealistic image of the person from Image 1 wearing the clothing from Image 2.
+            2. CRITICAL: The face in the output MUST match the face in Image 1. 
+            3. Adjust the lighting on the clothing to match the Subject's environment.
             `;
         } else {
             // Standard Remix / Style Transfer
-            coreInstruction = userInstruction || `Generate a photorealistic remix based on template: ${templateId}`;
+            coreInstruction = userInstruction || `Generate a photorealistic remix based on this image. Theme: ${templateId}`;
         }
 
         const finalPrompt = `
         ${coreInstruction}
         
-        NEGATIVE CONSTRAINTS (FORBIDDEN):
-        - DO NOT change the person's face identity.
-        - DO NOT generate a different person.
-        - DO NOT perform "face blending" or "averaging".
-        - DO NOT distort facial features.
-        - DO NOT create nudity or compromised anatomy.
+        STRICT CONSTRAINTS:
+        - Maintain the exact facial identity of the person in Image 1.
+        - Do not change the person's age, ethnicity, or key facial features.
+        - Output Aspect Ratio: ${aspectRatio}
+        - Style: Photorealistic, 8k, High Fidelity.
         `;
         
         parts.push({ text: finalPrompt });
 
         // --- 4. CONFIGURATION ---
         
+        // STRONGER SYSTEM PROMPT FOR IDENTITY
         const systemPrompt = `
-        ROLE: Expert Identity-Cloning & Fashion AI.
+        You are an advanced AI specialized in photorealistic identity preservation.
         
-        PRIMARY OBJECTIVE:
-        You are a high-fidelity image renderer. Your absolute priority is PRESERVING THE IDENTITY of the person in IMAGE 1.
+        PRIMARY DIRECTIVE:
+        You must preserve the facial identity of the subject in the first input image.
+        The output image must look like a photograph of the SAME PERSON.
         
-        CRITICAL RULES:
-        1. FACE LOCK: The face in the output MUST be perceptually identical to Image 1.
-        2. IF WEARABLE (Image 2) IS PROVIDED: Replace the clothing of the person in Image 1 with the item in Image 2. Do not change the person's pose unless necessary for the fit.
-        3. REALISM: Output must be photorealistic, 8k resolution, high texture quality.
-        4. SAFETY: Do not generate NSFW content. If the request implies nudity, clothe the person appropriately.
+        QUALITY GUIDELINES:
+        - Focus on skin texture, realistic lighting, and natural details.
+        - If performing a "Try-On", fit the clothing naturally to the subject's body pose.
         `;
 
-        // Safety Settings: Relaxed for "Try-On" to prevent blocking partial skin/body generation
-        // but kept strict on Harassment/Hate.
-        // Note: Using string values for compatibility with most GoogleGenAI versions.
         const safetySettings = [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' }, // Crucial for fashion/body generation
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
         ];
 
         const config: any = {
             systemInstruction: systemPrompt,
-            temperature: 0.15, // Low temperature for identity retention
-            topP: 0.8,
+            // BALANCED TEMPERATURE:
+            // 0.9 = High creativity/texture (Good for clothes/backgrounds).
+            // But we use the Prompt Constraints above to "Lock" the face.
+            temperature: 0.9, 
+            topP: 0.95,
             candidateCount: 1,
-            safetySettings: safetySettings, // Apply safety settings
+            safetySettings: safetySettings,
         };
 
         if (templateOptions?.aspectRatio) {
@@ -214,14 +214,12 @@ export default async function handler(req: any, res: any) {
             config.imageConfig = { aspectRatio: templateOptions.aspectRatio };
         }
 
-        // Generate
         const response = await ai.models.generateContent({
             model: GEMINI_CONFIG.MODEL_NAME,
             contents: parts, 
             config,          
         });
 
-        // Extract Results
         const urls: string[] = [];
         const candidates = response.candidates || [];
         
@@ -234,8 +232,7 @@ export default async function handler(req: any, res: any) {
 
         if (urls.length === 0) {
             userLog.warn('No images returned', { templateId, safetyRatings: candidates[0]?.safetyRatings });
-            // More descriptive error for debugging (client will see standard error)
-            res.status(500).json({ error: 'Generation failed. The AI might have blocked the request due to safety filters on the body/clothing.' });
+            res.status(500).json({ error: 'Generation failed. The AI might have blocked the request due to safety filters.' });
             return;
         }
 
