@@ -3797,7 +3797,7 @@ const clothesTemplates: Template[] = [
     stackId: "clothes",
     imageUrl: "/images/clothes_gown_cover.webp",
     prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a flowing evening gown. The person's face and features must be an exact match of the provided photo, without any alterations. The person should be seamlessly placed against the subtle gradient backdrop. Elegant studio light must create smooth, realistic highlights and shadows on the fabric that give it form and depth against the backdrop. High-fashion cinematic tone.\nno blur, no fantasy sparkles, no duplicated arms, no overexposure, no change in hairstyle, no background blur, no altered faces, no changed facial features.",
+      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a flowing satin gown, standing in a softly lit ballroom or terrace at twilight, subtle reflections, rich color contrast, high-end magazine style realism.\nno glare, no fantasy glow, no distorted proportions, no over-saturation. no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
     keywords: [
       "gown", "dress", "party", "evening", "formal", "long dress",
