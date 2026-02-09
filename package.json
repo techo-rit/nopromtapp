@@ -5,11 +5,10 @@
     "web",
     "server"
   ],
-  "packageManager": "pnpm@9.15.2",
   "engines": {
     "node": "20.x"
   },
   "scripts": {
-    "build": "pnpm -C web install && pnpm -C web build && node scripts/copy-web-to-server.mjs"
+    "build": "npm --prefix web install && npm --prefix web run build && node scripts/copy-web-to-server.mjs"
   }
 }
