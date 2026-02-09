@@ -1,11 +1,36 @@
+# nopromtapp (single-origin on Vercel)
 
-## Run Locally
+## Structure
+- `web/` Vite + React SPA
+- `server/` Express API + static host (server/public)
 
-**Prerequisites:**  Node.js
+## Vercel single-origin deploy
 
+This setup builds the web app and copies it to `server/public`, then routes all requests to the serverless Express handler.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Build locally
+```
+pnpm build
+```
+
+### Deploy on Vercel
+1. Push repo to GitHub
+2. Import repo in Vercel
+3. Root directory: repo root
+4. Build command: `pnpm build`
+5. Output directory: `server/public`
+6. Add env vars (same as server/.env)
+
+## Server env vars (required)
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ANON_KEY`
+- `GEMINI_API_KEY`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+
+Optional:
+- `BACKEND_URL`
+- `FRONTEND_URL`
+- `CORS_ORIGINS`

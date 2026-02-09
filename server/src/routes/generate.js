@@ -1,0 +1,216 @@
+import { GoogleGenAI } from '@google/genai';
+import { getGenerateRateLimiter, checkRateLimit } from '../lib/ratelimit.js';
+import { createLogger, generateRequestId } from '../lib/logger.js';
+import { UPLOAD_CONFIG, GEMINI_CONFIG } from '../lib/serverConfig.js';
+import { createAdminClient, getUserFromRequest } from '../lib/auth.js';
+
+async function verifyAuthAndCredits(req, res, log) {
+  const supabase = createAdminClient();
+  if (!supabase) {
+    log.error('Server config error: missing Supabase credentials');
+    return { error: 'Server configuration error', status: 500 };
+  }
+
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) {
+    return { error: authResult.error, status: authResult.status };
+  }
+  const user = authResult.user;
+
+  const limiter = getGenerateRateLimiter();
+  const rateLimitResult = await checkRateLimit(limiter, user.id);
+  if (!rateLimitResult.success) {
+    return { error: 'Rate limit exceeded. Please wait.', status: 429 };
+  }
+
+  const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
+  if (!profile || profile.credits < 1) {
+    return { error: 'Insufficient credits', status: 403 };
+  }
+
+  const { error: deductError } = await supabase.rpc('deduct_credits', { p_user_id: user.id, p_amount: 1 });
+  if (deductError) {
+    log.error('Credit deduction failed', { error: deductError.message });
+    return { error: 'Failed to process request', status: 500 };
+  }
+
+  return { userId: user.id };
+}
+
+function validateAndParseImage(dataUrl) {
+  if (!dataUrl) return null;
+  const m = /^data:(.+);base64,(.*)$/.exec(dataUrl);
+  if (!m) return { error: 'Invalid image format' };
+  return { mimeType: m[1].toLowerCase(), data: m[2] };
+}
+
+function sanitizePrompt(text) {
+  if (!text) return '';
+  return typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
+}
+
+export async function generateHandler(req, res) {
+  const requestId = generateRequestId();
+  const log = createLogger(requestId);
+
+  try {
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+
+    const authResult = await verifyAuthAndCredits(req, res, log);
+    if ('error' in authResult) {
+      res.status(authResult.status).json({ error: authResult.error });
+      return;
+    }
+
+    const { imageData, wearableData, templateId, templateOptions } = req.body || {};
+    const userLog = createLogger(requestId, authResult.userId);
+
+    const mainImage = validateAndParseImage(imageData);
+    if (!mainImage) {
+      res.status(400).json({ error: 'Missing main image' });
+      return;
+    }
+    if ('error' in mainImage) {
+      res.status(400).json({ error: mainImage.error });
+      return;
+    }
+
+    const wearableImage = validateAndParseImage(wearableData);
+    let validWearable = null;
+    if (wearableImage) {
+      if ('error' in wearableImage) {
+        res.status(400).json({ error: `Wearable image error: ${wearableImage.error}` });
+        return;
+      }
+      validWearable = wearableImage;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      res.status(500).json({ error: 'Server misconfigured: Missing API Key' });
+      return;
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const parts = [];
+
+    parts.push({
+      inlineData: {
+        mimeType: mainImage.mimeType,
+        data: mainImage.data,
+      },
+    });
+
+    if (validWearable) {
+      parts.push({
+        inlineData: {
+          mimeType: validWearable.mimeType,
+          data: validWearable.data,
+        },
+      });
+    }
+
+    const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
+    const aspectRatio = templateOptions?.aspectRatio || '1:1';
+
+    let coreInstruction = '';
+    if (validWearable) {
+      coreInstruction = `
+            TASK: VIRTUAL TRY-ON (Identity Preserved).
+            
+            INPUTS:
+            - Image 1: "The Subject" (Preserve this person's face and identity exactly).
+            - Image 2: "The Garment" (Apply this clothing to the Subject).
+            
+            INSTRUCTIONS:
+            1. Generate a photorealistic image of the person from Image 1 wearing the clothing from Image 2.
+            2. CRITICAL: The face in the output MUST match the face in Image 1. 
+            3. Adjust the lighting on the clothing to match the Subject's environment.
+            `;
+    } else {
+      coreInstruction = userInstruction || `Generate a photorealistic remix based on this image. Theme: ${templateId}`;
+    }
+
+    const finalPrompt = `
+        ${coreInstruction}
+        
+        STRICT CONSTRAINTS:
+        - Maintain the exact facial identity of the person in Image 1.
+        - Do not change the person's age, ethnicity, or key facial features.
+        - Output Aspect Ratio: ${aspectRatio}
+        - Style: Photorealistic, 8k, High Fidelity.
+        `;
+
+    parts.push({ text: finalPrompt });
+
+    const systemPrompt = `
+        You are an advanced AI specialized in photorealistic identity preservation.
+        
+        PRIMARY DIRECTIVE:
+        You must preserve the facial identity of the subject in the first input image.
+        The output image must look like a photograph of the SAME PERSON.
+        
+        QUALITY GUIDELINES:
+        - Focus on skin texture, realistic lighting, and natural details.
+        - If performing a "Try-On", fit the clothing naturally to the subject's body pose.
+        `;
+
+    const safetySettings = [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+    ];
+
+    const config = {
+      systemInstruction: systemPrompt,
+      temperature: 0.9,
+      topP: 0.95,
+      candidateCount: 1,
+      safetySettings,
+    };
+
+    if (templateOptions?.aspectRatio) {
+      config.imageConfig = { aspectRatio: templateOptions.aspectRatio };
+    }
+
+    const response = await ai.models.generateContent({
+      model: GEMINI_CONFIG.MODEL_NAME,
+      contents: parts,
+      config,
+    });
+
+    const urls = [];
+    const candidates = response.candidates || [];
+
+    for (const c of candidates) {
+      const part = c?.content?.parts?.find((p) => p.inlineData);
+      if (part?.inlineData?.data) {
+        urls.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+      }
+    }
+
+    if (urls.length === 0) {
+      userLog.warn('No images returned', { templateId, safetyRatings: candidates[0]?.safetyRatings });
+      res.status(500).json({ error: 'Generation failed. The AI might have blocked the request due to safety filters.' });
+      return;
+    }
+
+    userLog.info('Success', { count: urls.length });
+    res.status(200).json({ images: urls });
+  } catch (err) {
+    console.error('API Error:', err);
+    const msg = (err?.message || '').toLowerCase();
+
+    if (msg.includes('quota') || msg.includes('429')) {
+      res.status(429).json({ error: 'Server busy. Please try again.' });
+    } else if (msg.includes('safety')) {
+      res.status(400).json({ error: 'Safety filter triggered. Please try a different image.' });
+    } else {
+      res.status(500).json({ error: 'Generation failed.' });
+    }
+  }
+}

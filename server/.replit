@@ -1,0 +1,40 @@
+modules = ["nodejs-20", "web"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY = "YOUR_SERVICE_ROLE_KEY"
+SUPABASE_ANON_KEY = "YOUR_ANON_KEY"
+GEMINI_API_KEY = "YOUR_GEMINI_KEY"
+RAZORPAY_KEY_ID = "YOUR_RAZORPAY_KEY_ID"
+RAZORPAY_KEY_SECRET = "YOUR_RAZORPAY_KEY_SECRET"
+RAZORPAY_WEBHOOK_SECRET = "YOUR_RAZORPAY_WEBHOOK_SECRET"
+BACKEND_URL = "https://your-backend.example.com"
+FRONTEND_URL = "https://your-frontend.example.com"
+CORS_ORIGINS = "https://your-frontend.example.com"
+
+[workflows]
+runButton = "Backend"
+
+[[workflows.workflow]]
+name = "Backend"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 3001
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 3001
+externalPort = 3001

@@ -1,0 +1,75 @@
+Implement a GLOBAL mobile interaction rule:
+Replace all desktop hover-based UI effects with focus-based behavior on mobile.
+
+GOAL:
+On mobile devices, any UI element that relies on hover for emphasis
+should instead use a focus-based visual state when the element becomes prominent or active.
+
+This must apply across the entire app.
+
+INTERACTION MODEL:
+
+1) DESKTOP (UNCHANGED)
+- Keep all existing :hover styles and behaviors
+- Hover remains the primary interaction mechanism
+- No changes to desktop UX
+
+2) MOBILE (NEW BEHAVIOR)
+- Disable hover-dependent effects on mobile
+- Introduce a "focused" state as the mobile equivalent of hover
+
+FOCUS SHOULD ACTIVATE WHEN:
+- An element becomes the primary item in view (scroll-based focus)
+- An element is the snap target after guided scrolling
+- An element is tapped or receives interaction intent
+
+FOCUS DETECTION RULES:
+- Use IntersectionObserver for scroll-based focus
+- Element is considered focused when:
+  - 60–70% visible in viewport
+  - OR visually centered / dominant
+- Only ONE focused element per interaction group at a time
+
+3) VISUAL TREATMENT (FOCUS STATE)
+The focus state should mirror hover styling:
+- Subtle scale or elevation
+- Soft glow or accent border
+- Slight background emphasis
+- Calm, premium animation (slow in / slow out)
+
+No aggressive effects.
+No flashing.
+No large motion.
+
+4) BEHAVIOR RULES
+- Focus must NOT block scrolling
+- Focus must fade naturally as user scrolls away
+- Focus must not require a tap to appear
+- User input always overrides focus (tap wins)
+
+5) TECHNICAL CONSTRAINTS
+- Apply only on mobile breakpoints (<768px)
+- Use CSS classes or data attributes to toggle focus state
+- Avoid continuous scroll listeners
+- Prefer IntersectionObserver for performance
+- Fully compatible with WebView / Capacitor
+
+6) CONSISTENCY REQUIREMENT
+This rule must apply consistently to:
+- Cards
+- Buttons with hover emphasis
+- Grid items
+- Interactive previews
+- Any component that currently relies on hover
+
+STRICT RULES:
+- Do not change layouts
+- Do not add new UI elements
+- Do not alter routing or logic
+- Do not redesign components
+- Do not make multiple elements focused at once
+
+SUCCESS CRITERIA:
+On desktop, the app feels interactive via hover.
+On mobile, the app feels guided via focus.
+The user should never miss hover on mobile.

@@ -1,0 +1,37 @@
+I need to add a "Smart Selfie" feature to the `UploadZone` component in `components/UploadZone.tsx`. 
+
+Please implement this feature using `react-webcam` for the camera feed and `@mediapipe/tasks-vision` for face detection. 
+
+**Requirements:**
+
+1.  **New Dependencies:**
+    * Install `react-webcam` and `@mediapipe/tasks-vision`.
+
+2.  **UI Changes (`UploadZone.tsx`):**
+    * Add a "Take Selfie" button next to the existing upload button. Use a camera icon.
+    * When clicked, open a **Full-Screen Camera Modal** (use a standard overlay with `z-50`, fixed position, black background).
+    * **The Modal UI:**
+        * Show the live camera feed (use `facingMode: "user"` and `mirrored={true}`).
+        * Overlay a **"Face Guide Box"** (a rounded rectangle border in the center of the screen).
+        * Show a text status below the box: "Align your face" (default) or "Hold still..." (when aligned).
+        * Include a "Close" button in the top right.
+
+3.  **Smart Auto-Capture Logic:**
+    * Load the MediaPipe `FaceDetector` model on mount.
+    * Run a detection loop (using `requestAnimationFrame`).
+    * **Trigger the capture AUTOMATICALLY only if:**
+        * **Condition A (Inside Box):** A single face is detected, and its bounding box is strictly within the visual Guide Box margins (allow ~10-15% tolerance).
+        * **Condition B (Parallel/Straight):** The user is looking straight at the camera.
+            * *Logic:* Check the relative x-position of the `nose_tip` landmark. It must be roughly equidistant between the `left_eye` and `right_eye` landmarks (tolerance: < 5% deviation).
+    * When both conditions are met for 3 consecutive frames (to prevent jitter), automatically trigger `webcamRef.getScreenshot()`.
+
+4.  **Output:**
+    * Convert the screenshot (base64) to a `File` object.
+    * Pass it to the existing `onFileSelect` prop.
+    * Close the modal immediately.
+
+5.  **Mobile Wrapper Compatibility:**
+    * Ensure the modal uses `height: 100dvh` (dynamic viewport height) to avoid scrollbar issues on mobile browsers.
+    * Ensure the video tag has `playsInline` so it doesn't fullscreen automatically on iOS.
+
+**Note:** Keep the existing drag-and-drop functionality intact. Only add this as an alternative input method.
