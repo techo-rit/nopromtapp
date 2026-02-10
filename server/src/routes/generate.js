@@ -139,6 +139,12 @@ export async function generateHandler(req, res) {
         
         STRICT CONSTRAINTS:
         - Maintain the exact facial identity of the person in Image 1.
+        - The face should be clearly recognizable as the same individual, with no alterations to key features.
+        - Do not change the person's hairstyle, skin tone, or any distinctive marks (e.g., moles, scars).
+        - Do not add or remove accessories like glasses, earrings, or hats that are present in the original image.
+        - Do not alter the person's expression in a way that changes their identity (e.g., from smiling to frowning).
+        - Do not change the background in a way that obscures the person's identity (e.g., adding heavy filters or effects).
+        - Do not morph the person's face into another style (e.g., cartoon, painting) that makes them unrecognizable.
         - Do not change the person's age, ethnicity, or key facial features.
         - Output Aspect Ratio: ${aspectRatio}
         - Style: Photorealistic, 8k, High Fidelity.
