@@ -9,6 +9,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "build": "npm --prefix web install && npm --prefix web run build && node scripts/copy-web-to-server.mjs"
+    "build": "npm --prefix web install && npm --prefix web run build && node server/scripts/copy-web-to-server.mjs",
+    "start": "npm --prefix server start"
   }
 }
