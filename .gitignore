@@ -39,4 +39,4 @@ coverage/
 EOF
 
 # Miscellaneous
-public/
+server/public/
