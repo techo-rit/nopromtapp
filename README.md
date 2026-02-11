@@ -1,25 +1,22 @@
-# nopromtapp (single-origin on Vercel)
+# nopromtapp (DigitalOcean single-origin)
 
 ## Structure
 - `web/` Vite + React SPA
 - `server/` Express API + static host (server/public)
 
-## Vercel single-origin deploy
+## Build & run (single origin)
 
-This setup builds the web app and copies it to `server/public`, then routes all requests to the serverless Express handler.
-
-### Build locally
+1. Build web and copy into server/public:
 ```
-pnpm build
+npm run build
 ```
 
-### Deploy on Vercel
-1. Push repo to GitHub
-2. Import repo in Vercel
-3. Root directory: repo root
-4. Build command: `pnpm build`
-5. Output directory: `server/public`
-6. Add env vars (same as server/.env)
+2. Start server:
+```
+npm run start
+```
+
+Server listens on `PORT` (default 80).
 
 ## Server env vars (required)
 - `SUPABASE_URL`
