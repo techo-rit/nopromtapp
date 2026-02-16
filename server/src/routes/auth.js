@@ -2,7 +2,17 @@ import { createAnonClient, createAdminClient, setSessionCookies, clearSessionCoo
 import { clearCookie } from '../lib/cookies.js';
 
 function getBackendUrl(req) {
-  return process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+  const envUrl = process.env.BACKEND_URL?.trim();
+  if (!envUrl) return `${req.protocol}://${req.get('host')}`;
+
+  // Accept values like "app.nopromt.ai" and normalize to a valid absolute URL.
+  const withProtocol = /^https?:\/\//i.test(envUrl) ? envUrl : `https://${envUrl}`;
+  try {
+    const normalized = new URL(withProtocol);
+    return normalized.toString().replace(/\/$/, '');
+  } catch {
+    return `${req.protocol}://${req.get('host')}`;
+  }
 }
 
 export async function signUpHandler(req, res) {

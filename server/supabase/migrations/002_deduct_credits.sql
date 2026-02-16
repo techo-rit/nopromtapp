@@ -35,3 +35,7 @@ BEGIN
   RETURN json_build_object('success', true, 'remaining', v_current_credits - p_amount);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Keep default initial credits for newly created profiles
+ALTER TABLE public.profiles
+ALTER COLUMN credits SET DEFAULT 3;

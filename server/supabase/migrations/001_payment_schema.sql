@@ -7,7 +7,7 @@
 -- 1. Add credits column to existing profiles table
 -- ==========================================
 ALTER TABLE public.profiles 
-ADD COLUMN IF NOT EXISTS credits integer DEFAULT 0 NOT NULL;
+ADD COLUMN IF NOT EXISTS credits integer DEFAULT 3 NOT NULL;
 
 -- ==========================================
 -- 2. Create SUBSCRIPTIONS Table
