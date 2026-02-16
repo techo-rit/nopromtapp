@@ -102,6 +102,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const otherAccounts = accounts.filter((account) => account.email !== user?.email);
+    const hasOtherAccounts = accounts.length > 1 && otherAccounts.length > 0;
 
     const handleProfileClick = () => {
         if (!user) {
@@ -124,7 +125,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             {/* Profile Menu */}
             {showProfileMenu && user && (
                 <div className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom))] right-4 z-50 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2">
-                    <div className="px-4 py-3 border-b border-[#2a2a2a] flex items-start justify-between gap-3">
+                    <div className={`px-4 py-3 flex items-start justify-between gap-3 ${hasOtherAccounts ? "border-b border-[#2a2a2a]" : ""}`}>
                         <div className="min-w-0">
                             <p className="text-sm font-medium text-[#f5f5f5] truncate">
                                 {user.name}
@@ -140,7 +141,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                                     onAddAccount();
                                     setShowProfileMenu(false);
                                 }}
-                                className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors"
+                                className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
                             >
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M12 5v14M5 12h14" strokeLinecap="round" />
@@ -154,7 +155,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                                     onLogout();
                                     setShowProfileMenu(false);
                                 }}
-                                className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors"
+                                className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
                             >
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" />
@@ -164,7 +165,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                             </button>
                         </div>
                     </div>
-                    {accounts.length > 1 && otherAccounts.length > 0 && (
+                    {hasOtherAccounts && (
                         <div className="py-1">
                             <p className="px-4 py-2 text-[11px] uppercase tracking-wider text-[#6b6b6b]">
                                 Other accounts
@@ -177,7 +178,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                                             onSwitchAccount(account.email);
                                             setShowProfileMenu(false);
                                         }}
-                                        className="w-full min-h-[40px] text-left px-4 py-2 text-sm transition-colors flex items-center justify-between text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5]"
+                                        className="w-full min-h-[40px] text-left px-4 py-2 text-sm transition-colors flex items-center justify-between text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] cursor-pointer"
                                     >
                                         <span className="truncate pr-2">
                                             {account.name || account.email}

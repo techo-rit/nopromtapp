@@ -64,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
         "text-[15px] font-normal leading-none text-[#f5f5f5]";
     const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none w-[11ch] text-left`;
     const otherAccounts = accounts.filter((account) => account.email !== user?.email);
+    const hasOtherAccounts = accounts.length > 1 && otherAccounts.length > 0;
 
     useEffect(() => {
         if (!showUserMenu) return;
@@ -207,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
                                 </button>
                                 {showUserMenu && (
                                     <div className="absolute right-0 mt-2 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2 z-50">
-                                        <div className="px-4 py-3 border-b border-[#2a2a2a] flex items-start justify-between gap-3">
+                                        <div className={`px-4 py-3 flex items-start justify-between gap-3 ${hasOtherAccounts ? "border-b border-[#2a2a2a]" : ""}`}>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-medium text-[#f5f5f5] truncate">
                                                     {user.name}
@@ -225,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
                                                         onAddAccount();
                                                         setShowUserMenu(false);
                                                     }}
-                                                    className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors"
+                                                    className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
                                                 >
                                                     <svg
                                                         className="w-4 h-4"
@@ -245,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({
                                                         onLogout();
                                                         setShowUserMenu(false);
                                                     }}
-                                                    className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors"
+                                                    className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
                                                 >
                                                     <svg
                                                         className="w-4 h-4"
@@ -261,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
                                                 </button>
                                             </div>
                                         </div>
-                                        {accounts.length > 1 && otherAccounts.length > 0 && (
+                                        {hasOtherAccounts && (
                                             <div className="py-1">
                                                 <p className="px-4 py-2 text-[11px] uppercase tracking-wider text-[#6b6b6b]">
                                                     Other accounts
@@ -271,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                                                         <button
                                                             key={account.email}
                                                             onClick={() => onSwitchAccount(account.email)}
-                                                            className="w-full min-h-[40px] text-left px-4 py-2 text-sm transition-colors flex items-center justify-between text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5]"
+                                                            className="w-full min-h-[40px] text-left px-4 py-2 text-sm transition-colors flex items-center justify-between text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] cursor-pointer"
                                                         >
                                                             <span className="truncate pr-2">
                                                                 {account.name || account.email}
