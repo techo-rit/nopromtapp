@@ -121,6 +121,27 @@ export async function fetchUserProfile(adminClient, userId) {
   };
 }
 
+export async function ensureUserProfile(adminClient, supabaseUser) {
+  if (!adminClient || !supabaseUser?.id) return;
+
+  const { data: existing } = await adminClient
+    .from('profiles')
+    .select('id')
+    .eq('id', supabaseUser.id)
+    .maybeSingle();
+
+  if (existing) return;
+
+  await adminClient
+    .from('profiles')
+    .insert({
+      id: supabaseUser.id,
+      email: supabaseUser.email || null,
+      full_name: supabaseUser.user_metadata?.full_name || null,
+      credits: 3,
+    });
+}
+
 export function mapUser(supabaseUser, profile) {
   return {
     id: supabaseUser.id,

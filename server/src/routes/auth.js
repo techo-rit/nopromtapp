@@ -1,4 +1,4 @@
-import { createAnonClient, createAdminClient, setSessionCookies, clearSessionCookies, getUserFromRequest, fetchUserProfile, mapUser, generatePkcePair, setPkceCookie, getPkceVerifier } from '../lib/auth.js';
+import { createAnonClient, createAdminClient, setSessionCookies, clearSessionCookies, getUserFromRequest, fetchUserProfile, ensureUserProfile, mapUser, generatePkcePair, setPkceCookie, getPkceVerifier } from '../lib/auth.js';
 import { clearCookie } from '../lib/cookies.js';
 
 function getBackendUrl(req) {
@@ -49,6 +49,7 @@ export async function signUpHandler(req, res) {
   setSessionCookies(res, data.session);
 
   const admin = createAdminClient();
+  if (admin) await ensureUserProfile(admin, data.user);
   const profile = admin ? await fetchUserProfile(admin, data.user.id) : { name: null, credits: 0 };
   return res.status(200).json({ success: true, user: mapUser(data.user, profile) });
 }
@@ -72,6 +73,7 @@ export async function loginHandler(req, res) {
   setSessionCookies(res, data.session);
 
   const admin = createAdminClient();
+  if (admin) await ensureUserProfile(admin, data.user);
   const profile = admin ? await fetchUserProfile(admin, data.user.id) : { name: null, credits: 0 };
   return res.status(200).json({ success: true, user: mapUser(data.user, profile) });
 }
@@ -88,6 +90,7 @@ export async function meHandler(req, res) {
   }
 
   const admin = createAdminClient();
+  if (admin) await ensureUserProfile(admin, result.user);
   const profile = admin ? await fetchUserProfile(admin, result.user.id) : { name: null, credits: 0 };
   return res.status(200).json({ success: true, user: mapUser(result.user, profile) });
 }
