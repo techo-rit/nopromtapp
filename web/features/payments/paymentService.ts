@@ -7,16 +7,13 @@
 
 import { CONFIG } from '../../config';
 import type { 
-  CreateOrderRequest, 
+  CreateOrderRequest,
   CreateOrderResponse, 
   VerifyPaymentRequest, 
   VerifyPaymentResponse,
   RazorpayCheckoutOptions,
   RazorpayPaymentResponse 
 } from '../../types';
-
-// Razorpay checkout script URL
-const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
 
 // Track if script is loaded
 let razorpayScriptLoaded = false;
@@ -39,7 +36,7 @@ export async function loadRazorpayScript(): Promise<void> {
   // Start loading
   razorpayScriptLoading = new Promise((resolve, reject) => {
     // Check if already in DOM
-    const existingScript = document.querySelector(`script[src="${RAZORPAY_SCRIPT_URL}"]`);
+    const existingScript = document.querySelector(`script[src="${CONFIG.PAYMENTS.RAZORPAY_SCRIPT}"]`);
     if (existingScript) {
       razorpayScriptLoaded = true;
       resolve();
@@ -47,7 +44,7 @@ export async function loadRazorpayScript(): Promise<void> {
     }
 
     const script = document.createElement('script');
-    script.src = RAZORPAY_SCRIPT_URL;
+    script.src = CONFIG.PAYMENTS.RAZORPAY_SCRIPT;
     script.async = true;
 
     script.onload = () => {
@@ -69,7 +66,7 @@ export async function loadRazorpayScript(): Promise<void> {
  * Create a new Razorpay order
  * SECURITY: Now requires authentication - user info comes from JWT
  */
-export async function createOrder(request: { planId: string }): Promise<CreateOrderResponse> {
+export async function createOrder(request: CreateOrderRequest): Promise<CreateOrderResponse> {
   try {
     const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
     const url = apiBase ? `${apiBase}/api/create-order` : '/api/create-order';
@@ -119,7 +116,7 @@ export async function createOrder(request: { planId: string }): Promise<CreateOr
  * Verify payment after Razorpay checkout
  * SECURITY: Now requires authentication - userId comes from JWT
  */
-export async function verifyPayment(request: Omit<VerifyPaymentRequest, 'userId'>): Promise<VerifyPaymentResponse> {
+export async function verifyPayment(request: VerifyPaymentRequest): Promise<VerifyPaymentResponse> {
   try {
     const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
     const url = apiBase ? `${apiBase}/api/verify-payment` : '/api/verify-payment';

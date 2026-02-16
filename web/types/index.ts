@@ -1,6 +1,4 @@
-// types.ts
-
-export type NavCategory = "Try on" | "Creators"; // <--- Add this line
+export type NavCategory = "Try on" | "Creators";
 
 export interface Stack {
   id: string;
@@ -63,9 +61,6 @@ export interface Subscription {
 
 export interface CreateOrderRequest {
   planId: string;
-  userId: string;
-  userEmail: string;
-  userName?: string;
 }
 
 export interface CreateOrderResponse {
@@ -85,7 +80,6 @@ export interface VerifyPaymentRequest {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature: string;
-  userId: string;
 }
 
 export interface VerifyPaymentResponse {

@@ -10,7 +10,7 @@ import { verifyPaymentHandler } from './routes/verifyPayment.js';
 import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
-import { signUpHandler, loginHandler, logoutHandler, meHandler, googleStartHandler, googleCallbackHandler } from './routes/auth.js';
+import { signUpHandler, loginHandler, logoutHandler, meHandler, switchAccountHandler, googleStartHandler, googleCallbackHandler } from './routes/auth.js';
 
 export function createApp() {
   const app = express();
@@ -60,6 +60,7 @@ export function createApp() {
   app.post('/auth/login', loginHandler);
   app.post('/auth/logout', logoutHandler);
   app.get('/auth/me', meHandler);
+  app.post('/auth/switch', switchAccountHandler);
   app.get('/auth/google/start', googleStartHandler);
   app.get('/auth/google/callback', googleCallbackHandler);
   app.post('/api/generate', generateHandler);

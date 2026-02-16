@@ -22,6 +22,14 @@ import type { Template, User, NavCategory, Stack } from "./types";
 
 // Storage Helper (Moved here for now, could be in utils)
 const STORAGE_KEY_NAV = "nopromt_nav";
+const STORAGE_KEY_ACCOUNTS = "nopromt_accounts";
+
+type StoredAccount = {
+  id: string;
+  email: string;
+  name: string;
+  lastUsedAt: number;
+};
 
 // Wrapper for Template Route (keeps access to User/Auth logic)
 const TemplateRoute = ({ 
@@ -60,6 +68,14 @@ const App: React.FC = () => {
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
+  const [knownAccounts, setKnownAccounts] = useState<StoredAccount[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
@@ -86,6 +102,26 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(knownAccounts));
+  }, [knownAccounts]);
+
+  useEffect(() => {
+    if (!user) return;
+    setKnownAccounts((prev) => {
+      const next = [
+        {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          lastUsedAt: Date.now(),
+        },
+        ...prev.filter((a) => a.email !== user.email),
+      ];
+      return next.slice(0, 8);
+    });
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -153,6 +189,29 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSwitchAccount = async (email: string) => {
+    if (user?.email === email) return;
+    setShowPaymentModal(false);
+    setShowAuthModal(false);
+    try {
+      const switched = await authService.switchAccount(email);
+      setUser(switched);
+      return;
+    } catch {
+      // Fallback for accounts without a stored backend session.
+      await authService.signInWithGoogle(email);
+    }
+  };
+
+  const handleLogout = async () => {
+    const currentEmail = user?.email || null;
+    const nextUser = await authService.logout();
+    if (currentEmail) {
+      setKnownAccounts((prev) => prev.filter((a) => a.email !== currentEmail));
+    }
+    setUser(nextUser);
+  };
+
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
       
@@ -163,7 +222,10 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); setUser(null); }}
+          accounts={knownAccounts}
+          onSwitchAccount={handleSwitchAccount}
+          onLogout={handleLogout}
+          onAddAccount={() => setShowAuthModal(true)}
           onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
           isLoading={isGlobalLoading}
           isSecondaryPage={location.pathname !== '/'}
@@ -237,7 +299,10 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={() => setShowAuthModal(true)}
-          onLogout={async () => { await authService.logout(); setUser(null); }}
+          accounts={knownAccounts}
+          onSwitchAccount={handleSwitchAccount}
+          onLogout={handleLogout}
+          onAddAccount={() => setShowAuthModal(true)}
         />
       </div>
     </div>

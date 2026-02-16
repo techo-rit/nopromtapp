@@ -4,10 +4,11 @@ import { TemplateGrid } from "../templates/TemplateGrid";
 import { TrendingCarousel } from "../templates/TrendingCarousel";
 import { StackGrid } from "../templates/StackGrid";
 import { STACKS, TEMPLATES_BY_STACK } from "../../data/constants";
-import type { Stack, Template } from "../../types";
+import type { Stack, Template, NavCategory } from "../../types";
+import { CONFIG } from "../../config";
 
 interface HomeProps {
-  activeNav: string;
+  activeNav: NavCategory;
   searchQuery: string;
   searchResults: Template[];
   trendingTemplates: Template[];
@@ -51,9 +52,7 @@ export const Home: React.FC<HomeProps> = ({
   }
 
   // 3. Default "Creators" Mode
-  const creatorsStackIds = [
-    "flex", "aesthetics", "sceneries", "clothes", "monuments", "celebration", "fitit", "animation",
-  ];
+  const creatorsStackIds = CONFIG.APP.CREATOR_STACKS;
   
   const stacksToShow = creatorsStackIds
     .map((id) => STACKS.find((s) => s.id === id))

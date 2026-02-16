@@ -1,4 +1,3 @@
-cat > .gitignore << 'EOF'
 # Build files
 dist/
 build/
@@ -36,7 +35,6 @@ coverage/
 # Cache
 .cache/
 *.cache
-EOF
 
 # Miscellaneous
 server/public/

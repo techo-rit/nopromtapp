@@ -100,14 +100,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   }, [selectedPlan, handleSelectPlan]);
 
-  // Handle close with confirmation if in processing
   const handleClose = useCallback(() => {
-    if (paymentState === 'processing') {
-      // Don't allow close during processing
-      return;
-    }
     onClose();
-  }, [paymentState, onClose]);
+  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -116,24 +111,40 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       {/* Backdrop with Blur */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] transition-all duration-300"
-        onClick={paymentState !== 'processing' ? handleClose : undefined}
+        onClick={handleClose}
         aria-hidden="true"
       />
 
       {/* Modal Container */}
-      <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none overflow-y-auto">
+      <div className="fixed inset-0 z-[101] flex items-start sm:items-center justify-center pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] px-4 pointer-events-none overflow-y-auto overflow-x-hidden">
         <div 
-          className="bg-[#0a0a0a] w-full max-w-[900px] rounded-3xl shadow-2xl border border-[#2a2a2a] overflow-hidden pointer-events-auto my-4"
+          className="relative bg-[#0a0a0a] w-full max-w-[900px] rounded-3xl shadow-2xl border border-[#2a2a2a] overflow-y-auto overflow-x-hidden max-h-[calc(100dvh-2rem)] pointer-events-auto my-0 sm:my-4"
           role="dialog"
           aria-modal="true"
           aria-label="Payment"
         >
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClose();
+            }}
+            className="absolute right-4 top-4 sm:right-6 sm:top-6 p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors z-20"
+            aria-label="Close payment modal"
+          >
+            <CloseIcon width={20} height={20} />
+          </button>
+
           {/* Render based on payment state */}
           {paymentState === 'plan-selection' && (
             <PlanSelectionView
               plans={PRICING_PLANS}
               onSelectPlan={handleSelectPlan}
-              onClose={handleClose}
               isLoading={isLoading}
             />
           )}
@@ -169,30 +180,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 interface PlanSelectionViewProps {
   plans: PricingPlan[];
   onSelectPlan: (plan: PricingPlan) => void;
-  onClose: () => void;
   isLoading: boolean;
 }
 
 const PlanSelectionView: React.FC<PlanSelectionViewProps> = ({
   plans,
   onSelectPlan,
-  onClose,
   isLoading,
 }) => {
   return (
     <div className="relative">
       {/* Background Ambient Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#c9a962]/5 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Close Button */}
-      <button
-        onClick={onClose}
-        className="absolute right-6 top-6 p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors z-10"
-        aria-label="Close"
-        disabled={isLoading}
-      >
-        <CloseIcon width={20} height={20} />
-      </button>
 
       {/* Header */}
       <div className="relative z-10 pt-12 pb-8 text-center px-6">
@@ -348,7 +347,7 @@ const ProcessingView: React.FC<ProcessingViewProps> = ({ planName }) => {
 
       <div className="bg-[#1a1a1a] rounded-xl p-4 max-w-sm mx-auto">
         <p className="text-xs text-[#6b6b6b]">
-          💡 Don't close this window. If the payment window doesn't appear, please disable your popup blocker.
+          Do not close this window. If checkout does not appear, disable your popup blocker.
         </p>
       </div>
     </div>
@@ -473,3 +472,4 @@ const ErrorView: React.FC<ErrorViewProps> = ({ errorMessage, onRetry, onClose })
     </div>
   );
 };
+

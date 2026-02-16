@@ -1,4 +1,4 @@
-import { createAnonClient, createAdminClient, setSessionCookies, clearSessionCookies, getUserFromRequest, fetchUserProfile, ensureUserProfile, mapUser, generatePkcePair, setPkceCookie, getPkceVerifier } from '../lib/auth.js';
+import { createAnonClient, createAdminClient, setSessionCookies, clearSessionCookies, getUserFromRequest, fetchUserProfile, ensureUserProfile, mapUser, generatePkcePair, setPkceCookie, getPkceVerifier, storeSessionForAccount, switchSessionToAccount, getSessionPool, setSessionPool, removeSessionForEmail } from '../lib/auth.js';
 import { clearCookie } from '../lib/cookies.js';
 
 function getBackendUrl(req) {
@@ -47,6 +47,7 @@ export async function signUpHandler(req, res) {
   }
 
   setSessionCookies(res, data.session);
+  storeSessionForAccount(req, res, data.session, data.user.email);
 
   const admin = createAdminClient();
   if (admin) await ensureUserProfile(admin, data.user);
@@ -71,6 +72,7 @@ export async function loginHandler(req, res) {
   }
 
   setSessionCookies(res, data.session);
+  storeSessionForAccount(req, res, data.session, data.user.email);
 
   const admin = createAdminClient();
   if (admin) await ensureUserProfile(admin, data.user);
@@ -78,9 +80,35 @@ export async function loginHandler(req, res) {
   return res.status(200).json({ success: true, user: mapUser(data.user, profile) });
 }
 
-export async function logoutHandler(_req, res) {
+export async function logoutHandler(req, res) {
+  const current = await getUserFromRequest(req, res);
+  const currentEmail = !('error' in current) ? (current.user.email || '').toLowerCase() : '';
+
+  let remainingPool = currentEmail
+    ? removeSessionForEmail(req, res, currentEmail)
+    : getSessionPool(req);
+
   clearSessionCookies(res);
-  return res.status(200).json({ success: true });
+
+  if (remainingPool.length === 0) {
+    setSessionPool(res, []);
+    return res.status(200).json({ success: true, user: null });
+  }
+
+  const admin = createAdminClient();
+  for (const candidate of remainingPool) {
+    const switched = await switchSessionToAccount(req, res, candidate.email, remainingPool);
+    if (!('error' in switched)) {
+      if (admin) await ensureUserProfile(admin, switched.user);
+      const profile = admin ? await fetchUserProfile(admin, switched.user.id) : { name: null, credits: 0 };
+      return res.status(200).json({ success: true, user: mapUser(switched.user, profile) });
+    }
+
+    remainingPool = remainingPool.filter((entry) => entry.email !== candidate.email);
+    setSessionPool(res, remainingPool);
+  }
+
+  return res.status(200).json({ success: true, user: null });
 }
 
 export async function meHandler(req, res) {
@@ -95,6 +123,23 @@ export async function meHandler(req, res) {
   return res.status(200).json({ success: true, user: mapUser(result.user, profile) });
 }
 
+export async function switchAccountHandler(req, res) {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email is required' });
+  }
+
+  const switched = await switchSessionToAccount(req, res, email);
+  if ('error' in switched) {
+    return res.status(switched.status).json({ success: false, error: switched.error });
+  }
+
+  const admin = createAdminClient();
+  if (admin) await ensureUserProfile(admin, switched.user);
+  const profile = admin ? await fetchUserProfile(admin, switched.user.id) : { name: null, credits: 0 };
+  return res.status(200).json({ success: true, user: mapUser(switched.user, profile) });
+}
+
 export async function googleStartHandler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -105,6 +150,8 @@ export async function googleStartHandler(req, res) {
 
   const { verifier, challenge } = generatePkcePair();
   setPkceCookie(res, verifier);
+  const loginHint = typeof req.query.login_hint === 'string' ? req.query.login_hint : null;
+  const prompt = typeof req.query.prompt === 'string' ? req.query.prompt : null;
 
   const redirectTo = `${getBackendUrl(req)}/auth/google/callback`;
   const url = new URL(`${supabaseUrl}/auth/v1/authorize`);
@@ -113,7 +160,10 @@ export async function googleStartHandler(req, res) {
   url.searchParams.set('code_challenge', challenge);
   url.searchParams.set('code_challenge_method', 's256');
   url.searchParams.set('access_type', 'offline');
-  url.searchParams.set('prompt', 'consent');
+  url.searchParams.set('prompt', prompt || 'consent');
+  if (loginHint) {
+    url.searchParams.set('login_hint', loginHint);
+  }
 
   return res.status(200).json({ success: true, url: url.toString() });
 }
@@ -154,6 +204,17 @@ export async function googleCallbackHandler(req, res) {
       refresh_token: data.refresh_token,
       expires_in: data.expires_in || 3600,
     });
+    const admin = createAdminClient();
+    if (admin) {
+      const { data: userData } = await admin.auth.getUser(data.access_token);
+      if (userData?.user?.email) {
+        storeSessionForAccount(req, res, {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in: data.expires_in || 3600,
+        }, userData.user.email);
+      }
+    }
 
     clearCookie(res, 'sb_code_verifier');
 

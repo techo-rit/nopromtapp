@@ -13,8 +13,8 @@ export const searchTemplates = (query: string, templates: Template[]): Template[
     const keywords = (template.keywords || []).map(k => k.toLowerCase());
     const category = template.stackId.toLowerCase();
 
-    // OR Logic: Returns true if ANY token matches title, keywords, or category
-    // For stricter search (AND logic), change .some() to .every()
+    // AND across tokens: every token must match title, keyword, or category.
+    // Within a token check, matching against fields is OR-based.
     return searchTokens.every((token) => {
       return (
         title.includes(token) || 

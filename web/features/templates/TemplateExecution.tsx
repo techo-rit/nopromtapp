@@ -8,6 +8,8 @@ import {
     RefreshIcon,
 } from "../../shared/ui/Icons";
 import { generateImage } from "./geminiService";
+import { useImagePaste } from "../../shared/hooks/useImagePaste";
+import { CONFIG } from "../../config";
 
 interface TemplateExecutionProps {
     template: Template;
@@ -43,8 +45,6 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
     const wearableImageRef = useRef(wearableImage);
     const hoveredZoneRef = useRef(hoveredZone);
     const isFititStackRef = useRef(isFititStack);
-    const isLoadingRef = useRef(isLoading);
-    const generatedImagesRef = useRef(generatedImages);
 
     // Sync refs with state
     useEffect(() => {
@@ -59,98 +59,39 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
     useEffect(() => {
         isFititStackRef.current = isFititStack;
     }, [isFititStack]);
-    useEffect(() => {
-        isLoadingRef.current = isLoading;
-    }, [isLoading]);
-    useEffect(() => {
-        generatedImagesRef.current = generatedImages;
-    }, [generatedImages]);
-
-    // Paste handler
-    useEffect(() => {
-        const handlePaste = (e: ClipboardEvent) => {
-            // Check if user is authenticated
+    useImagePaste({
+        enabled: !!user && !isLoading && !generatedImages,
+        maxFileSize: CONFIG.UPLOAD.MAX_FILE_SIZE,
+        acceptedTypes: CONFIG.UPLOAD.ACCEPTED_TYPES,
+        onError: (message) => alert(message),
+        onFile: (file) => {
             if (!user) {
                 onLoginRequired?.();
                 return;
             }
+            const currentHoveredZone = hoveredZoneRef.current;
+            const currentIsFititStack = isFititStackRef.current;
+            const currentSelfie = selfieImageRef.current;
+            const currentWearable = wearableImageRef.current;
 
-            // Read latest state from refs
-            if (isLoadingRef.current || generatedImagesRef.current) return;
-
-            let file: File | null = null;
-
-            // Priority 1: Check direct file list (common for file copying)
-            if (e.clipboardData && e.clipboardData.files.length > 0) {
-                for (let i = 0; i < e.clipboardData.files.length; i++) {
-                    const f = e.clipboardData.files[i];
-                    if (f.type.startsWith("image/")) {
-                        file = f;
-                        break;
-                    }
-                }
+            if (currentHoveredZone === "wearable" && currentIsFititStack) {
+                setWearableImage(file);
+                return;
+            }
+            if (currentHoveredZone === "selfie") {
+                setSelfieImage(file);
+                return;
             }
 
-            // Priority 2: Check items (common for screenshots or direct image data copy)
-            if (!file && e.clipboardData && e.clipboardData.items) {
-                const items = e.clipboardData.items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf("image") !== -1) {
-                        const f = items[i].getAsFile();
-                        if (f) {
-                            file = f;
-                            break;
-                        }
-                    }
-                }
+            if (!currentSelfie) {
+                setSelfieImage(file);
+            } else if (currentIsFititStack && !currentWearable) {
+                setWearableImage(file);
+            } else {
+                setSelfieImage(file);
             }
-
-            if (file) {
-                // Validate file
-                if (file.size > 10 * 1024 * 1024) {
-                    alert("Pasted file size exceeds 10MB.");
-                    return;
-                }
-                if (
-                    !["image/jpeg", "image/png", "image/webp"].includes(
-                        file.type,
-                    )
-                ) {
-                    alert(
-                        "Invalid file type. Please paste a JPG, PNG, or WebP image.",
-                    );
-                    return;
-                }
-
-                const currentHoveredZone = hoveredZoneRef.current;
-                const currentIsFititStack = isFititStackRef.current;
-                const currentSelfie = selfieImageRef.current;
-                const currentWearable = wearableImageRef.current;
-
-                // Determine target zone
-                if (currentHoveredZone === "wearable" && currentIsFititStack) {
-                    setWearableImage(file);
-                } else if (currentHoveredZone === "selfie") {
-                    setSelfieImage(file);
-                } else {
-                    // Intelligent fallback if not hovering over a specific zone
-                    if (!currentSelfie) {
-                        setSelfieImage(file);
-                    } else if (currentIsFititStack && !currentWearable) {
-                        setWearableImage(file);
-                    } else {
-                        // Default to overwriting selfie if both full or logic fails
-                        setSelfieImage(file);
-                    }
-                }
-            }
-        };
-
-        window.addEventListener("paste", handlePaste);
-        return () => {
-            window.removeEventListener("paste", handlePaste);
-        };
-    }, [user, onLoginRequired]); // Add user and onLoginRequired to dependency array
+        },
+    });
 
     const handleRemix = useCallback(async () => {
         // Check if user is authenticated

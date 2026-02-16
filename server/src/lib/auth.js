@@ -5,6 +5,8 @@ import { parseCookies, setCookie, clearCookie } from './cookies.js';
 const ACCESS_COOKIE = 'sb_access_token';
 const REFRESH_COOKIE = 'sb_refresh_token';
 const PKCE_COOKIE = 'sb_code_verifier';
+const SESSION_POOL_COOKIE = 'sb_session_pool';
+const MAX_STORED_SESSIONS = 5;
 
 function getSupabaseUrl() {
   return process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
@@ -60,6 +62,121 @@ export function setSessionCookies(res, session) {
 
   setCookie(res, ACCESS_COOKIE, session.access_token, { maxAge: accessMaxAge });
   setCookie(res, REFRESH_COOKIE, session.refresh_token, { maxAge: refreshMaxAge });
+}
+
+function readSessionPool(req) {
+  const cookies = parseCookies(req);
+  const raw = cookies[SESSION_POOL_COOKIE];
+  if (!raw) return [];
+  try {
+    const json = Buffer.from(raw, 'base64url').toString('utf8');
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) =>
+      item &&
+      typeof item.email === 'string' &&
+      typeof item.accessToken === 'string' &&
+      typeof item.refreshToken === 'string'
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeSessionPool(res, pool) {
+  const sanitized = pool.slice(0, MAX_STORED_SESSIONS).map((s) => ({
+    email: s.email,
+    accessToken: s.accessToken,
+    refreshToken: s.refreshToken,
+    updatedAt: Date.now(),
+  }));
+  const encoded = Buffer.from(JSON.stringify(sanitized), 'utf8').toString('base64url');
+  setCookie(res, SESSION_POOL_COOKIE, encoded, { maxAge: 60 * 60 * 24 * 30 });
+}
+
+export function getSessionPool(req) {
+  return readSessionPool(req);
+}
+
+export function setSessionPool(res, pool) {
+  writeSessionPool(res, pool);
+}
+
+export function removeSessionForEmail(req, res, email) {
+  const normalized = (email || '').toLowerCase();
+  const remaining = readSessionPool(req).filter((entry) => entry.email.toLowerCase() !== normalized);
+  writeSessionPool(res, remaining);
+  return remaining;
+}
+
+export function storeSessionForAccount(req, res, session, email) {
+  if (!session?.access_token || !session?.refresh_token || !email) return;
+  const existing = readSessionPool(req);
+  const next = [
+    {
+      email,
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+      updatedAt: Date.now(),
+    },
+    ...existing.filter((entry) => entry.email !== email),
+  ];
+  writeSessionPool(res, next);
+}
+
+export async function switchSessionToAccount(req, res, email, poolOverride = null) {
+  if (!email) {
+    return { error: 'Email is required', status: 400 };
+  }
+
+  const admin = createAdminClient();
+  const anon = createAnonClient();
+  if (!admin || !anon) {
+    return { error: 'Server misconfigured: missing Supabase keys', status: 500 };
+  }
+
+  const pool = Array.isArray(poolOverride) ? poolOverride : readSessionPool(req);
+  const found = pool.find((entry) => entry.email === email);
+  if (!found) {
+    return { error: 'No stored session for this account', status: 404 };
+  }
+
+  let accessToken = found.accessToken;
+  let refreshToken = found.refreshToken;
+
+  const accessCheck = await admin.auth.getUser(accessToken);
+  if (accessCheck.error || !accessCheck.data?.user) {
+    const refreshResult = await anon.auth.refreshSession({ refresh_token: refreshToken });
+    if (refreshResult.error || !refreshResult.data?.session) {
+      return { error: 'Stored session expired. Please log in again.', status: 401 };
+    }
+    accessToken = refreshResult.data.session.access_token;
+    refreshToken = refreshResult.data.session.refresh_token;
+    setSessionCookies(res, refreshResult.data.session);
+  } else {
+    setSessionCookies(res, {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 3600,
+    });
+  }
+
+  writeSessionPool(res, [
+    {
+      email,
+      accessToken,
+      refreshToken,
+      updatedAt: Date.now(),
+    },
+    ...pool.filter((entry) => entry.email !== email),
+  ]);
+
+  const userResp = await admin.auth.getUser(accessToken);
+  if (userResp.error || !userResp.data?.user) {
+    return { error: 'Unable to switch account', status: 401 };
+  }
+
+  return { user: userResp.data.user, accessToken };
 }
 
 export function clearSessionCookies(res) {

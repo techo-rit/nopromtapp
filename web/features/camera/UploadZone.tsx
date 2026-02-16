@@ -2,7 +2,7 @@ import React, { useState, useId, useEffect, useRef } from 'react';
 import { UploadIcon } from '../../shared/ui/Icons';
 import { SmartSelfieModal } from './SmartSelfieModal';
 import { StandardCameraModal } from './StandardCameraModal'; 
-import { usePaste } from '../../shared/hooks/usePaste';
+import { useImagePaste } from '../../shared/hooks/useImagePaste';
 import { CONFIG } from '../../config';
 
 interface UploadZoneProps {
@@ -50,8 +50,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     onFileChange(selectedFile);
   };
 
-  // Use the new Hook!
-  usePaste(handleFile);
+  useImagePaste({
+    onFile: handleFile,
+    onError: (message) => alert(message),
+  });
 
   // Drag Handlers
   const handleDrag = (e: React.DragEvent, state: boolean) => {
