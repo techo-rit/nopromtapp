@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from "react-router-dom";
 
 // Components
@@ -84,6 +84,9 @@ const App: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const authModalHistoryActiveRef = useRef(false);
+  const paymentModalHistoryActiveRef = useRef(false);
+  const ignoreNextModalPopRef = useRef(false);
 
   // --- Search (debounced to prevent O(n) search on every keystroke) ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -181,7 +184,7 @@ const App: React.FC = () => {
     try {
       const result = await action();
       if (result) setUser(result); // If action returns a user
-      setShowAuthModal(false);
+      closeAuthModal();
     } catch (error: any) {
       setAuthError(error.message || "Authentication failed");
     } finally {
@@ -189,10 +192,67 @@ const App: React.FC = () => {
     }
   };
 
+  const openAuthModal = useCallback(() => {
+    if (!authModalHistoryActiveRef.current) {
+      window.history.pushState({ authModal: true }, "", window.location.href);
+      authModalHistoryActiveRef.current = true;
+    }
+    setShowAuthModal(true);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    if (authModalHistoryActiveRef.current) {
+      ignoreNextModalPopRef.current = true;
+      window.history.back();
+      authModalHistoryActiveRef.current = false;
+    }
+    setShowAuthModal(false);
+  }, []);
+
+  const openPaymentModal = useCallback(() => {
+    if (!paymentModalHistoryActiveRef.current) {
+      window.history.pushState({ paymentModal: true }, "", window.location.href);
+      paymentModalHistoryActiveRef.current = true;
+    }
+    setShowPaymentModal(true);
+  }, []);
+
+  const closePaymentModal = useCallback(() => {
+    if (paymentModalHistoryActiveRef.current) {
+      ignoreNextModalPopRef.current = true;
+      window.history.back();
+      paymentModalHistoryActiveRef.current = false;
+    }
+    setShowPaymentModal(false);
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (ignoreNextModalPopRef.current) {
+        ignoreNextModalPopRef.current = false;
+        return;
+      }
+
+      if (paymentModalHistoryActiveRef.current) {
+        paymentModalHistoryActiveRef.current = false;
+        setShowPaymentModal(false);
+        return;
+      }
+
+      if (authModalHistoryActiveRef.current) {
+        authModalHistoryActiveRef.current = false;
+        setShowAuthModal(false);
+      }
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   const handleSwitchAccount = async (email: string) => {
     if (user?.email === email) return;
     setShowPaymentModal(false);
-    setShowAuthModal(false);
+    closeAuthModal();
     try {
       const switched = await authService.switchAccount(email);
       setUser(switched);
@@ -221,12 +281,12 @@ const App: React.FC = () => {
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
-          onSignIn={() => setShowAuthModal(true)}
+          onSignIn={openAuthModal}
           accounts={knownAccounts}
           onSwitchAccount={handleSwitchAccount}
           onLogout={handleLogout}
-          onAddAccount={() => setShowAuthModal(true)}
-          onUpgrade={() => user ? setShowPaymentModal(true) : setShowAuthModal(true)}
+          onAddAccount={openAuthModal}
+          onUpgrade={() => user ? openPaymentModal() : openAuthModal()}
           isLoading={isGlobalLoading}
           isSecondaryPage={location.pathname !== '/'}
           onBack={handleBack}
@@ -238,7 +298,7 @@ const App: React.FC = () => {
       {/* MODALS */}
       <AuthModal
         isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        onClose={closeAuthModal}
         onSignUp={(e, p, n) => handleAuthAction(() => authService.signUp(e, p, n))}
         onLogin={(e, p) => handleAuthAction(() => authService.login(e, p))}
         onGoogleAuth={() => handleAuthAction(() => authService.signInWithGoogle())}
@@ -249,7 +309,7 @@ const App: React.FC = () => {
       {user && (
         <PaymentModal
           isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
+          onClose={closePaymentModal}
           user={user}
           onPaymentSuccess={async () => {
              const u = await authService.getCurrentUser();
@@ -283,7 +343,7 @@ const App: React.FC = () => {
             element={
               <TemplateRoute 
                 user={user} 
-                onLoginRequired={() => setShowAuthModal(true)} 
+                onLoginRequired={openAuthModal} 
                 onBack={handleBack} 
               />
             } 
@@ -298,11 +358,11 @@ const App: React.FC = () => {
           activeNav={activeNav}
           onNavClick={handleNavClick}
           user={user}
-          onSignIn={() => setShowAuthModal(true)}
+          onSignIn={openAuthModal}
           accounts={knownAccounts}
           onSwitchAccount={handleSwitchAccount}
           onLogout={handleLogout}
-          onAddAccount={() => setShowAuthModal(true)}
+          onAddAccount={openAuthModal}
         />
       </div>
     </div>
