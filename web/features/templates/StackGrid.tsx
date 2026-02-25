@@ -7,6 +7,8 @@ interface StackGridProps {
   firstCardRef?: React.RefObject<HTMLDivElement | null>;
 }
 
+const CLICKABLE_STACK_IDS = new Set(['aesthetics', 'flex']);
+
 export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, firstCardRef }) => {
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -42,6 +44,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
       <div className="md:hidden flex flex-col gap-8 w-full pb-32">
         {stacks.map((stack, index) => {
           const isFocused = focusedCardId === stack.id;
+          const isComingSoon = !CLICKABLE_STACK_IDS.has(stack.id);
 
           return (
             <div
@@ -69,17 +72,24 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
                 /* FOCUS */
                 ${isFocused ? 'scale-[1.02] shadow-2xl border-[#c9a962]/50' : 'scale-95 opacity-80'}
               `}
-              onClick={() => onSelectStack(stack)}
+              onClick={() => {
+                if (!isComingSoon) onSelectStack(stack);
+              }}
             >
               <img src={stack.imageUrl} alt={stack.name} className="w-full h-full object-cover object-[center_30%]" />
               <div className={`absolute inset-0 transition-colors duration-500 ${isFocused ? 'bg-black/20' : 'bg-black/60'}`} />
               <div className="absolute inset-0 flex items-center justify-center p-4">
-                <h3 className={`
+                <div className="text-center">
+                  <h3 className={`
                   text-white text-4xl font-bold tracking-tight drop-shadow-lg transition-transform duration-500
                   ${isFocused ? 'scale-110' : 'scale-90 opacity-70'}
                 `}>
-                  {stack.name}
-                </h3>
+                    {stack.name}
+                  </h3>
+                  {isComingSoon && (
+                    <p className="mt-2 text-[#c9a962] text-sm font-medium">(coming soon...)</p>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -88,19 +98,29 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
 
       {/* Desktop: Grid (Unchanged) */}
       <div className="hidden md:grid grid-cols-2 gap-6 pb-12">
-        {stacks.map(stack => (
+        {stacks.map(stack => {
+          const isComingSoon = !CLICKABLE_STACK_IDS.has(stack.id);
+          return (
           <div
             key={stack.id}
             className="relative aspect-[4/3] rounded-2xl overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] border border-[#2a2a2a]"
-            onClick={() => onSelectStack(stack)}
+            onClick={() => {
+              if (!isComingSoon) onSelectStack(stack);
+            }}
           >
             <img src={stack.imageUrl} alt={stack.name} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-all" />
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <h3 className="text-white text-3xl font-bold">{stack.name}</h3>
+              <div className="text-center">
+                <h3 className="text-white text-3xl font-bold">{stack.name}</h3>
+                {isComingSoon && (
+                  <p className="mt-2 text-[#c9a962] text-sm font-medium">(coming soon...)</p>
+                )}
+              </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );

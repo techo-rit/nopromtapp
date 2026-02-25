@@ -1,7 +1,8 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import type { Template } from "../../types";
 import { ChevronLeftIcon, ChevronRightIcon } from "../../shared/ui/Icons";
 import { getManifestationQuote } from "../../data/manifestationQuotes";
+import { isTemplateAvailable, sortTemplatesByAvailability } from "./templateAvailability";
 
 interface TrendingCarouselProps {
     templates: Template[];
@@ -15,6 +16,14 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
     const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const orderedTemplates = useMemo(
+        () => sortTemplatesByAvailability(templates),
+        [templates]
+    );
+    const visibleTemplates = useMemo(
+        () => orderedTemplates.filter(isTemplateAvailable),
+        [orderedTemplates]
+    );
 
     // --- Logic for focusing cards ---
     const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -63,7 +72,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
         );
         cardRefs.current.forEach((el) => observer.observe(el));
         return () => observer.disconnect();
-    }, [templates]);
+    }, [visibleTemplates]);
 
     const scroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
@@ -93,7 +102,9 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     const handleKeyDown = (e: React.KeyboardEvent, template: Template) => {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            onSelectTemplate(template);
+            if (isTemplateAvailable(template)) {
+                onSelectTemplate(template);
+            }
         }
     };
 
@@ -137,7 +148,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                         /* REMOVED: scroll-pl-* (This was causing the rightward shift) */
                     "
                 >
-                    {templates.map((template) => {
+                    {visibleTemplates.map((template) => {
                         const isFocused = focusedCardId === template.id;
                         const quote = getManifestationQuote(template.name);
 
@@ -152,7 +163,9 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                                 <div
                                     role="button"
                                     tabIndex={0}
-                                    onClick={() => onSelectTemplate(template)}
+                                    onClick={() => {
+                                        onSelectTemplate(template);
+                                    }}
                                     onKeyDown={(e) =>
                                         handleKeyDown(e, template)
                                     }

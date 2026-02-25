@@ -16,10 +16,31 @@ async function fileToDataUrl(file: File | null) {
   });
 }
 
+async function urlToDataUrl(url: string | null | undefined) {
+  if (!url) return null;
+  try {
+    const resolvedUrl = /^https?:\/\//i.test(url)
+      ? url
+      : new URL(url, window.location.origin).toString();
+    const resp = await fetch(resolvedUrl, { credentials: "include" });
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Failed reading template reference image"));
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Minimal request shape expected by the server.
  * - imageData: data URL string for the main image (selfie)
  * - wearableData: optional data URL string for the wearable/overlay image
+ * - templateReferenceData: optional data URL string for template cover/reference image
  * - templateId: id of the template
  * - templateOptions: other options (prompt, aspectRatio, etc)
  */
@@ -34,10 +55,14 @@ export async function generateRemixOnServer(
 
   const imageData = await fileToDataUrl(imageFile);
   const wearableData = await fileToDataUrl(wearableFile ?? null);
+  const templateReferenceData = await urlToDataUrl(
+    templateOptions?.template?.imageUrl ?? templateOptions?.imageUrl
+  );
 
   const payload = {
     imageData,
     wearableData,
+    templateReferenceData,
     templateId,
     templateOptions: templateOptions ?? {},
   };

@@ -41,17 +41,11 @@ export const PRICING_PLANS: PricingPlan[] = [
 ];
 
 export const TRENDING_TEMPLATE_IDS: string[] = [
-  "flex_template_5", // Private Jet Lifestyle
-  "clothes_template_11", //evening gown
-  "aesthetics_template_20", // Dramatic Studio Portrait
-  "flex_template_18", // Race Track Ferrari
-  "celebration_template_3", // Cozy Christmas Portrait
-  "clothes_template_9", // Summer Linen
-  "flex_template_6", // Yacht life
-  "monuments_template_5", // Great Wall of China Trek
-  "flex_template_12", // Luxury shopping spree
-  "sceneries_template_2", // Sahara Desert Walk
-  "flex_template_13", // Infinity Pool Villa
+  "aesthetics_template_9",  // Seaside Golden Hour
+  "flex_template_10",       // Luxury Hotel Lounge
+  "aesthetics_template_14", // Evening Gown Twilight
+  "flex_template_6",        // Yacht Life
+  "flex_template_1",        // Bugatti Coastal Drive
 ];
 
 export const STACKS: Stack[] = [
@@ -2079,9 +2073,178 @@ const aestheticsTemplates: Template[] = [
     id: "aesthetics_template_9",
     name: "Seaside Golden Hour",
     stackId: "aesthetics",
-    imageUrl: "/images/asthetics_seasidegoldenhour_cover.webp",
-    prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} by the seaside or cliffside boardwalk, wind in hair and fabric, soft golden-hour tones, reflective water highlights, cinematic tranquility.\nno flat sky, no digital artifacts, no over-bright waves, no harsh shadows ,no background blur.",
+    imageUrl: "/images/asthetics_seasidegoldenhour_cover.png",
+    prompt: {
+      task: "identity_locked_virtual_tryon_with_static_face_composite_and_environment_interaction",
+
+      priority_stack: [
+        "face_identity_absolute",
+        "body_identity",
+        "clothing",
+        "interaction",
+        "environment"
+      ],
+
+      identity_priority: "absolute_maximum",
+
+      input_sources: {
+        identity_image: "{input_person}",
+        clothing_reference: "{second_input_image}"
+      },
+
+      face_handling_mode: "foreign_static_face_layer",
+
+      face_authority: {
+        source: "identity_image",
+        authority_level: "pixel_absolute",
+        treat_as_external_asset: true,
+        exclude_from_diffusion_graph: true
+      },
+
+      face_masking: {
+        enable: true,
+        mask_source: "identity_image",
+        mask_region: "entire_face_forehead_to_chin_ear_to_ear_including_hairline",
+        mask_type: "hard_mask_binary",
+
+        mask_behavior: "direct_pixel_transfer",
+
+        generation_inside_mask: "disabled",
+        diffusion_inside_mask: "disabled",
+        style_transfer_inside_mask: "disabled",
+        geometry_adjustment_inside_mask: "disabled",
+
+        lighting_adjustment_inside_mask: "minimal_photometric_alignment_only",
+        color_adjustment_inside_mask: "minimal_photometric_alignment_only",
+
+        edge_handling: {
+          blend_mode: "poisson_seamless_clone",
+          edge_color_matching: true,
+          edge_luminance_matching: true,
+          no_face_blur: true,
+          no_face_smoothing: true
+        }
+      },
+
+      identity_constraints: {
+        face_identity_lock: true,
+        face_source_of_truth: "identity_image",
+
+        render_order: [
+          "render_full_scene_without_face",
+          "insert_face_pixels_exactly",
+          "seam_align_face_edges",
+          "lock_face_layer"
+        ],
+
+        rules: {
+          do_not_modify_face_pixels: true,
+          do_not_regenerate_face: true,
+          do_not_change_face_geometry: true,
+          do_not_change_face_expression: true,
+          do_not_symmetrize_face: true
+        },
+
+        visibility_rules: {
+          full_face_visibility: true,
+          no_face_occlusion: true
+        },
+
+        failure_condition: {
+          type: "pixel_integrity_check",
+          rule: "If any face pixel differs from identity_image, output is invalid."
+        }
+      },
+
+      clothing_constraints: {
+        extract_clothing_only: true,
+        ignore_product_model_identity: true,
+        re_render_clothing: true,
+        no_clothing_paste: true
+      },
+
+      pose_and_body: {
+        pose: "standing or walking calmly along a seaside or cliffside boardwalk",
+        body_orientation: "natural_three_quarter",
+        neck_alignment: "match_identity_image",
+        head_rotation: "match_identity_image",
+        facial_expression: "exact_from_identity_image"
+      },
+
+      interaction_layer: {
+        interaction_priority: "secondary_to_identity",
+
+        interaction_scenarios: [
+          {
+            type: "coastal_interaction",
+            description: "hands resting naturally at sides or lightly touching railing, posture relaxed against ocean breeze",
+            rules: {
+              natural_weight_distribution: true,
+              no_pose_stiffness: true,
+              no_hand_object_merging: true
+            }
+          }
+        ],
+
+        environment_response: {
+          object_contact_feedback: {
+            enable: true,
+            water_reflection_integration: "reflects_environment_and_body_only",
+            shadow_contact: "body_only"
+          }
+        }
+      },
+
+      camera_and_framing: {
+        camera_angle: "eye_level",
+        focal_length: "cinematic_travel_photography",
+        distance: "medium_full_body",
+        no_wide_angle: true,
+        no_perspective_warp_on_face: true
+      },
+
+      scene_composition: {
+        environment: "seaside or cliffside boardwalk at golden hour",
+        background_elements: [
+          "textured wooden boardwalk",
+          "ocean water with reflective highlights",
+          "distant cliffs or coastline",
+          "detailed dynamic sky with depth",
+          "clean horizon line"
+        ],
+        lighting: "soft golden-hour sunlight with balanced cinematic tones",
+        background_visibility: "fully_sharp_and_detailed",
+        background_blur: "disabled",
+        depth_of_field: "deep_focus",
+        atmosphere_rules: {
+          no_flat_sky: true,
+          no_digital_artifacts: true,
+          no_over_bright_waves: true,
+          no_harsh_shadows: true
+        }
+      },
+
+      rendering_rules: {
+        photorealistic: true,
+        identity_layer_locked: true,
+        sharp_focus_everywhere: true,
+        no_postprocessing_on_face: true
+      },
+
+      negative_prompt: [
+        "background blur",
+        "portrait mode blur",
+        "depth blur",
+        "flat sky",
+        "digital artifacts",
+        "over bright waves",
+        "harsh shadows",
+        "face regeneration",
+        "approximate face",
+        "beautified face",
+        "AI face"
+      ]
+    },
     aspectRatio: "3:4",
     keywords: [
       "sea", "ocean", "beach", "sunset", "golden hour", "water",
@@ -2516,7 +2679,7 @@ const aestheticsTemplates: Template[] = [
     id: "aesthetics_template_13",
     name: "Bohemian Chic",
     stackId: "aesthetics",
-    imageUrl: "/images/asthetics_bohemia_cover.webp",
+    imageUrl: "/images/asthetics_bohemia_cover.png",
     prompt:
       "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in layered bohemian fabrics and patterns, soft evening sunlight, textured studio or artistic street market setting, natural smile, free-spirited hyper realistic image.\nno neon tones, no clutter, no artificial blur, no plastic texture , no background blur, change the hand gestures according to the background, no change in hairstyle.",
     aspectRatio: "3:4",
@@ -2530,9 +2693,174 @@ const aestheticsTemplates: Template[] = [
     id: "aesthetics_template_14",
     name: "Evening Gown Twilight",
     stackId: "aesthetics",
-    imageUrl: "/images/asthetics_eveninggowntwilight_cover.webp",
-    prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a flowing satin gown, standing in a softly lit ballroom or terrace at twilight, subtle reflections, rich color contrast, high-end magazine style realism.\nno glare, no fantasy glow, no distorted proportions, no over-saturation. no background blur, change the hand gestures according to the background, no change in hairstyle.",
+    imageUrl: "/images/asthetics_eveninggowntwilight_cover.png",
+    prompt: {
+      task: "identity_locked_virtual_tryon_with_static_face_composite_and_environment_interaction",
+
+      priority_stack: [
+        "face_identity_absolute",
+        "body_identity",
+        "clothing",
+        "interaction",
+        "environment"
+      ],
+
+      identity_priority: "absolute_maximum",
+
+      input_sources: {
+        identity_image: "{input_person}",
+        clothing_reference: "{second_input_image}"
+      },
+
+      face_handling_mode: "foreign_static_face_layer",
+
+      face_authority: {
+        source: "identity_image",
+        authority_level: "pixel_absolute",
+        treat_as_external_asset: true,
+        exclude_from_diffusion_graph: true
+      },
+
+      face_masking: {
+        enable: true,
+        mask_source: "identity_image",
+        mask_region: "entire_face_forehead_to_chin_ear_to_ear_including_hairline",
+        mask_type: "hard_mask_binary",
+
+        mask_behavior: "direct_pixel_transfer",
+
+        generation_inside_mask: "disabled",
+        diffusion_inside_mask: "disabled",
+        style_transfer_inside_mask: "disabled",
+        geometry_adjustment_inside_mask: "disabled",
+
+        lighting_adjustment_inside_mask: "minimal_photometric_alignment_only",
+        color_adjustment_inside_mask: "minimal_photometric_alignment_only",
+
+        edge_handling: {
+          blend_mode: "poisson_seamless_clone",
+          edge_color_matching: true,
+          edge_luminance_matching: true,
+          no_face_blur: true,
+          no_face_smoothing: true
+        }
+      },
+
+      identity_constraints: {
+        face_identity_lock: true,
+        face_source_of_truth: "identity_image",
+
+        render_order: [
+          "render_full_scene_without_face",
+          "insert_face_pixels_exactly",
+          "seam_align_face_edges",
+          "lock_face_layer"
+        ],
+
+        rules: {
+          do_not_modify_face_pixels: true,
+          do_not_regenerate_face: true,
+          do_not_change_face_geometry: true,
+          do_not_change_face_expression: true,
+          do_not_symmetrize_face: true
+        },
+
+        failure_condition: {
+          type: "pixel_integrity_check",
+          rule: "If any face pixel differs from identity_image, output is invalid."
+        }
+      },
+
+      clothing_constraints: {
+        extract_clothing_only: true,
+        ignore_product_model_identity: true,
+        re_render_clothing: true,
+        no_clothing_paste: true
+      },
+
+      pose_and_body: {
+        pose: "standing elegantly inside a softly lit ballroom or on a terrace at twilight",
+        body_orientation: "graceful_three_quarter",
+        neck_alignment: "match_identity_image",
+        head_rotation: "match_identity_image",
+        facial_expression: "exact_from_identity_image"
+      },
+
+      interaction_layer: {
+        interaction_priority: "secondary_to_identity",
+
+        interaction_scenarios: [
+          {
+            type: "elegant_environment_interaction",
+            description: "one hand resting naturally on a railing, column, or at the side depending on setting",
+            rules: {
+              natural_weight_distribution: true,
+              no_pose_stiffness: true,
+              no_hand_object_merging: true
+            }
+          }
+        ],
+
+        environment_response: {
+          object_contact_feedback: {
+            enable: true,
+            reflection_integration: "subtle_floor_or_surface_reflection_body_only",
+            shadow_contact: "body_only"
+          }
+        }
+      },
+
+      camera_and_framing: {
+        camera_angle: "eye_level",
+        focal_length: "high_end_fashion_photography",
+        distance: "medium_full_body",
+        no_wide_angle: true,
+        no_perspective_warp_on_face: true
+      },
+
+      scene_composition: {
+        environment: "luxury ballroom interior or terrace at twilight",
+        background_elements: [
+          "architectural columns or railings",
+          "polished marble or stone flooring",
+          "warm ambient twilight sky if terrace",
+          "subtle surface reflections",
+          "rich color contrast lighting"
+        ],
+        lighting: "soft twilight ambient light with balanced cinematic tones",
+        background_visibility: "fully_sharp_and_detailed",
+        background_blur: "disabled",
+        depth_of_field: "deep_focus",
+        atmosphere_rules: {
+          no_glare: true,
+          no_fantasy_glow: true,
+          no_over_saturation: true,
+          no_distorted_proportions: true
+        }
+      },
+
+      rendering_rules: {
+        photorealistic: true,
+        identity_layer_locked: true,
+        sharp_focus_everywhere: true,
+        no_postprocessing_on_face: true
+      },
+
+      negative_prompt: [
+        "background blur",
+        "portrait mode blur",
+        "depth blur",
+        "glare",
+        "fantasy glow",
+        "over saturation",
+        "cartoon look",
+        "face regeneration",
+        "approximate face",
+        "beautified face",
+        "AI face",
+        "hairstyle change"
+      ]
+    },
     aspectRatio: "3:4",
     keywords: [
       "gown", "evening", "party", "dress", "elegant", "night",
@@ -2593,7 +2921,7 @@ const aestheticsTemplates: Template[] = [
         gaze: "direct_soft_eye_contact",
         hair: "professionally_styled", // I also fixed the typo "m." to something safe
       },
-    }, // <--- THIS WAS MISSING
+    },
     aspectRatio: "3:4",
     keywords: [
       "city", "casual", "modern", "street", "urban", "daily",
@@ -4129,9 +4457,174 @@ const flexTemplates: Template[] = [
     id: "flex_template_1",
     name: "Bugatti Coastal Drive",
     stackId: "flex",
-    imageUrl: "/images/flex_bugaticostaldrive_cover.webp",
-    prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a tailored suit or premium jacket, posing beside or driving a Bugatti on a scenic coastal highway, sunlight reflecting off polished metal, wind-in-motion realism, Raymond-class sophistication.\nno motion blur, no fantasy reflections, no cartoon look, no harsh shadows.",
+    imageUrl: "/images/flex_bugaticostaldrive_cover.png",
+    prompt: {
+      task: "identity_locked_virtual_tryon_with_static_face_composite_and_environment_interaction",
+
+      priority_stack: [
+        "face_identity_absolute",
+        "body_identity",
+        "clothing",
+        "interaction",
+        "environment"
+      ],
+
+      identity_priority: "absolute_maximum",
+
+      input_sources: {
+        identity_image: "{input_person}",
+        clothing_reference: "{second_input_image}"
+      },
+
+      face_handling_mode: "foreign_static_face_layer",
+
+      face_authority: {
+        source: "identity_image",
+        authority_level: "pixel_absolute",
+        treat_as_external_asset: true,
+        exclude_from_diffusion_graph: true
+      },
+
+      face_masking: {
+        enable: true,
+        mask_source: "identity_image",
+        mask_region: "entire_face_forehead_to_chin_ear_to_ear_including_hairline",
+        mask_type: "hard_mask_binary",
+
+        mask_behavior: "direct_pixel_transfer",
+
+        generation_inside_mask: "disabled",
+        diffusion_inside_mask: "disabled",
+        style_transfer_inside_mask: "disabled",
+        geometry_adjustment_inside_mask: "disabled",
+
+        lighting_adjustment_inside_mask: "minimal_photometric_alignment_only",
+        color_adjustment_inside_mask: "minimal_photometric_alignment_only",
+
+        edge_handling: {
+          blend_mode: "poisson_seamless_clone",
+          edge_color_matching: true,
+          edge_luminance_matching: true,
+          no_face_blur: true,
+          no_face_smoothing: true
+        }
+      },
+
+      identity_constraints: {
+        face_identity_lock: true,
+        face_source_of_truth: "identity_image",
+
+        render_order: [
+          "render_full_scene_without_face",
+          "insert_face_pixels_exactly",
+          "seam_align_face_edges",
+          "lock_face_layer"
+        ],
+
+        rules: {
+          do_not_modify_face_pixels: true,
+          do_not_regenerate_face: true,
+          do_not_change_face_geometry: true,
+          do_not_change_face_expression: true,
+          do_not_symmetrize_face: true
+        },
+
+        failure_condition: {
+          type: "pixel_integrity_check",
+          rule: "If any face pixel differs from identity_image, output is invalid."
+        }
+      },
+
+      clothing_constraints: {
+        extract_clothing_only: true,
+        ignore_product_model_identity: true,
+        re_render_clothing: true,
+        no_clothing_paste: true
+      },
+
+      pose_and_body: {
+        pose: "standing beside or seated inside a Bugatti on a scenic coastal highway",
+        body_orientation: "confident_three_quarter",
+        neck_alignment: "match_identity_image",
+        head_rotation: "match_identity_image",
+        facial_expression: "exact_from_identity_image"
+      },
+
+      interaction_layer: {
+        interaction_priority: "secondary_to_identity",
+
+        interaction_scenarios: [
+          {
+            type: "luxury_vehicle_interaction",
+            description: "one hand resting on the Bugatti door, steering wheel, or roofline, the other relaxed or adjusting suit jacket",
+            rules: {
+              natural_weight_distribution: true,
+              no_hand_object_merging: true,
+              no_pose_stiffness: true
+            }
+          }
+        ],
+
+        environment_response: {
+          object_contact_feedback: {
+            enable: true,
+            car_reflection_integration: "reflects_environment_and_body_only",
+            shadow_contact: "body_and_vehicle_only"
+          }
+        }
+      },
+
+      camera_and_framing: {
+        camera_angle: "eye_level",
+        focal_length: "standard_automotive_photography",
+        distance: "medium_full_body",
+        no_wide_angle: true,
+        no_perspective_warp_on_face: true
+      },
+
+      scene_composition: {
+        environment: "scenic coastal highway",
+        hero_object: "Bugatti hypercar",
+        background_elements: [
+          "coastal cliffs",
+          "ocean visible in distance",
+          "winding asphalt road",
+          "guardrails and road markings",
+          "clear horizon line"
+        ],
+        lighting: "natural sunlight with clean reflections on polished metal",
+        background_visibility: "fully_sharp_and_detailed",
+        background_blur: "disabled",
+        depth_of_field: "deep_focus",
+        atmosphere_rules: {
+          no_motion_blur: true,
+          no_fantasy_reflections: true,
+          no_cartoon_look: true,
+          no_harsh_shadows: true
+        }
+      },
+
+      rendering_rules: {
+        photorealistic: true,
+        identity_layer_locked: true,
+        sharp_focus_everywhere: true,
+        no_postprocessing_on_face: true
+      },
+
+      negative_prompt: [
+        "motion blur",
+        "fantasy reflections",
+        "cartoon style",
+        "harsh shadows",
+        "blurred background",
+        "portrait mode blur",
+        "depth blur",
+        "face regeneration",
+        "approximate face",
+        "beautified face",
+        "AI face"
+      ]
+    },
     aspectRatio: "3:4",
     keywords: [
       "bugatti", "car", "supercar", "rich", "luxury", "drive", "gadi",
@@ -4664,9 +5157,173 @@ const flexTemplates: Template[] = [
     id: "flex_template_6",
     name: "Yacht Life",
     stackId: "flex",
-    imageUrl: "/images/flex_yachtlife_cover.webp",
-    prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} on a luxury yacht deck wearing linen shirt or summer blazer, calm blue ocean background, sunlight reflections on water, clean cinematic tones, National Geographic-style travel luxury.\nno haze, no overexposure, no blur, no unrealistic waves.no change in hairstyle , no blur background, change the hand gestures accordingly",
+    imageUrl: "/images/flex_yachtlife_cover.png",
+    prompt: {
+      task: "identity_locked_virtual_tryon_with_static_face_composite_and_environment_interaction",
+
+      priority_stack: [
+        "face_identity_absolute",
+        "body_identity",
+        "clothing",
+        "interaction",
+        "environment"
+      ],
+
+      identity_priority: "absolute_maximum",
+
+      input_sources: {
+        identity_image: "{input_person}",
+        clothing_reference: "{second_input_image}"
+      },
+
+      face_handling_mode: "foreign_static_face_layer",
+
+      face_authority: {
+        source: "identity_image",
+        authority_level: "pixel_absolute",
+        treat_as_external_asset: true,
+        exclude_from_diffusion_graph: true
+      },
+
+      face_masking: {
+        enable: true,
+        mask_source: "identity_image",
+        mask_region: "entire_face_forehead_to_chin_ear_to_ear_including_hairline",
+        mask_type: "hard_mask_binary",
+
+        mask_behavior: "direct_pixel_transfer",
+
+        generation_inside_mask: "disabled",
+        diffusion_inside_mask: "disabled",
+        style_transfer_inside_mask: "disabled",
+        geometry_adjustment_inside_mask: "disabled",
+
+        lighting_adjustment_inside_mask: "minimal_photometric_alignment_only",
+        color_adjustment_inside_mask: "minimal_photometric_alignment_only",
+
+        edge_handling: {
+          blend_mode: "poisson_seamless_clone",
+          edge_color_matching: true,
+          edge_luminance_matching: true,
+          no_face_blur: true,
+          no_face_smoothing: true
+        }
+      },
+
+      identity_constraints: {
+        face_identity_lock: true,
+        face_source_of_truth: "identity_image",
+
+        render_order: [
+          "render_full_scene_without_face",
+          "insert_face_pixels_exactly",
+          "seam_align_face_edges",
+          "lock_face_layer"
+        ],
+
+        rules: {
+          do_not_modify_face_pixels: true,
+          do_not_regenerate_face: true,
+          do_not_change_face_geometry: true,
+          do_not_change_face_expression: true,
+          do_not_symmetrize_face: true
+        },
+
+        failure_condition: {
+          type: "pixel_integrity_check",
+          rule: "If any face pixel differs from identity_image, output is invalid."
+        }
+      },
+
+      clothing_constraints: {
+        extract_clothing_only: true,
+        ignore_product_model_identity: true,
+        re_render_clothing: true,
+        no_clothing_paste: true
+      },
+
+      pose_and_body: {
+        pose: "standing relaxed on a luxury yacht deck",
+        body_orientation: "natural_three_quarter",
+        neck_alignment: "match_identity_image",
+        head_rotation: "match_identity_image",
+        facial_expression: "exact_from_identity_image"
+      },
+
+      interaction_layer: {
+        interaction_priority: "secondary_to_identity",
+
+        interaction_scenarios: [
+          {
+            type: "yacht_interaction",
+            description: "one hand resting casually on the yacht railing or deck surface, the other naturally positioned or lightly adjusting linen shirt or summer blazer",
+            rules: {
+              natural_weight_distribution: true,
+              no_hand_object_merging: true,
+              no_pose_stiffness: true
+            }
+          }
+        ],
+
+        environment_response: {
+          object_contact_feedback: {
+            enable: true,
+            water_reflection_integration: "reflects_environment_and_body_only",
+            shadow_contact: "body_and_deck_only"
+          }
+        }
+      },
+
+      camera_and_framing: {
+        camera_angle: "eye_level",
+        focal_length: "85mm_portrait_equivalent",
+        distance: "medium_full_body",
+        no_wide_angle: true,
+        no_perspective_warp_on_face: true
+      },
+
+      scene_composition: {
+        environment: "luxury yacht deck in open ocean",
+        hero_object: "luxury yacht structure",
+        background_elements: [
+          "calm blue ocean",
+          "clear horizon line",
+          "sunlight reflections on water",
+          "white yacht surfaces",
+          "teak deck textures"
+        ],
+        lighting: "natural sunlight with clean cinematic tones",
+        background_visibility: "fully_sharp_and_detailed",
+        background_blur: "disabled",
+        depth_of_field: "deep_focus",
+        atmosphere_rules: {
+          no_haze: true,
+          no_overexposure: true,
+          no_unrealistic_waves: true
+        }
+      },
+
+      rendering_rules: {
+        photorealistic: true,
+        identity_layer_locked: true,
+        sharp_focus_everywhere: true,
+        no_postprocessing_on_face: true
+      },
+
+      negative_prompt: [
+        "haze",
+        "overexposure",
+        "blurred background",
+        "portrait mode blur",
+        "depth blur",
+        "unrealistic waves",
+        "hairstyle change",
+        "face regeneration",
+        "approximate face",
+        "beautified face",
+        "AI face"
+      ]
+    },
     aspectRatio: "3:4",
     keywords: [
       "yacht", "boat", "ocean", "sea", "luxury", "travel", "wealth",
@@ -4983,9 +5640,177 @@ const flexTemplates: Template[] = [
     id: "flex_template_10",
     name: "Luxury Hotel Lounge",
     stackId: "flex",
-    imageUrl: "/images/flex_LuxuryHotelLounge_cover.webp",
-    prompt:
-      "Make sure the background of the output image is not blurry and the output image has clearly visible background objects. Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. {input person} in a formal blazer or elegant dress, seated in a luxurious hotel lounge with warm ambient lighting, marble tables, golden tones, cinematic realism, Raymond lifestyle grace and poise.\nno harsh light, no blur, no busy crowd, no cartoon textures.no change in hairstyle , no blur background, change the hand gestures accordingly . whole face should be visible .",
+    imageUrl: "/images/flex_LuxuryHotelLounge_cover.png",
+    prompt: {
+      task: "identity_locked_virtual_tryon_with_static_face_composite_and_environment_interaction",
+
+      priority_stack: [
+        "face_identity_absolute",
+        "body_identity",
+        "clothing",
+        "interaction",
+        "environment"
+      ],
+
+      identity_priority: "absolute_maximum",
+
+      input_sources: {
+        identity_image: "{input_person}",
+        clothing_reference: "{second_input_image}"
+      },
+
+      face_handling_mode: "foreign_static_face_layer",
+
+      face_authority: {
+        source: "identity_image",
+        authority_level: "pixel_absolute",
+        treat_as_external_asset: true,
+        exclude_from_diffusion_graph: true
+      },
+
+      face_masking: {
+        enable: true,
+        mask_source: "identity_image",
+        mask_region: "entire_face_forehead_to_chin_ear_to_ear_including_hairline",
+        mask_type: "hard_mask_binary",
+
+        mask_behavior: "direct_pixel_transfer",
+
+        generation_inside_mask: "disabled",
+        diffusion_inside_mask: "disabled",
+        style_transfer_inside_mask: "disabled",
+        geometry_adjustment_inside_mask: "disabled",
+
+        lighting_adjustment_inside_mask: "minimal_photometric_alignment_only",
+        color_adjustment_inside_mask: "minimal_photometric_alignment_only",
+
+        edge_handling: {
+          blend_mode: "poisson_seamless_clone",
+          edge_color_matching: true,
+          edge_luminance_matching: true,
+          no_face_blur: true,
+          no_face_smoothing: true
+        }
+      },
+
+      identity_constraints: {
+        face_identity_lock: true,
+        face_source_of_truth: "identity_image",
+
+        render_order: [
+          "render_full_scene_without_face",
+          "insert_face_pixels_exactly",
+          "seam_align_face_edges",
+          "lock_face_layer"
+        ],
+
+        rules: {
+          do_not_modify_face_pixels: true,
+          do_not_regenerate_face: true,
+          do_not_change_face_geometry: true,
+          do_not_change_face_expression: true,
+          do_not_symmetrize_face: true
+        },
+
+        visibility_rules: {
+          full_face_visibility: true,
+          no_face_occlusion: true
+        },
+
+        failure_condition: {
+          type: "pixel_integrity_check",
+          rule: "If any face pixel differs from identity_image, output is invalid."
+        }
+      },
+
+      clothing_constraints: {
+        extract_clothing_only: true,
+        ignore_product_model_identity: true,
+        re_render_clothing: true,
+        no_clothing_paste: true
+      },
+
+      pose_and_body: {
+        pose: "seated gracefully in a sharply visible luxurious korean hotel lounge",
+        body_orientation: "natural_seated_three_quarter",
+        neck_alignment: "match_identity_image",
+        head_rotation: "match_identity_image",
+        facial_expression: "exact_from_identity_image"
+      },
+
+      interaction_layer: {
+        interaction_priority: "secondary_to_identity",
+
+        interaction_scenarios: [
+          {
+            type: "lounge_interaction",
+            description: "hands resting naturally on lap, armrest, or lightly placed on marble table surface",
+            rules: {
+              natural_weight_distribution: true,
+              no_pose_stiffness: true,
+              no_hand_object_merging: true
+            }
+          }
+        ],
+
+        environment_response: {
+          object_contact_feedback: {
+            enable: true,
+            surface_reflection_integration: "subtle_table_and_floor_reflection_body_only",
+            shadow_contact: "body_and_seating_only"
+          }
+        }
+      },
+
+      camera_and_framing: {
+        camera_angle: "eye_level",
+        focal_length: "luxury_lifestyle_photography",
+        distance: "medium_full_body",
+        no_wide_angle: true,
+        no_perspective_warp_on_face: true
+      },
+
+      scene_composition: {
+        environment: "luxurious hotel lounge interior",
+        background_elements: [
+          "marble tables",
+          "plush seating",
+          "warm ambient lighting",
+          "golden interior tones",
+          "refined architectural detailing"
+        ],
+        lighting: "soft warm ambient lighting with balanced cinematic tones",
+        background_visibility: "fully_sharp_and_detailed",
+        background_blur: "disabled",
+        depth_of_field: "deep_focus",
+        atmosphere_rules: {
+          no_harsh_light: true,
+          no_busy_crowd: true,
+          no_cartoon_textures: true
+        }
+      },
+
+      rendering_rules: {
+        photorealistic: true,
+        identity_layer_locked: true,
+        sharp_focus_everywhere: true,
+        no_postprocessing_on_face: true
+      },
+
+      negative_prompt: [
+        "background blur",
+        "portrait mode blur",
+        "depth blur",
+        "harsh light",
+        "busy crowd",
+        "cartoon textures",
+        "face regeneration",
+        "approximate face",
+        "beautified face",
+        "AI face",
+        "hairstyle change"
+      ]
+    },
     aspectRatio: "3:4",
     keywords: [
       "luxury", "hotel", "lounge", "formal", "blazer", "elegant", "dress",

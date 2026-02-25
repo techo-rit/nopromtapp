@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Template } from '../../types';
 import { getManifestationQuote } from '../../data/manifestationQuotes';
+import { isTemplateAvailable, sortTemplatesByAvailability } from './templateAvailability';
 
 interface TemplateGridProps {
   templates: Template[];
@@ -11,6 +12,10 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const orderedTemplates = useMemo(
+    () => sortTemplatesByAvailability(templates),
+    [templates]
+  );
 
   // Register card refs for position calculation
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -49,7 +54,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
 
   useEffect(() => {
     handleScroll();
-  }, [templates, handleScroll]);
+  }, [orderedTemplates, handleScroll]);
 
   return (
     <div 
@@ -85,15 +90,18 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
         scrollbar-hide
       "
     >
-      {templates.map(template => {
+      {orderedTemplates.map(template => {
         const isFocused = focusedCardId === template.id;
         const quote = getManifestationQuote(template.name);
+        const isAvailable = isTemplateAvailable(template);
 
         return (
           <div
             key={template.id}
             ref={(el) => setCardRef(template.id, el)}
-            onClick={() => onSelectTemplate(template)}
+            onClick={() => {
+              if (isAvailable) onSelectTemplate(template);
+            }}
             className={`
               /* SNAP ALIGNMENT */
               snap-center 
@@ -162,9 +170,14 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               </button>
 
               {/* HEADING */}
-              <h3 className="text-[#f5f5f5] text-[24px] md:text-[56px] font-bold leading-tight md:drop-shadow-lg">
-                {template.name}
-              </h3>
+              <div>
+                <h3 className="text-[#f5f5f5] text-[24px] md:text-[56px] font-bold leading-tight md:drop-shadow-lg">
+                  {template.name}
+                </h3>
+                {!isAvailable && (
+                  <p className="mt-1 text-[#c9a962] text-[12px] md:text-[14px] font-medium">(coming soon...)</p>
+                )}
+              </div>
 
               {/* DESCRIPTION */}
               <p className={`

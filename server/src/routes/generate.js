@@ -65,7 +65,7 @@ export async function generateHandler(req, res) {
       return;
     }
 
-    const { imageData, wearableData, templateId, templateOptions } = req.body || {};
+    const { imageData, wearableData, templateReferenceData, templateId, templateOptions } = req.body || {};
     const userLog = createLogger(requestId, authResult.userId);
 
     const mainImage = validateAndParseImage(imageData);
@@ -86,6 +86,16 @@ export async function generateHandler(req, res) {
         return;
       }
       validWearable = wearableImage;
+    }
+
+    const templateReferenceImage = validateAndParseImage(templateReferenceData);
+    let validTemplateReference = null;
+    if (templateReferenceImage) {
+      if ('error' in templateReferenceImage) {
+        res.status(400).json({ error: `Template reference image error: ${templateReferenceImage.error}` });
+        return;
+      }
+      validTemplateReference = templateReferenceImage;
     }
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -113,6 +123,15 @@ export async function generateHandler(req, res) {
       });
     }
 
+    if (validTemplateReference) {
+      parts.push({
+        inlineData: {
+          mimeType: validTemplateReference.mimeType,
+          data: validTemplateReference.data,
+        },
+      });
+    }
+
     const userInstruction = sanitizePrompt(templateOptions?.text || templateOptions?.prompt);
     const aspectRatio = templateOptions?.aspectRatio || '1:1';
 
@@ -124,14 +143,19 @@ export async function generateHandler(req, res) {
             INPUTS:
             - Image 1: "The Subject" (Preserve this person's face and identity exactly).
             - Image 2: "The Garment" (Apply this clothing to the Subject).
+            ${validTemplateReference ? '- Image 3: "Template Reference" (Use this as visual guidance for scene/composition/style only).' : ''}
             
             INSTRUCTIONS:
             1. Generate a photorealistic image of the person from Image 1 wearing the clothing from Image 2.
             2. CRITICAL: The face in the output MUST match the face in Image 1. 
             3. Adjust the lighting on the clothing to match the Subject's environment.
+            ${validTemplateReference ? '4. Use Image 3 to guide the background scene, composition, and overall styling, while preserving identity from Image 1.' : ''}
             `;
     } else {
       coreInstruction = userInstruction || `Generate a photorealistic remix based on this image. Theme: ${templateId}`;
+      if (validTemplateReference) {
+        coreInstruction += '\nUse the template reference image as visual guidance for scene/composition/style.';
+      }
     }
 
     const finalPrompt = `
