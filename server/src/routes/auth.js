@@ -165,6 +165,10 @@ export async function googleStartHandler(req, res) {
     url.searchParams.set('login_hint', loginHint);
   }
 
+  if (req.query.redirect === '1') {
+    return res.redirect(url.toString());
+  }
+
   return res.status(200).json({ success: true, url: url.toString() });
 }
 

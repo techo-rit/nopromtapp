@@ -192,6 +192,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleGoogleAuth = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      await authService.signInWithGoogle();
+      // No modal close here: signInWithGoogle redirects the page.
+    } catch (error: any) {
+      setAuthError(error.message || "Google authentication failed");
+      setAuthLoading(false);
+    }
+  };
+
   const openAuthModal = useCallback(() => {
     if (!authModalHistoryActiveRef.current) {
       window.history.pushState({ authModal: true }, "", window.location.href);
@@ -301,7 +313,7 @@ const App: React.FC = () => {
         onClose={closeAuthModal}
         onSignUp={(e, p, n) => handleAuthAction(() => authService.signUp(e, p, n))}
         onLogin={(e, p) => handleAuthAction(() => authService.login(e, p))}
-        onGoogleAuth={() => handleAuthAction(() => authService.signInWithGoogle())}
+        onGoogleAuth={handleGoogleAuth}
         isLoading={authLoading}
         error={authError}
       />

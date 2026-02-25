@@ -51,17 +51,12 @@ export const authService = {
   async signInWithGoogle(loginHint?: string): Promise<void> {
     const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '')
     const baseUrl = apiBase ? `${apiBase}/auth/google/start` : '/auth/google/start'
-    const url = loginHint
-      ? `${baseUrl}?login_hint=${encodeURIComponent(loginHint)}&prompt=select_account`
-      : baseUrl
-
-    const resp = await fetch(url, { credentials: 'include' })
-    const data = await resp.json()
-    if (!resp.ok || !data.success || !data.url) {
-      throw new Error(data.error || 'Google auth failed')
+    const params = new URLSearchParams({ redirect: '1' })
+    if (loginHint) {
+      params.set('login_hint', loginHint)
+      params.set('prompt', 'select_account')
     }
-
-    window.location.href = data.url
+    window.location.href = `${baseUrl}?${params.toString()}`
   },
 
   async getCurrentUser(): Promise<User | null> {
