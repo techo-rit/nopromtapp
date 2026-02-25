@@ -14,6 +14,8 @@ import { signUpHandler, loginHandler, logoutHandler, meHandler, switchAccountHan
 
 export function createApp() {
   const app = express();
+  const bodyLimitMb = Number(process.env.BODY_LIMIT_MB || 35);
+  const bodyLimit = `${Number.isFinite(bodyLimitMb) && bodyLimitMb > 0 ? bodyLimitMb : 35}mb`;
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -49,7 +51,7 @@ export function createApp() {
   });
 
   app.use(express.json({
-    limit: '15mb',
+    limit: bodyLimit,
     verify: (req, _res, buf) => {
       req.rawBody = buf.toString();
     },
