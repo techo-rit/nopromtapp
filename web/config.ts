@@ -47,7 +47,7 @@ export const CONFIG = {
     ANIMATION_DURATION_MS: 300,
   },
   APP: {
-    NAME: "NoPromt",
+    NAME: "Stiri",
     // Used in App.tsx for logic
     CREATOR_STACKS: [
       "flex", "aesthetics", "sceneries", "clothes", 

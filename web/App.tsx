@@ -21,8 +21,8 @@ import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./dat
 import type { Template, User, NavCategory, Stack } from "./types";
 
 // Storage Helper (Moved here for now, could be in utils)
-const STORAGE_KEY_NAV = "nopromt_nav";
-const STORAGE_KEY_ACCOUNTS = "nopromt_accounts";
+const STORAGE_KEY_NAV = "stiri_nav";
+const STORAGE_KEY_ACCOUNTS = "stiri_accounts";
 
 type StoredAccount = {
   id: string;

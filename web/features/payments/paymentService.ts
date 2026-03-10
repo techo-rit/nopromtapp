@@ -220,7 +220,7 @@ export async function openRazorpayCheckout(
     key: options.keyId,
     amount: options.amount,
     currency: options.currency,
-    name: 'nopromt.ai',
+    name: 'Stiri',
     description: `${options.planName} Plan`,
     order_id: options.orderId,
     prefill: options.prefill,

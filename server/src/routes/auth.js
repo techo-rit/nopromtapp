@@ -5,7 +5,7 @@ function getBackendUrl(req) {
   const envUrl = process.env.BACKEND_URL?.trim();
   if (!envUrl) return `${req.protocol}://${req.get('host')}`;
 
-  // Accept values like "app.nopromt.ai" and normalize to a valid absolute URL.
+  // Accept values like "stiri.in" and normalize to a valid absolute URL.
   const withProtocol = /^https?:\/\//i.test(envUrl) ? envUrl : `https://${envUrl}`;
   try {
     const normalized = new URL(withProtocol);

@@ -1,17 +1,13 @@
 import React from 'react';
 
 export const RemixLogoIcon: React.FC = () => (
-  <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="32" cy="32" r="32" fill="#000000" />
-    
-    <path
-      d="M21 46V29C21 20 32 20 32 29V46M32 21C42 21 47 25 47 31C47 37 42 41 32 41"
-      stroke="#FFFFFF" 
-      strokeWidth="5" 
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-</svg>
+  <img 
+    src="/ico/favicon.svg" 
+    alt="Stiri Logo" 
+    width="40" 
+    height="40" 
+    style={{ display: 'block' }}
+  />
 );
 
 export const ArrowLeftIcon: React.FC = () => (

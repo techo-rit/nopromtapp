@@ -1,5 +1,5 @@
 {
-  "name": "nopromtapp",
+  "name": "stiriapp",
   "private": true,
   "workspaces": [
     "web",

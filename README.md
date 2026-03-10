@@ -1,4 +1,4 @@
-# nopromtapp (DigitalOcean single-origin)
+# stiriapp (DigitalOcean single-origin)
 
 ## Structure
 - `web/` Vite + React SPA

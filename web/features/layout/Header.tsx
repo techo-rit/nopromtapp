@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center gap-12">
                         <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5] hover:cursor-pointer">
                             <RemixLogoIcon />
-                            <span>nopromt.ai</span>
+                            <span>stiri.in</span>
                         </div>
                         <nav className="flex items-center gap-2">
                             {navItems.map((item) => (
