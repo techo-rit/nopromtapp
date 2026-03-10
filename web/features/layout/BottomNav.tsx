@@ -58,21 +58,17 @@ const TryOnIcon: React.FC<{ active?: boolean }> = ({ active }) => (
 );
 
 const ProfileIcon: React.FC<{ active?: boolean }> = ({ active }) => (
-    <svg
-        width="30"
-        height="30"
-        viewBox="0 0 64 64"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-    >
-        <path
-            d="M21 46V29C21 20 32 20 32 29V46M32 21C42 21 47 25 47 31C47 37 42 41 32 41"
-            stroke={active ? "#f5f5f5" : "#6b6b6b"}
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </svg>
+    <img
+        src="/ico/favicon.svg"
+        alt="Sign In"
+        width="24"
+        height="24"
+        style={{
+            display: 'block',
+            opacity: active ? 1 : 0.6,
+            filter: active ? 'none' : 'grayscale(0.3)'
+        }}
+    />
 );
 
 const UserProfileIcon: React.FC<{ active?: boolean; initial?: string }> = ({
