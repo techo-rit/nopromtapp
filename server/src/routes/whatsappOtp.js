@@ -18,6 +18,14 @@ function getWhatsAppToken() {
   return process.env.WHATSAPP_ACCESS_TOKEN || '';
 }
 
+function getWhatsAppTemplateName() {
+  return process.env.WHATSAPP_TEMPLATE_NAME || 'stiri_otp';
+}
+
+function getWhatsAppTemplateLanguage() {
+  return process.env.WHATSAPP_TEMPLATE_LANG || 'en';
+}
+
 /**
  * POST /auth/otp/send
  * Body: { phone: "9198XXXXXXXX" }  — full number with country code (no +)
@@ -29,11 +37,14 @@ export async function sendOtpHandler(req, res) {
       return res.status(400).json({ success: false, error: 'Phone number is required' });
     }
 
-    // Normalize: strip spaces, dashes; ensure starts with country code
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    if (cleanPhone.length < 10) {
+    // Normalize to digits only
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) {
       return res.status(400).json({ success: false, error: 'Invalid phone number' });
     }
+
+    // Default to India format if 10-digit local number is provided
+    const cleanPhone = digits.length === 10 ? `91${digits}` : digits;
 
     // Rate-limit: don't allow re-send within 30s
     const existing = otpStore.get(cleanPhone);
@@ -51,6 +62,8 @@ export async function sendOtpHandler(req, res) {
 
     const phoneNumberId = getPhoneNumberId();
     const accessToken = getWhatsAppToken();
+    const templateName = getWhatsAppTemplateName();
+    const templateLang = getWhatsAppTemplateLanguage();
 
     if (!phoneNumberId || !accessToken) {
       console.error('WhatsApp credentials not configured');
@@ -71,19 +84,11 @@ export async function sendOtpHandler(req, res) {
           to: cleanPhone,
           type: 'template',
           template: {
-            name: 'stiri_otp',
-            language: { code: 'en' },
+            name: templateName,
+            language: { code: templateLang },
             components: [
               {
                 type: 'body',
-                parameters: [
-                  { type: 'text', text: code },
-                ],
-              },
-              {
-                type: 'button',
-                sub_type: 'url',
-                index: '0',
                 parameters: [
                   { type: 'text', text: code },
                 ],
@@ -96,8 +101,26 @@ export async function sendOtpHandler(req, res) {
 
     if (!whatsappResp.ok) {
       const errData = await whatsappResp.json().catch(() => ({}));
-      console.error('WhatsApp API error:', errData);
-      return res.status(502).json({ success: false, error: 'Failed to send OTP via WhatsApp' });
+      const metaError = errData?.error || {};
+      const metaCode = metaError?.code;
+      const metaMessage = metaError?.message || 'Unknown WhatsApp API error';
+      const metaDetails = metaError?.error_data?.details || null;
+
+      console.error('WhatsApp API error:', {
+        status: whatsappResp.status,
+        code: metaCode,
+        message: metaMessage,
+        details: metaDetails,
+        templateName,
+        templateLang,
+        to: cleanPhone,
+      });
+
+      return res.status(502).json({
+        success: false,
+        error: `WhatsApp send failed${metaCode ? ` (${metaCode})` : ''}: ${metaMessage}`,
+        details: metaDetails,
+      });
     }
 
     return res.status(200).json({ success: true, message: 'OTP sent via WhatsApp' });
