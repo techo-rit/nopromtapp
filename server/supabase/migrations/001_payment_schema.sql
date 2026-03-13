@@ -6,8 +6,10 @@
 -- ==========================================
 -- 1. Add credits column to existing profiles table
 -- ==========================================
+-- Credits column already exists from 000_user_profiles.sql (default 8)
+-- This ensures backwards compatibility if run standalone
 ALTER TABLE public.profiles 
-ADD COLUMN IF NOT EXISTS credits integer DEFAULT 3 NOT NULL;
+ADD COLUMN IF NOT EXISTS credits integer DEFAULT 8 NOT NULL;
 
 -- ==========================================
 -- 2. Create SUBSCRIPTIONS Table
@@ -117,11 +119,13 @@ ALTER TABLE public.idempotency_keys ENABLE ROW LEVEL SECURITY;
 -- ==========================================
 
 -- Users can view their own subscriptions
+DROP POLICY IF EXISTS "Users can view own subscriptions" ON public.subscriptions;
 CREATE POLICY "Users can view own subscriptions" 
   ON public.subscriptions FOR SELECT 
   USING (auth.uid() = user_id);
 
 -- Users can insert their own subscriptions (for order creation)
+DROP POLICY IF EXISTS "Users can insert own subscriptions" ON public.subscriptions;
 CREATE POLICY "Users can insert own subscriptions" 
   ON public.subscriptions FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
@@ -129,6 +133,7 @@ CREATE POLICY "Users can insert own subscriptions"
 -- Only service role can update subscriptions (for webhook/verification)
 -- Note: Service role bypasses RLS, so no explicit policy needed for updates
 -- But we add one for extra safety in case RLS is disabled
+DROP POLICY IF EXISTS "Service role can update subscriptions" ON public.subscriptions;
 CREATE POLICY "Service role can update subscriptions"
   ON public.subscriptions FOR UPDATE
   USING (true)
@@ -139,12 +144,14 @@ CREATE POLICY "Service role can update subscriptions"
 -- ==========================================
 
 -- Users can view their own payment logs
+DROP POLICY IF EXISTS "Users can view own payment logs" ON public.payment_logs;
 CREATE POLICY "Users can view own payment logs" 
   ON public.payment_logs FOR SELECT 
   USING (auth.uid() = user_id);
 
 -- Service role can insert payment logs (bypass RLS)
 -- This policy allows the webhook to insert logs
+DROP POLICY IF EXISTS "Allow insert for service role" ON public.payment_logs;
 CREATE POLICY "Allow insert for service role"
   ON public.payment_logs FOR INSERT
   WITH CHECK (true);
@@ -154,11 +161,13 @@ CREATE POLICY "Allow insert for service role"
 -- ==========================================
 
 -- Users can view their own idempotency keys
+DROP POLICY IF EXISTS "Users can view own idempotency keys" ON public.idempotency_keys;
 CREATE POLICY "Users can view own idempotency keys" 
   ON public.idempotency_keys FOR SELECT 
   USING (auth.uid() = user_id);
 
 -- Users can insert their own idempotency keys
+DROP POLICY IF EXISTS "Users can insert own idempotency keys" ON public.idempotency_keys;
 CREATE POLICY "Users can insert own idempotency keys" 
   ON public.idempotency_keys FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
@@ -253,6 +262,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON public.subscriptions
   FOR EACH ROW

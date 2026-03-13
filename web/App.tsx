@@ -8,6 +8,8 @@ import { BottomNav } from "./features/layout/BottomNav";
 import { AuthModal } from "./features/auth/AuthModal";
 import { PaymentModal } from "./features/payments/PaymentModal";
 import { TemplateExecution } from "./features/templates/TemplateExecution";
+import { OnboardingModal } from "./features/profile/OnboardingModal";
+import { ProfilePage } from "./features/pages/ProfilePage";
 
 // New Routes
 import { Home } from "./features/pages/Home";
@@ -15,21 +17,14 @@ import { StackView } from "./features/pages/StackView";
 
 // Services & Utils
 import { authService } from "./features/auth/authService";
+import { profileService } from "./features/profile/profileService";
 import { searchTemplates } from "./shared/utils/searchLogic";
 import { useDebounce } from "./shared/hooks/useDebounce";
 import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./data/constants";
 import type { Template, User, NavCategory, Stack } from "./types";
 
-// Storage Helper (Moved here for now, could be in utils)
+// Storage Helper
 const STORAGE_KEY_NAV = "stiri_nav";
-const STORAGE_KEY_ACCOUNTS = "stiri_accounts";
-
-type StoredAccount = {
-  id: string;
-  email: string;
-  name: string;
-  lastUsedAt: number;
-};
 
 // Wrapper for Template Route (keeps access to User/Auth logic)
 const TemplateRoute = ({ 
@@ -68,25 +63,23 @@ const App: React.FC = () => {
   const [activeNav, setActiveNav] = useState<NavCategory>(() => {
     return (localStorage.getItem(STORAGE_KEY_NAV) as NavCategory) || "Creators";
   });
-  const [knownAccounts, setKnownAccounts] = useState<StoredAccount[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
   const [user, setUser] = useState<User | null>(null);
   const [isGlobalLoading, setIsGlobalLoading] = useState(true);
   
   // --- Modals ---
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const authModalHistoryActiveRef = useRef(false);
   const paymentModalHistoryActiveRef = useRef(false);
+  const onboardingModalHistoryActiveRef = useRef(false);
   const ignoreNextModalPopRef = useRef(false);
+
+  // --- Onboarding ---
+  const [onboardingPercent, setOnboardingPercent] = useState<number>(100);
+  const [onboardingSteps, setOnboardingSteps] = useState<number>(5);
 
   // --- Search (debounced to prevent O(n) search on every keystroke) ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,26 +98,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_NAV, activeNav);
   }, [activeNav]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(knownAccounts));
-  }, [knownAccounts]);
-
-  useEffect(() => {
-    if (!user) return;
-    setKnownAccounts((prev) => {
-      const next = [
-        {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          lastUsedAt: Date.now(),
-        },
-        ...prev.filter((a) => a.email !== user.email),
-      ];
-      return next.slice(0, 8);
-    });
-  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -150,6 +123,25 @@ const App: React.FC = () => {
       if (subscription?.unsubscribe) subscription.unsubscribe();
     };
   }, []);
+
+  // Fetch onboarding status whenever user changes
+  useEffect(() => {
+    if (!user) {
+      setOnboardingPercent(100);
+      setOnboardingSteps(5);
+      return;
+    }
+    profileService.getProfile().then((data) => {
+      if (data) {
+        setOnboardingPercent(data.onboardingPercent ?? 100);
+        setOnboardingSteps(data.onboardingSteps ?? 5);
+        // Auto-show onboarding after first login if not complete
+        if (data.profile && !data.profile.isOnboardingComplete && data.onboardingSteps === 0) {
+          openOnboardingModal();
+        }
+      }
+    }).catch(() => { /* ignore */ });
+  }, [user]);
 
   // --- Handlers ---
   const handleNavClick = (category: NavCategory) => {
@@ -238,10 +230,59 @@ const App: React.FC = () => {
     setShowPaymentModal(false);
   }, []);
 
+  const openOnboardingModal = useCallback(() => {
+    if (!onboardingModalHistoryActiveRef.current) {
+      window.history.pushState({ onboardingModal: true }, "", window.location.href);
+      onboardingModalHistoryActiveRef.current = true;
+    }
+    setShowOnboardingModal(true);
+  }, []);
+
+  const closeOnboardingModal = useCallback(() => {
+    if (onboardingModalHistoryActiveRef.current) {
+      ignoreNextModalPopRef.current = true;
+      window.history.back();
+      onboardingModalHistoryActiveRef.current = false;
+    }
+    setShowOnboardingModal(false);
+  }, []);
+
+  const handleOnboardingComplete = useCallback(async () => {
+    closeOnboardingModal();
+    // Refresh profile data
+    try {
+      const data = await profileService.getProfile();
+      if (data) {
+        setOnboardingPercent(data.onboardingPercent);
+        setOnboardingSteps(data.onboardingSteps);
+      }
+      const u = await authService.getCurrentUser();
+      if (u) setUser(u);
+    } catch { /* ignore */ }
+  }, [closeOnboardingModal]);
+
+  const handleProfileUpdate = useCallback(async () => {
+    try {
+      const data = await profileService.getProfile();
+      if (data) {
+        setOnboardingPercent(data.onboardingPercent);
+        setOnboardingSteps(data.onboardingSteps);
+      }
+      const u = await authService.getCurrentUser();
+      if (u) setUser(u);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     const onPopState = () => {
       if (ignoreNextModalPopRef.current) {
         ignoreNextModalPopRef.current = false;
+        return;
+      }
+
+      if (onboardingModalHistoryActiveRef.current) {
+        onboardingModalHistoryActiveRef.current = false;
+        setShowOnboardingModal(false);
         return;
       }
 
@@ -261,26 +302,8 @@ const App: React.FC = () => {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  const handleSwitchAccount = async (email: string) => {
-    if (user?.email === email) return;
-    setShowPaymentModal(false);
-    closeAuthModal();
-    try {
-      const switched = await authService.switchAccount(email);
-      setUser(switched);
-      return;
-    } catch {
-      // Fallback for accounts without a stored backend session.
-      await authService.signInWithGoogle(email);
-    }
-  };
-
   const handleLogout = async () => {
-    const currentEmail = user?.email || null;
     const nextUser = await authService.logout();
-    if (currentEmail) {
-      setKnownAccounts((prev) => prev.filter((a) => a.email !== currentEmail));
-    }
     setUser(nextUser);
   };
 
@@ -294,13 +317,10 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={openAuthModal}
-          accounts={knownAccounts}
-          onSwitchAccount={handleSwitchAccount}
           onLogout={handleLogout}
-          onAddAccount={openAuthModal}
           onUpgrade={() => user ? openPaymentModal() : openAuthModal()}
           isLoading={isGlobalLoading}
-          isSecondaryPage={location.pathname !== '/'}
+          isSecondaryPage={location.pathname !== '/' && location.pathname !== '/profile'}
           onBack={handleBack}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -314,6 +334,21 @@ const App: React.FC = () => {
         onSignUp={(e, p, n) => handleAuthAction(() => authService.signUp(e, p, n))}
         onLogin={(e, p) => handleAuthAction(() => authService.login(e, p))}
         onGoogleAuth={handleGoogleAuth}
+        onSendOtp={async (phone) => {
+          setAuthLoading(true);
+          setAuthError(null);
+          try {
+            await authService.sendOtp(phone);
+          } catch (err: any) {
+            setAuthError(err.message || 'Failed to send OTP');
+            throw err;
+          } finally {
+            setAuthLoading(false);
+          }
+        }}
+        onVerifyOtp={async (phone, code) => {
+          await handleAuthAction(() => authService.verifyOtp(phone, code));
+        }}
         isLoading={authLoading}
         error={authError}
       />
@@ -327,6 +362,17 @@ const App: React.FC = () => {
              const u = await authService.getCurrentUser();
              if (u) setUser(u);
           }}
+        />
+      )}
+
+      {user && (
+        <OnboardingModal
+          isOpen={showOnboardingModal}
+          onClose={closeOnboardingModal}
+          onComplete={handleOnboardingComplete}
+          userName={user.name || ''}
+          userEmail={user.email || ''}
+          userPhone={user.phone || ''}
         />
       )}
       
@@ -343,6 +389,9 @@ const App: React.FC = () => {
                 trendingTemplates={trendingTemplates}
                 onSelectStack={(s) => navigate(`/stack/${s.id}`)}
                 onSelectTemplate={(t) => navigate(`/template/${t.id}`)}
+                user={user}
+                onboardingPercent={onboardingPercent}
+                onOpenOnboarding={openOnboardingModal}
               />
             } 
           />
@@ -360,6 +409,21 @@ const App: React.FC = () => {
               />
             } 
           />
+          <Route
+            path="/profile"
+            element={
+              user ? (
+                <ProfilePage
+                  user={user}
+                  onProfileUpdate={handleProfileUpdate}
+                  onBack={() => navigate('/')}
+                  onLogout={handleLogout}
+                />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -371,10 +435,7 @@ const App: React.FC = () => {
           onNavClick={handleNavClick}
           user={user}
           onSignIn={openAuthModal}
-          accounts={knownAccounts}
-          onSwitchAccount={handleSwitchAccount}
           onLogout={handleLogout}
-          onAddAccount={openAuthModal}
         />
       </div>
     </div>

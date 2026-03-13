@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { RemixLogoIcon, ArrowLeftIcon } from "../../shared/ui/Icons";
 import type { User, NavCategory } from "../../types";
 
@@ -7,9 +8,6 @@ interface HeaderProps {
     onNavClick: (category: NavCategory) => void;
     user: User | null;
     onSignIn: () => void;
-    accounts: Array<{ email: string; name: string }>;
-    onSwitchAccount: (email: string) => void;
-    onAddAccount: () => void;
     onLogout: () => void;
     onUpgrade?: () => void;
     isLoading?: boolean;
@@ -43,9 +41,6 @@ export const Header: React.FC<HeaderProps> = ({
     onNavClick,
     user,
     onSignIn,
-    accounts,
-    onSwitchAccount,
-    onAddAccount,
     onLogout,
     onUpgrade,
     isLoading = false,
@@ -59,12 +54,11 @@ export const Header: React.FC<HeaderProps> = ({
     const userMenuRef = useRef<HTMLDivElement>(null);
     const mobileSearchRef = useRef<HTMLInputElement>(null);
     const desktopSearchRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
 
     const commonTextClasses =
         "text-[15px] font-normal leading-none text-[#f5f5f5]";
     const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none w-[11ch] text-left`;
-    const otherAccounts = accounts.filter((account) => account.email !== user?.email);
-    const hasOtherAccounts = accounts.length > 1 && otherAccounts.length > 0;
 
     useEffect(() => {
         if (!showUserMenu) return;
@@ -199,89 +193,63 @@ export const Header: React.FC<HeaderProps> = ({
                                     onClick={() => setShowUserMenu(!showUserMenu)}
                                     className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-[#1a1a1a] transition-all"
                                 >
-                                    <div className="w-8 h-8 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm">
-                                        {user?.name?.charAt(0)?.toUpperCase()}
-                                    </div>
+                                    {user?.avatarUrl ? (
+                                        <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
+                                    ) : (
+                                        <div className="w-8 h-8 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm">
+                                            {user?.name?.charAt(0)?.toUpperCase()}
+                                        </div>
+                                    )}
                                     <span className="text-sm font-medium text-[#a0a0a0] hidden lg:block">
                                         {user?.name?.split(" ")[0]}
                                     </span>
                                 </button>
                                 {showUserMenu && (
                                     <div className="absolute right-0 mt-2 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2 z-50">
-                                        <div className={`px-4 py-3 flex items-start justify-between gap-3 ${hasOtherAccounts ? "border-b border-[#2a2a2a]" : ""}`}>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-[#f5f5f5] truncate">
-                                                    {user.name}
-                                                </p>
-                                                <p className="text-xs text-[#6b6b6b] truncate">
-                                                    {user.email}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                <button
-                                                    type="button"
-                                                    title="Add account"
-                                                    aria-label="Add account"
-                                                    onClick={() => {
-                                                        onAddAccount();
-                                                        setShowUserMenu(false);
-                                                    }}
-                                                    className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                                                >
-                                                    <svg
-                                                        className="w-4 h-4"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                    >
-                                                        <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    title="Log out"
-                                                    aria-label="Log out"
-                                                    onClick={() => {
-                                                        onLogout();
-                                                        setShowUserMenu(false);
-                                                    }}
-                                                    className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                                                >
-                                                    <svg
-                                                        className="w-4 h-4"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                    >
-                                                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" />
-                                                        <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                                        <path d="M21 12H9" strokeLinecap="round" />
-                                                    </svg>
-                                                </button>
+                                        <div className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                {user.avatarUrl ? (
+                                                    <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
+                                                ) : null}
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-[#f5f5f5] truncate">
+                                                        {user.name}
+                                                    </p>
+                                                    <p className="text-xs text-[#6b6b6b] truncate">
+                                                        {user.email}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                        {hasOtherAccounts && (
-                                            <div className="py-1">
-                                                <p className="px-4 py-2 text-[11px] uppercase tracking-wider text-[#6b6b6b]">
-                                                    Other accounts
-                                                </p>
-                                                {otherAccounts.map((account) => {
-                                                    return (
-                                                        <button
-                                                            key={account.email}
-                                                            onClick={() => onSwitchAccount(account.email)}
-                                                            className="w-full min-h-[40px] text-left px-4 py-2 text-sm transition-colors flex items-center justify-between text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] cursor-pointer"
-                                                        >
-                                                            <span className="truncate pr-2">
-                                                                {account.name || account.email}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                        <div className="border-t border-[#2a2a2a]">
+                                            <button
+                                                onClick={() => {
+                                                    navigate('/profile');
+                                                    setShowUserMenu(false);
+                                                }}
+                                                className="w-full text-left px-4 py-3 text-sm text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
+                                                    <circle cx="12" cy="7" r="4" />
+                                                </svg>
+                                                View Profile
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    onLogout();
+                                                    setShowUserMenu(false);
+                                                }}
+                                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-400/5 transition-colors flex items-center gap-3 cursor-pointer"
+                                            >
+                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" />
+                                                    <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <path d="M21 12H9" strokeLinecap="round" />
+                                                </svg>
+                                                Log Out
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>

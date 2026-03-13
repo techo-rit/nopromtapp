@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { User, NavCategory } from "../../types";
 
 interface BottomNavProps {
@@ -6,9 +7,6 @@ interface BottomNavProps {
     onNavClick: (category: NavCategory) => void;
     user: User | null;
     onSignIn: () => void;
-    accounts: Array<{ email: string; name: string }>;
-    onSwitchAccount: (email: string) => void;
-    onAddAccount: () => void;
     onLogout: () => void;
 }
 
@@ -71,10 +69,13 @@ const ProfileIcon: React.FC<{ active?: boolean }> = ({ active }) => (
     />
 );
 
-const UserProfileIcon: React.FC<{ active?: boolean; initial?: string }> = ({
+const UserProfileIcon: React.FC<{ active?: boolean; initial?: string; avatarUrl?: string | null }> = ({
     active,
     initial,
-}) => (
+    avatarUrl,
+}) => avatarUrl ? (
+    <img src={avatarUrl} alt="" className={`w-6 h-6 rounded-full object-cover ${active ? 'ring-2 ring-[#c9a962]' : ''}`} referrerPolicy="no-referrer" />
+) : (
     <div
         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
             active
@@ -91,14 +92,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     onNavClick,
     user,
     onSignIn,
-    accounts,
-    onSwitchAccount,
-    onAddAccount,
     onLogout,
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const otherAccounts = accounts.filter((account) => account.email !== user?.email);
-    const hasOtherAccounts = accounts.length > 1 && otherAccounts.length > 0;
+    const navigate = useNavigate();
 
     const handleProfileClick = () => {
         if (!user) {
@@ -121,69 +118,52 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             {/* Profile Menu */}
             {showProfileMenu && user && (
                 <div className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom))] right-4 z-50 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2">
-                    <div className={`px-4 py-3 flex items-start justify-between gap-3 ${hasOtherAccounts ? "border-b border-[#2a2a2a]" : ""}`}>
+                    <div className="px-4 py-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <p className="text-sm font-medium text-[#f5f5f5] truncate">
-                                {user.name}
-                            </p>
-                            <p className="text-xs text-[#6b6b6b] truncate">{user.email}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                            <button
-                                type="button"
-                                title="Add account"
-                                aria-label="Add account"
-                                onClick={() => {
-                                    onAddAccount();
-                                    setShowProfileMenu(false);
-                                }}
-                                className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                                </svg>
-                            </button>
-                            <button
-                                type="button"
-                                title="Log out"
-                                aria-label="Log out"
-                                onClick={() => {
-                                    onLogout();
-                                    setShowProfileMenu(false);
-                                }}
-                                className="p-1.5 rounded-md text-[#a0a0a0] hover:text-[#f5f5f5] hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" />
-                                    <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M21 12H9" strokeLinecap="round" />
-                                </svg>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {user.avatarUrl ? (
+                                    <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
+                                ) : null}
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-[#f5f5f5] truncate">
+                                        {user.name}
+                                    </p>
+                                    <p className="text-xs text-[#6b6b6b] truncate">{user.email}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    {hasOtherAccounts && (
-                        <div className="py-1">
-                            <p className="px-4 py-2 text-[11px] uppercase tracking-wider text-[#6b6b6b]">
-                                Other accounts
-                            </p>
-                            {otherAccounts.map((account) => {
-                                return (
-                                    <button
-                                        key={account.email}
-                                        onClick={() => {
-                                            onSwitchAccount(account.email);
-                                            setShowProfileMenu(false);
-                                        }}
-                                        className="w-full min-h-[40px] text-left px-4 py-2 text-sm transition-colors flex items-center justify-between text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] cursor-pointer"
-                                    >
-                                        <span className="truncate pr-2">
-                                            {account.name || account.email}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+                    <div className="border-t border-[#2a2a2a]">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                navigate('/profile');
+                                setShowProfileMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors flex items-center gap-3 cursor-pointer"
+                        >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            View Profile
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onLogout();
+                                setShowProfileMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-400/5 transition-colors flex items-center gap-3 cursor-pointer"
+                        >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" />
+                                <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M21 12H9" strokeLinecap="round" />
+                            </svg>
+                            Log Out
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -232,6 +212,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                             <UserProfileIcon
                                 active={showProfileMenu}
                                 initial={user.name?.charAt(0)?.toUpperCase()}
+                                avatarUrl={user.avatarUrl}
                             />
                         ) : (
                             <ProfileIcon active={false} />

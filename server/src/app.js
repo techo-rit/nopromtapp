@@ -11,6 +11,9 @@ import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
 import { signUpHandler, loginHandler, logoutHandler, meHandler, switchAccountHandler, googleStartHandler, googleCallbackHandler } from './routes/auth.js';
+import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, deleteAddressHandler } from './routes/profile.js';
+import { sendOtpHandler, verifyOtpHandler, whatsappWebhookVerify, whatsappWebhookHandler } from './routes/whatsappOtp.js';
+import { geocodeHandler, placesAutocompleteHandler, placeDetailsHandler } from './routes/geocode.js';
 
 export function createApp() {
   const app = express();
@@ -65,12 +68,24 @@ export function createApp() {
   app.post('/auth/switch', switchAccountHandler);
   app.get('/auth/google/start', googleStartHandler);
   app.get('/auth/google/callback', googleCallbackHandler);
+  app.post('/auth/otp/send', sendOtpHandler);
+  app.post('/auth/otp/verify', verifyOtpHandler);
+  app.get('/auth/webhook/whatsapp', whatsappWebhookVerify);
+  app.post('/auth/webhook/whatsapp', whatsappWebhookHandler);
   app.post('/api/generate', generateHandler);
   app.post('/api/create-order', createOrderHandler);
   app.post('/api/verify-payment', verifyPaymentHandler);
   app.get('/api/user-subscription', userSubscriptionHandler);
   app.post('/api/webhook', webhookHandler);
   app.get('/api/health', healthHandler);
+  app.get('/api/geocode', geocodeHandler);
+  app.get('/api/places/autocomplete', placesAutocompleteHandler);
+  app.get('/api/places/details', placeDetailsHandler);
+  app.get('/api/profile', getProfileHandler);
+  app.put('/api/profile', updateProfileHandler);
+  app.get('/api/profile/addresses', getAddressesHandler);
+  app.post('/api/profile/addresses', addAddressHandler);
+  app.delete('/api/profile/addresses/:id', deleteAddressHandler);
 
   // Serve built web app from server/public
   const publicDir = path.resolve(__dirname, '..', 'public');

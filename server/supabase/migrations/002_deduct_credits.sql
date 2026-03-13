@@ -36,6 +36,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Keep default initial credits for newly created profiles
+-- Default initial credits = 8 (matches 000_user_profiles.sql)
 ALTER TABLE public.profiles
-ALTER COLUMN credits SET DEFAULT 3;
+ALTER COLUMN credits SET DEFAULT 8;

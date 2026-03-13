@@ -8,6 +8,42 @@ import { CONFIG } from '../../config'
  */
 
 export const authService = {
+  async sendOtp(phone: string): Promise<void> {
+    const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '')
+    const url = apiBase ? `${apiBase}/auth/otp/send` : '/auth/otp/send'
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone }),
+    })
+
+    const data = await resp.json()
+    if (!resp.ok || !data.success) {
+      throw new Error(data.error || 'Failed to send OTP')
+    }
+  },
+
+  async verifyOtp(phone: string, code: string): Promise<User> {
+    const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '')
+    const url = apiBase ? `${apiBase}/auth/otp/verify` : '/auth/otp/verify'
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, code }),
+    })
+
+    const data = await resp.json()
+    if (!resp.ok || !data.success) {
+      throw new Error(data.error || 'OTP verification failed')
+    }
+
+    return data.user as User
+  },
+
   // Updated: Returns User OR null (if email confirmation is required)
   async signUp(email: string, password: string, name: string): Promise<User | null> {
     const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '')

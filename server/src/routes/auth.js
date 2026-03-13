@@ -177,6 +177,10 @@ export async function googleCallbackHandler(req, res) {
   const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   const frontendUrl = process.env.FRONTEND_URL || '/';
 
+  const oauthError = Array.isArray(req.query.error) ? req.query.error[0] : req.query.error;
+  const oauthErrorDescription = Array.isArray(req.query.error_description)
+    ? req.query.error_description[0]
+    : req.query.error_description;
   const code = Array.isArray(req.query.code) ? req.query.code[0] : req.query.code;
   const verifier = getPkceVerifier(req);
 
@@ -184,8 +188,21 @@ export async function googleCallbackHandler(req, res) {
     return res.status(500).send('Server misconfigured');
   }
 
+  if (oauthError) {
+    const redirectTarget = new URL(frontendUrl, `${req.protocol}://${req.get('host')}`);
+    redirectTarget.searchParams.set('auth_error', String(oauthError));
+    if (oauthErrorDescription) {
+      redirectTarget.searchParams.set('auth_error_description', String(oauthErrorDescription));
+    }
+    clearCookie(res, 'sb_code_verifier');
+    return res.redirect(redirectTarget.toString());
+  }
+
   if (!code || !verifier) {
-    return res.status(400).send('Missing OAuth code');
+    const redirectTarget = new URL(frontendUrl, `${req.protocol}://${req.get('host')}`);
+    redirectTarget.searchParams.set('auth_error', 'missing_oauth_code_or_verifier');
+    redirectTarget.searchParams.set('auth_error_description', 'OAuth callback missing code/verifier. Ensure cookies are enabled and retry.');
+    return res.redirect(redirectTarget.toString());
   }
 
   try {

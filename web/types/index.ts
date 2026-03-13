@@ -20,9 +20,50 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phone: string | null;
+  ageRange: string | null;
+  colorMode: string | null;
+  colors: string[];
+  styles: string[];
+  fit: string | null;
+  bodyType: string | null;
+  avatarUrl: string | null;
+  isOnboardingComplete: boolean;
   credits: number;
   createdAt: Date;
   lastLogin: Date;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  ageRange: string | null;
+  colorMode: string | null;
+  colors: string[];
+  styles: string[];
+  fit: string | null;
+  bodyType: string | null;
+  avatarUrl: string | null;
+  isOnboardingComplete: boolean;
+  credits: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserAddress {
+  id: string;
+  userId: string;
+  label: string;
+  addressLine: string;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  lat: number | null;
+  lng: number | null;
+  isDefault: boolean;
+  createdAt: string;
 }
 
 // ==========================================
