@@ -1,10 +1,30 @@
 import crypto from 'crypto';
+import { appendFileSync, existsSync, mkdirSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createAdminClient, setSessionCookies, storeSessionForAccount, ensureUserProfile, fetchUserProfile, mapUser } from '../lib/auth.js';
 
 // OTP storage — in-memory for simplicity, could use Redis (Upstash) for production
 const otpStore = new Map(); // key: phone, value: { code, expiresAt, attempts }
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_ATTEMPTS = 5;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const whatsappLogsDir = path.resolve(__dirname, '..', '..', 'logs');
+const whatsappLogFile = path.join(whatsappLogsDir, 'whatsapp.log');
+
+function writeWhatsAppLog(event, payload) {
+  try {
+    if (!existsSync(whatsappLogsDir)) {
+      mkdirSync(whatsappLogsDir, { recursive: true });
+    }
+    const line = `${new Date().toISOString()} ${JSON.stringify({ event, ...payload })}\n`;
+    appendFileSync(whatsappLogFile, line, 'utf8');
+  } catch {
+    // Avoid breaking auth flow on logging errors.
+  }
+}
 
 function generateOtp() {
   return crypto.randomInt(100000, 999999).toString();
@@ -132,8 +152,10 @@ export async function sendOtpHandler(req, res) {
       }
     );
 
+    const whatsappData = await whatsappResp.json().catch(() => ({}));
+
     if (!whatsappResp.ok) {
-      const errData = await whatsappResp.json().catch(() => ({}));
+      const errData = whatsappData;
       const metaError = errData?.error || {};
       const metaCode = metaError?.code;
       const metaSubcode = metaError?.error_subcode;
@@ -141,6 +163,16 @@ export async function sendOtpHandler(req, res) {
       const metaDetails = metaError?.error_data?.details || null;
 
       console.error('WhatsApp API error:', {
+        status: whatsappResp.status,
+        code: metaCode,
+        subcode: metaSubcode,
+        message: metaMessage,
+        details: metaDetails,
+        templateName,
+        templateLang,
+        to: cleanPhone,
+      });
+      writeWhatsAppLog('send_error', {
         status: whatsappResp.status,
         code: metaCode,
         subcode: metaSubcode,
@@ -158,7 +190,26 @@ export async function sendOtpHandler(req, res) {
       });
     }
 
-    return res.status(200).json({ success: true, message: 'OTP sent via WhatsApp' });
+    console.log('WhatsApp send accepted:', {
+      to: cleanPhone,
+      templateName,
+      templateLang,
+      contact: whatsappData?.contacts?.[0] || null,
+      messageId: whatsappData?.messages?.[0]?.id || null,
+    });
+    writeWhatsAppLog('send_accepted', {
+      to: cleanPhone,
+      templateName,
+      templateLang,
+      contact: whatsappData?.contacts?.[0] || null,
+      messageId: whatsappData?.messages?.[0]?.id || null,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP accepted by WhatsApp',
+      messageId: whatsappData?.messages?.[0]?.id || null,
+    });
   } catch (err) {
     console.error('sendOtp error:', err);
     return res.status(500).json({ success: false, error: 'Failed to send OTP' });
@@ -319,7 +370,40 @@ export function whatsappWebhookVerify(req, res) {
  * Meta webhook for delivery status updates (optional — log only)
  */
 export function whatsappWebhookHandler(req, res) {
-  // Acknowledge receipt
-  console.log('WhatsApp webhook event:', JSON.stringify(req.body).slice(0, 500));
+  const entry = req.body?.entry?.[0];
+  const change = entry?.changes?.[0];
+  const value = change?.value || {};
+  const statuses = Array.isArray(value.statuses) ? value.statuses : [];
+  const messages = Array.isArray(value.messages) ? value.messages : [];
+
+  if (statuses.length > 0) {
+    for (const status of statuses) {
+      const payload = {
+        id: status?.id || null,
+        recipient: status?.recipient_id || null,
+        status: status?.status || null,
+        timestamp: status?.timestamp || null,
+        conversation: status?.conversation?.id || null,
+        pricingCategory: status?.pricing?.category || null,
+        errors: status?.errors || null,
+      };
+      console.log('WhatsApp delivery status:', payload);
+      writeWhatsAppLog('delivery_status', payload);
+    }
+  } else if (messages.length > 0) {
+    for (const message of messages) {
+      const payload = {
+        from: message?.from || null,
+        id: message?.id || null,
+        type: message?.type || null,
+      };
+      console.log('WhatsApp inbound event:', payload);
+      writeWhatsAppLog('inbound_event', payload);
+    }
+  } else {
+    console.log('WhatsApp webhook event:', JSON.stringify(req.body).slice(0, 1000));
+    writeWhatsAppLog('webhook_event', { body: req.body || null });
+  }
+
   return res.status(200).send('OK');
 }
