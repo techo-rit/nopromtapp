@@ -39,7 +39,8 @@ function buildTemplatePayload(templateName, templateLang, code) {
   }
 
   // Authentication templates with a copy-code button require both
-  // the OTP body variable and the button variable.
+  // the OTP body variable and a special COPY_CODE button parameter.
+  // Meta expects sub_type=url with text=COPY_CODE for copy-code auth templates.
   if (templateName.toLowerCase().includes('auth')) {
     return {
       ...payload,
@@ -50,9 +51,9 @@ function buildTemplatePayload(templateName, templateLang, code) {
         },
         {
           type: 'button',
-          sub_type: 'copy_code',
+          sub_type: 'url',
           index: '0',
-          parameters: [{ type: 'text', text: code }],
+          parameters: [{ type: 'text', text: 'COPY_CODE' }],
         },
       ],
     };
