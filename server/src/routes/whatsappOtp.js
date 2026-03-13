@@ -38,6 +38,26 @@ function buildTemplatePayload(templateName, templateLang, code) {
     return payload;
   }
 
+  // Authentication templates with a copy-code button require both
+  // the OTP body variable and the button variable.
+  if (templateName.toLowerCase().includes('auth')) {
+    return {
+      ...payload,
+      components: [
+        {
+          type: 'body',
+          parameters: [{ type: 'text', text: code }],
+        },
+        {
+          type: 'button',
+          sub_type: 'copy_code',
+          index: '0',
+          parameters: [{ type: 'text', text: code }],
+        },
+      ],
+    };
+  }
+
   return {
     ...payload,
     components: [
