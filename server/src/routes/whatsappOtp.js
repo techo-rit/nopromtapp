@@ -15,7 +15,8 @@ function getPhoneNumberId() {
 }
 
 function getWhatsAppToken() {
-  return process.env.WHATSAPP_ACCESS_TOKEN || '';
+  const raw = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
+  return raw.replace(/^Bearer\s+/i, '');
 }
 
 function getWhatsAppTemplateName() {
@@ -24,6 +25,28 @@ function getWhatsAppTemplateName() {
 
 function getWhatsAppTemplateLanguage() {
   return process.env.WHATSAPP_TEMPLATE_LANG || 'en';
+}
+
+function buildTemplatePayload(templateName, templateLang, code) {
+  const payload = {
+    name: templateName,
+    language: { code: templateLang },
+  };
+
+  // Meta test template `hello_world` expects no params.
+  if (templateName.toLowerCase() === 'hello_world') {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    components: [
+      {
+        type: 'body',
+        parameters: [{ type: 'text', text: code }],
+      },
+    ],
+  };
 }
 
 /**
@@ -83,18 +106,7 @@ export async function sendOtpHandler(req, res) {
           messaging_product: 'whatsapp',
           to: cleanPhone,
           type: 'template',
-          template: {
-            name: templateName,
-            language: { code: templateLang },
-            components: [
-              {
-                type: 'body',
-                parameters: [
-                  { type: 'text', text: code },
-                ],
-              },
-            ],
-          },
+          template: buildTemplatePayload(templateName, templateLang, code),
         }),
       }
     );
@@ -103,12 +115,14 @@ export async function sendOtpHandler(req, res) {
       const errData = await whatsappResp.json().catch(() => ({}));
       const metaError = errData?.error || {};
       const metaCode = metaError?.code;
+      const metaSubcode = metaError?.error_subcode;
       const metaMessage = metaError?.message || 'Unknown WhatsApp API error';
       const metaDetails = metaError?.error_data?.details || null;
 
       console.error('WhatsApp API error:', {
         status: whatsappResp.status,
         code: metaCode,
+        subcode: metaSubcode,
         message: metaMessage,
         details: metaDetails,
         templateName,
@@ -118,7 +132,7 @@ export async function sendOtpHandler(req, res) {
 
       return res.status(502).json({
         success: false,
-        error: `WhatsApp send failed${metaCode ? ` (${metaCode})` : ''}: ${metaMessage}`,
+        error: `WhatsApp send failed${metaCode ? ` (${metaCode}${metaSubcode ? `/${metaSubcode}` : ''})` : ''}: ${metaMessage}`,
         details: metaDetails,
       });
     }
