@@ -103,9 +103,15 @@ const App: React.FC = () => {
     let mounted = true;
     
     // Initial Load
-    authService.getCurrentUser().then((initialUser) => {
+    const cachedUser = authService.getCachedUser();
+    if (cachedUser) {
+      setUser(cachedUser);
+      setIsGlobalLoading(false);
+    }
+
+    authService.fetchCurrentUser().then((initialUser) => {
       if (mounted) {
-        if (initialUser) setUser(initialUser);
+        setUser(initialUser);
         setIsGlobalLoading(false); 
       }
     });
@@ -305,6 +311,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     const nextUser = await authService.logout();
     setUser(nextUser);
+    profileService.clearCache();
   };
 
   return (
@@ -320,7 +327,7 @@ const App: React.FC = () => {
           onLogout={handleLogout}
           onUpgrade={() => user ? openPaymentModal() : openAuthModal()}
           isLoading={isGlobalLoading}
-          isSecondaryPage={location.pathname !== '/' && location.pathname !== '/profile'}
+          isSecondaryPage={location.pathname !== '/'}
           onBack={handleBack}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -331,8 +338,6 @@ const App: React.FC = () => {
       <AuthModal
         isOpen={showAuthModal}
         onClose={closeAuthModal}
-        onSignUp={(e, p, n) => handleAuthAction(() => authService.signUp(e, p, n))}
-        onLogin={(e, p) => handleAuthAction(() => authService.login(e, p))}
         onGoogleAuth={handleGoogleAuth}
         onSendOtp={async (phone) => {
           setAuthLoading(true);
@@ -418,6 +423,7 @@ const App: React.FC = () => {
                   onProfileUpdate={handleProfileUpdate}
                   onBack={() => navigate('/')}
                   onLogout={handleLogout}
+                  onUpgrade={openPaymentModal}
                 />
               ) : (
                 <Navigate to="/" replace />
@@ -436,6 +442,7 @@ const App: React.FC = () => {
           user={user}
           onSignIn={openAuthModal}
           onLogout={handleLogout}
+          onUpgrade={() => user ? openPaymentModal() : openAuthModal()}
         />
       </div>
     </div>

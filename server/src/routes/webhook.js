@@ -146,14 +146,15 @@ async function handlePaymentCaptured(supabase, payload) {
     return;
   }
 
-  await supabase.rpc('add_user_credits', {
+  await supabase.rpc('add_user_entitlements', {
     p_user_id: subscription.user_id,
-    p_credits: subscription.credits_purchased,
+    p_amount: subscription.creations_purchased,
+    p_account_type: subscription.plan_id,
   });
 
-  console.log('Credits added:', {
+  console.log('Creations added:', {
     userId: subscription.user_id,
-    credits: subscription.credits_purchased,
+    creations: subscription.creations_purchased,
   });
 }
 
@@ -225,13 +226,14 @@ async function handleOrderPaid(supabase, payload) {
     return;
   }
 
-  await supabase.rpc('add_user_credits', {
+  await supabase.rpc('add_user_entitlements', {
     p_user_id: subscription.user_id,
-    p_credits: subscription.credits_purchased,
+    p_amount: subscription.creations_purchased,
+    p_account_type: subscription.plan_id,
   });
 
-  console.log('Credits added via order.paid:', {
+  console.log('Creations added via order.paid:', {
     userId: subscription.user_id,
-    credits: subscription.credits_purchased,
+    creations: subscription.creations_purchased,
   });
 }

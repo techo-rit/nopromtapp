@@ -135,7 +135,8 @@ export async function createOrderHandler(req, res) {
         userId,
         planId,
         planName: plan.name,
-        credits: plan.credits.toString(),
+        creations: plan.creations.toString(),
+        accountType: plan.accountType,
       },
     };
 
@@ -161,7 +162,7 @@ export async function createOrderHandler(req, res) {
         user_id: userId,
         plan_id: planId,
         plan_name: plan.name,
-        credits_purchased: plan.credits,
+        creations_purchased: plan.creations,
         amount: plan.price,
         currency: plan.currency,
         razorpay_order_id: order.id,
@@ -182,7 +183,7 @@ export async function createOrderHandler(req, res) {
       metadata: {
         planId,
         planName: plan.name,
-        credits: plan.credits,
+        creations: plan.creations,
         receipt,
       },
       ip_address: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,

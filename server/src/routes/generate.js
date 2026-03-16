@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { randomUUID } from 'crypto';
 import { getGenerateRateLimiter, checkRateLimit } from '../lib/ratelimit.js';
 import { createLogger, generateRequestId } from '../lib/logger.js';
 import { UPLOAD_CONFIG, GEMINI_CONFIG } from '../lib/serverConfig.js';
@@ -23,15 +24,11 @@ async function verifyAuthAndCredits(req, res, log) {
     return { error: 'Rate limit exceeded. Please wait.', status: 429 };
   }
 
-  const { data: profile } = await supabase.from('profiles').select('credits').eq('id', user.id).single();
-  if (!profile || profile.credits < 1) {
-    return { error: 'Insufficient credits', status: 403 };
-  }
-
-  const { error: deductError } = await supabase.rpc('deduct_credits', { p_user_id: user.id, p_amount: 1 });
-  if (deductError) {
-    log.error('Credit deduction failed', { error: deductError.message });
-    return { error: 'Failed to process request', status: 500 };
+  const { data: deduction, error: deductError } = await supabase.rpc('deduct_creations', { p_user_id: user.id, p_amount: 1 });
+  if (deductError || !deduction?.success) {
+    log.error('Creation deduction failed', { error: deductError?.message || deduction?.error });
+    const reason = deduction?.error || 'Insufficient creations';
+    return { error: reason, status: 403 };
   }
 
   return { userId: user.id };
@@ -47,6 +44,55 @@ function validateAndParseImage(dataUrl) {
 function sanitizePrompt(text) {
   if (!text) return '';
   return typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text);
+}
+
+const MIME_TO_EXT = { 'image/jpeg': 'jpeg', 'image/jpg': 'jpeg', 'image/png': 'png', 'image/webp': 'webp' };
+
+async function persistGeneratedImage(supabase, userId, base64Data, mimeType, metadata, log) {
+  try {
+    const ext = MIME_TO_EXT[mimeType] || 'png';
+    const now = new Date();
+    const yyyyMm = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const storagePath = `${userId}/${yyyyMm}/${randomUUID()}.${ext}`;
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const { error: uploadError } = await supabase.storage
+      .from('generated-images')
+      .upload(storagePath, buffer, { contentType: mimeType, upsert: false });
+
+    if (uploadError) {
+      log.error('Storage upload failed', { error: uploadError.message });
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage.from('generated-images').getPublicUrl(storagePath);
+    const imageUrl = urlData?.publicUrl;
+    if (!imageUrl) {
+      log.error('Could not get public URL after upload');
+      return null;
+    }
+
+    const { error: dbError } = await supabase.from('generated_images').insert({
+      user_id: userId,
+      storage_path: storagePath,
+      image_url: imageUrl,
+      template_id: metadata.templateId || null,
+      template_name: metadata.templateName || null,
+      stack_id: metadata.stackId || null,
+      mode: metadata.mode,
+      aspect_ratio: metadata.aspectRatio || null,
+    });
+
+    if (dbError) {
+      log.error('DB insert for generated image failed', { error: dbError.message });
+      // Image is already in storage — don't remove it, just return URL with no DB record
+    }
+
+    return imageUrl;
+  } catch (err) {
+    log.error('persistGeneratedImage unexpected error', { error: err?.message });
+    return null;
+  }
 }
 
 export async function generateHandler(req, res) {
@@ -67,6 +113,7 @@ export async function generateHandler(req, res) {
 
     const { imageData, wearableData, templateReferenceData, templateId, templateOptions } = req.body || {};
     const userLog = createLogger(requestId, authResult.userId);
+    const supabase = createAdminClient();
 
     const mainImage = validateAndParseImage(imageData);
     if (!mainImage) {
@@ -216,10 +263,23 @@ export async function generateHandler(req, res) {
     const urls = [];
     const candidates = response.candidates || [];
 
+    const imageMetadata = {
+      templateId: templateId || null,
+      templateName: templateOptions?.template?.name || null,
+      stackId: templateOptions?.template?.stackId || null,
+      mode: validWearable ? 'tryon' : 'remix',
+      aspectRatio: aspectRatio || null,
+    };
+
     for (const c of candidates) {
       const part = c?.content?.parts?.find((p) => p.inlineData);
       if (part?.inlineData?.data) {
-        urls.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+        const { data: imgData, mimeType: imgMime } = part.inlineData;
+        // Persist to Supabase Storage — fall back to base64 data URL if it fails
+        const publicUrl = supabase
+          ? await persistGeneratedImage(supabase, authResult.userId, imgData, imgMime, imageMetadata, userLog)
+          : null;
+        urls.push(publicUrl ?? `data:${imgMime};base64,${imgData}`);
       }
     }
 

@@ -10,8 +10,8 @@ import { verifyPaymentHandler } from './routes/verifyPayment.js';
 import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
-import { signUpHandler, loginHandler, logoutHandler, meHandler, switchAccountHandler, googleStartHandler, googleCallbackHandler } from './routes/auth.js';
-import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, deleteAddressHandler } from './routes/profile.js';
+import { logoutHandler, meHandler, switchAccountHandler, googleStartHandler, googleCallbackHandler } from './routes/auth.js';
+import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
 import { sendOtpHandler, verifyOtpHandler, whatsappWebhookVerify, whatsappWebhookHandler } from './routes/whatsappOtp.js';
 import { geocodeHandler, placesAutocompleteHandler, placeDetailsHandler } from './routes/geocode.js';
 
@@ -61,8 +61,6 @@ export function createApp() {
   }));
 
   // API routes
-  app.post('/auth/signup', signUpHandler);
-  app.post('/auth/login', loginHandler);
   app.post('/auth/logout', logoutHandler);
   app.get('/auth/me', meHandler);
   app.post('/auth/switch', switchAccountHandler);
@@ -86,6 +84,9 @@ export function createApp() {
   app.get('/api/profile/addresses', getAddressesHandler);
   app.post('/api/profile/addresses', addAddressHandler);
   app.delete('/api/profile/addresses/:id', deleteAddressHandler);
+  app.get('/api/profile/generations', getGenerationsHandler);
+  app.delete('/api/profile/generations/:id', deleteGenerationHandler);
+  app.delete('/api/profile/generations', deleteAllGenerationsHandler);
 
   // Serve built web app from server/public
   const publicDir = path.resolve(__dirname, '..', 'public');

@@ -228,21 +228,29 @@ export async function getUserFromRequest(req, res) {
 export async function fetchUserProfile(adminClient, userId) {
   const { data: profile } = await adminClient
     .from('profiles')
-    .select('full_name, phone, age_range, color_mode, colors, styles, fit, body_type, is_onboarding_complete, credits')
+    .select('full_name, phone, age_range, colors, styles, fit, body_type, is_onboarding_complete, account_type, monthly_quota, monthly_used, extra_credits')
     .eq('id', userId)
     .single();
+
+  const monthlyQuota = profile?.monthly_quota || 0;
+  const monthlyUsed = profile?.monthly_used || 0;
+  const extraCredits = profile?.extra_credits || 0;
+  const monthlyRemaining = Math.max(monthlyQuota - monthlyUsed, 0);
 
   return {
     name: profile?.full_name || null,
     phone: profile?.phone || null,
     ageRange: profile?.age_range || null,
-    colorMode: profile?.color_mode || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],
     fit: profile?.fit || null,
     bodyType: profile?.body_type || null,
     isOnboardingComplete: profile?.is_onboarding_complete || false,
-    credits: profile?.credits || 0,
+    accountType: profile?.account_type || 'free',
+    monthlyQuota,
+    monthlyUsed,
+    extraCredits,
+    creationsLeft: monthlyRemaining + extraCredits,
   };
 }
 
@@ -263,7 +271,10 @@ export async function ensureUserProfile(adminClient, supabaseUser) {
       id: supabaseUser.id,
       email: supabaseUser.email || null,
       full_name: supabaseUser.user_metadata?.full_name || null,
-      credits: 8,
+      account_type: 'free',
+      monthly_quota: 3,
+      monthly_used: 0,
+      extra_credits: 5,
     });
 }
 
@@ -274,14 +285,17 @@ export function mapUser(supabaseUser, profile) {
     name: profile?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
     phone: profile?.phone || null,
     ageRange: profile?.ageRange || null,
-    colorMode: profile?.colorMode || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],
     fit: profile?.fit || null,
     bodyType: profile?.bodyType || null,
     avatarUrl: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture || null,
     isOnboardingComplete: profile?.isOnboardingComplete || false,
-    credits: profile?.credits || 0,
+    accountType: profile?.accountType || 'free',
+    monthlyQuota: profile?.monthlyQuota || 3,
+    monthlyUsed: profile?.monthlyUsed || 0,
+    extraCredits: profile?.extraCredits || 0,
+    creationsLeft: profile?.creationsLeft || 0,
     createdAt: new Date(supabaseUser.created_at),
     lastLogin: new Date(),
   };

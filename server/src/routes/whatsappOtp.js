@@ -277,8 +277,7 @@ export async function verifyOtpHandler(req, res) {
       });
 
       if (linkErr || !linkData) {
-        // Fallback: use signInWithPassword if we have an email
-        // For phone-only users, create a session via admin
+        // Fallback: create a session via admin (works for phone-only users too)
         const { data: sessionData, error: sessErr } = await admin.auth.admin.createSession({
           user_id: existingUser.id,
         });

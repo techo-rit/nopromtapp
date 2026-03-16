@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { profileService } from '../profile/profileService';
-import type { User, UserAddress } from '../../types';
+import type { User, UserAddress, GeneratedImage } from '../../types';
 
 interface ProfilePageProps {
   user: User;
   onProfileUpdate: () => void;
   onBack: () => void;
   onLogout: () => void;
+  onUpgrade?: () => void;
 }
 
 const AGE_RANGES = [
@@ -53,22 +54,48 @@ const BODY_TYPES = [
   { id: 'round', label: 'Round' },
 ];
 
+function formatDate(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear()
+    ? `${months[d.getMonth()]} ${d.getDate()}`
+    : `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   user,
   onProfileUpdate,
   onBack,
   onLogout,
+  onUpgrade,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generations, setGenerations] = useState<GeneratedImage[]>([]);
+  const [isGalleryLoading, setIsGalleryLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState<GeneratedImage | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [cachedProfile, setCachedProfile] = useState<null | {
+    name: string;
+    phone: string;
+    ageRange: string;
+    email: string;
+    colors: string[];
+    styles: string[];
+    fit: string;
+    bodyType: string;
+  }>(null);
 
   // Form fields
   const [name, setName] = useState(user.name || '');
   const [phone, setPhone] = useState(user.phone || '');
   const [ageRange, setAgeRange] = useState(user.ageRange || '');
   const [email, setEmail] = useState(user.email || '');
-  const [colorMode, setColorMode] = useState(user.colorMode || '');
   const [colors, setColors] = useState<string[]>(user.colors || []);
   const [styles, setStyles] = useState<string[]>(user.styles || []);
   const [fit, setFit] = useState(user.fit || '');
@@ -84,12 +111,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setPhone(user.phone || '');
     setAgeRange(user.ageRange || '');
     setEmail(user.email || '');
-    setColorMode(user.colorMode || '');
     setColors(user.colors || []);
     setStyles(user.styles || []);
     setFit(user.fit || '');
     setBodyType(user.bodyType || '');
+    setCachedProfile({
+      name: (user.name || '').trim(),
+      phone: (user.phone || '').trim(),
+      ageRange: user.ageRange || '',
+      email: (user.email || '').trim(),
+      colors: user.colors || [],
+      styles: user.styles || [],
+      fit: user.fit || '',
+      bodyType: user.bodyType || '',
+    });
     loadAddresses();
+    loadGallery();
   }, [user]);
 
   const loadAddresses = useCallback(async () => {
@@ -99,37 +136,108 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     } catch { /* ignore */ }
   }, []);
 
+  const loadGallery = useCallback(async (force = false) => {
+    setIsGalleryLoading(true);
+    try {
+      const { generations: imgs } = await profileService.getGenerations(force);
+      setGenerations(imgs);
+    } catch { /* ignore */ } finally {
+      setIsGalleryLoading(false);
+    }
+  }, []);
+
+  const handleDeleteGeneration = useCallback(async (id: string) => {
+    setDeletingId(id);
+    try {
+      await profileService.deleteGeneration(id);
+      setGenerations(prev => prev.filter(g => g.id !== id));
+      setLightboxImage(prev => prev?.id === id ? null : prev);
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
+
+  const handleDeleteAllGenerations = useCallback(async () => {
+    setConfirmClearAll(false);
+    setIsDeletingAll(true);
+    try {
+      await profileService.deleteAllGenerations();
+      setGenerations([]);
+      setLightboxImage(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to clear gallery');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  }, []);
+
   const handleSave = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setSuccess(null);
     try {
       if (!name.trim()) { setError('Name is required'); setIsLoading(false); return; }
-      if (!phone.trim()) { setError('Phone number is required'); setIsLoading(false); return; }
+      if (phone.trim() && phone.trim().length < 10) { setError('Enter a valid phone number'); setIsLoading(false); return; }
+      if (!fit) { setError('Fit size is required'); setIsLoading(false); return; }
+      if (!bodyType) { setError('Body type is required'); setIsLoading(false); return; }
+
+      const trimmedName = name.trim();
+      const trimmedPhone = phone.trim();
+      const trimmedEmail = email.trim();
+      const hasChanges = !cachedProfile
+        || trimmedName !== cachedProfile.name
+        || trimmedPhone !== cachedProfile.phone
+        || (ageRange || '') !== cachedProfile.ageRange
+        || trimmedEmail !== cachedProfile.email
+        || !arraysEqual(colors, cachedProfile.colors)
+        || !arraysEqual(styles, cachedProfile.styles)
+        || fit !== cachedProfile.fit
+        || bodyType !== cachedProfile.bodyType;
+
+      if (!hasChanges) {
+      setSuccess('No changes to save');
+      setTimeout(() => setSuccess(null), 3000);
+        setIsLoading(false);
+        return;
+      }
 
       const updates: Record<string, any> = {
-        name: name.trim(),
-        phone: phone.trim(),
+        name: trimmedName,
       };
+      if (trimmedPhone) updates.phone = trimmedPhone;
 
       if (ageRange) updates.ageRange = ageRange;
-      if (email.trim()) updates.email = email.trim();
-      if (colorMode) updates.colorMode = colorMode;
+      if (trimmedEmail) updates.email = trimmedEmail;
       if (colors.length > 0) updates.colors = colors;
       if (styles.length > 0) updates.styles = styles;
-      if (fit) updates.fit = fit;
-      if (bodyType) updates.bodyType = bodyType;
+      updates.fit = fit;
+      updates.bodyType = bodyType;
 
       await profileService.updateProfile(updates);
       setSuccess('Profile updated successfully');
+      setCachedProfile({
+        name: trimmedName,
+        phone: trimmedPhone,
+        ageRange: ageRange || '',
+        email: trimmedEmail,
+        colors: [...colors],
+        styles: [...styles],
+        fit,
+        bodyType,
+      });
       onProfileUpdate();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to save');
+      setTimeout(() => setError(null), 4000);
     } finally {
       setIsLoading(false);
     }
-  }, [name, phone, ageRange, email, colorMode, colors, styles, fit, bodyType, onProfileUpdate]);
+  }, [name, phone, ageRange, email, colors, styles, fit, bodyType, cachedProfile, onProfileUpdate]);
 
   const handleAddAddress = useCallback(async () => {
     if (!newAddress.trim()) return;
@@ -143,6 +251,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       loadAddresses();
     } catch (err: any) {
       setError(err.message || 'Failed to add address');
+      setTimeout(() => setError(null), 4000);
     }
   }, [newAddress, newLabel, loadAddresses]);
 
@@ -152,8 +261,50 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       loadAddresses();
     } catch (err: any) {
       setError(err.message || 'Failed to delete address');
+      setTimeout(() => setError(null), 4000);
     }
   }, [loadAddresses]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const data = await profileService.getProfile(true);
+      const addrs = await profileService.getAddresses(true);
+      if (data?.profile) {
+        const p = data.profile;
+        setName(p.name || '');
+        setPhone(p.phone || '');
+        setAgeRange(p.ageRange || '');
+        setEmail(p.email || '');
+        setColors(p.colors || []);
+        setStyles(p.styles || []);
+        setFit(p.fit || '');
+        setBodyType(p.bodyType || '');
+        setCachedProfile({
+          name: (p.name || '').trim(),
+          phone: (p.phone || '').trim(),
+          ageRange: p.ageRange || '',
+          email: (p.email || '').trim(),
+          colors: p.colors || [],
+          styles: p.styles || [],
+          fit: p.fit || '',
+          bodyType: p.bodyType || '',
+        });
+      }
+      setAddresses(addrs);
+      loadGallery(true);
+      onProfileUpdate();
+      setSuccess('Profile refreshed');
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to refresh');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onProfileUpdate]);
 
   const toggleColor = (id: string) => {
     setColors(prev => {
@@ -167,9 +318,75 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setStyles(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
   };
 
+  const arraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false;
+    const aSorted = [...a].sort();
+    const bSorted = [...b].sort();
+    return aSorted.every((val, idx) => val === bSorted[idx]);
+  };
+
   const avatarUrl = user.avatarUrl || null;
+  const accountLabel = user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1);
+  const monthlyRemaining = Math.max(user.monthlyQuota - user.monthlyUsed, 0);
 
   return (
+    <>
+    {/* Lightbox */}
+    {lightboxImage && (
+      <div
+        className="fixed inset-0 z-[300] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4"
+        onClick={() => setLightboxImage(null)}
+      >
+        <div
+          className="relative flex flex-col items-center max-w-[min(90vw,480px)] w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute -top-10 right-0 w-8 h-8 flex items-center justify-center text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+            </svg>
+          </button>
+          <img
+            src={lightboxImage.imageUrl}
+            alt={lightboxImage.templateName || 'Creation'}
+            className="w-full max-h-[75vh] object-contain rounded-2xl border border-[#2a2a2a]"
+          />
+          <div className="mt-3 w-full flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lightboxImage.mode === 'tryon' ? 'bg-[#60a5fa]/15 text-[#60a5fa] border border-[#60a5fa]/30' : 'bg-[#c9a962]/15 text-[#c9a962] border border-[#c9a962]/30'}`}>
+                {lightboxImage.mode === 'tryon' ? 'Try-on' : 'Remix'}
+              </span>
+              {lightboxImage.templateName && (
+                <span className="text-sm text-[#a0a0a0] truncate max-w-[180px]">{lightboxImage.templateName}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-[#6b6b6b]">{formatDate(lightboxImage.createdAt)}</span>
+              <button
+                onClick={() => handleDeleteGeneration(lightboxImage.id)}
+                disabled={deletingId === lightboxImage.id}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-all disabled:opacity-50"
+              >
+                {deletingId === lightboxImage.id ? (
+                  <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" strokeLinecap="round" />
+                  </svg>
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="w-full h-full overflow-y-auto bg-[#0a0a0a] scrollbar-hide">
       <div className="max-w-[600px] mx-auto px-4 py-6 pb-[100px]">
 
@@ -190,26 +407,198 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-semibold text-[#f5f5f5] truncate">{user.name}</h1>
             <p className="text-sm text-[#6b6b6b] truncate">{user.email}</p>
-            <p className="text-xs text-[#c9a962] mt-0.5">{user.credits} credits</p>
+            <p className="text-xs text-[#c9a962] mt-0.5">{accountLabel} account • {user.creationsLeft} left</p>
           </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="h-9 px-3 rounded-lg border border-[#2a2a2a] text-xs font-medium text-[#a0a0a0] hover:text-[#f5f5f5] hover:border-[#3a3a3a] transition-all disabled:opacity-50"
+          >
+            Refresh
+          </button>
         </div>
 
-        {/* Notifications */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            <p className="text-sm text-red-400">{error}</p>
-            <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/></svg>
-            </button>
+        {/* Notifications (fixed) */}
+        {(error || success) && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[calc(100%-2rem)] max-w-[520px]">
+            {error && (
+              <div className="mb-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 shadow-lg backdrop-blur">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                <p className="text-sm text-red-400">{error}</p>
+                <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-400">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2 shadow-lg backdrop-blur">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                <p className="text-sm text-green-400">{success}</p>
+                <button onClick={() => setSuccess(null)} className="ml-auto text-green-400/60 hover:text-green-400">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            )}
           </div>
         )}
-        {success && (
-          <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-            <p className="text-sm text-green-400">{success}</p>
+
+        {/* Section: Account & Usage */}
+        <section className="mb-6">
+          <h2 className="text-sm font-semibold text-[#c9a962] mb-3 flex items-center gap-2">
+            <span>💳</span> Account & Usage
+          </h2>
+          <div className="space-y-3 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[#6b6b6b]">Account Type</p>
+                <p className="text-sm text-[#f5f5f5] font-medium">{accountLabel}</p>
+              </div>
+              {user.accountType !== 'ultimate' && onUpgrade && (
+                <button
+                  onClick={onUpgrade}
+                  className="h-9 px-3 rounded-lg border border-[#2a2a2a] text-xs font-medium text-[#c9a962] hover:text-[#f5f5f5] hover:border-[#c9a962]/50 transition-all"
+                >
+                  Upgrade
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a]">
+                <p className="text-[11px] text-[#6b6b6b]">Monthly used</p>
+                <p className="text-sm text-[#f5f5f5]">{user.monthlyUsed}/{user.monthlyQuota}</p>
+              </div>
+              <div className="p-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a]">
+                <p className="text-[11px] text-[#6b6b6b]">Monthly left</p>
+                <p className="text-sm text-[#f5f5f5]">{monthlyRemaining}</p>
+              </div>
+              <div className="p-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a]">
+                <p className="text-[11px] text-[#6b6b6b]">Extra creations</p>
+                <p className="text-sm text-[#f5f5f5]">{user.extraCredits}</p>
+              </div>
+              <div className="p-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a]">
+                <p className="text-[11px] text-[#6b6b6b]">Total left</p>
+                <p className="text-sm text-[#f5f5f5]">{user.creationsLeft}</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-[#6b6b6b] leading-relaxed">
+              Your account starts with 8 creations: 5 welcome bonus creations plus 3 monthly free creations.
+              Monthly free creations reset on the 1st of every month (UTC).
+            </p>
           </div>
-        )}
+        </section>
+
+        {/* Section: My Creations Gallery */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-[#c9a962] flex items-center gap-2">
+              <span>✦</span> My Creations
+              {!isGalleryLoading && generations.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#c9a962]/10 text-[#c9a962] text-[10px] font-medium border border-[#c9a962]/20">
+                  {generations.length}
+                </span>
+              )}
+            </h2>
+            {!isGalleryLoading && generations.length > 0 && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => loadGallery(true)}
+                  className="text-[11px] text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors"
+                >
+                  Refresh
+                </button>
+                {confirmClearAll ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-[#6b6b6b]">Sure?</span>
+                    <button
+                      onClick={handleDeleteAllGenerations}
+                      disabled={isDeletingAll}
+                      className="text-[11px] font-medium text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                    >
+                      {isDeletingAll ? 'Clearing…' : 'Yes'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmClearAll(false)}
+                      className="text-[11px] text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmClearAll(true)}
+                    className="text-[11px] text-[#6b6b6b] hover:text-red-400 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {isGalleryLoading ? (
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-square rounded-xl bg-[#141414] animate-pulse" />
+              ))}
+            </div>
+          ) : generations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-10 bg-[#121212] border border-[#1a1a1a] rounded-2xl">
+              <div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#3a3a3a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9" strokeLinecap="round" />
+                  <path d="M16 3l2 2-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M21 7l-2-2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-[#3a3a3a]">No creations yet</p>
+                <p className="text-xs text-[#2a2a2a] mt-1">Your generated looks will appear here</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {generations.map((gen) => (
+                <div
+                  key={gen.id}
+                  className="group relative aspect-square rounded-xl overflow-hidden bg-[#141414] border border-[#1a1a1a] hover:border-[#3a3a3a] transition-all cursor-pointer"
+                  onClick={() => deletingId !== gen.id && setLightboxImage(gen)}
+                >
+                  <img
+                    src={gen.imageUrl}
+                    alt={gen.templateName || 'Creation'}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                  />
+                  {/* Mode badge on hover */}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-6 pb-2 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${gen.mode === 'tryon' ? 'bg-[#60a5fa]/20 text-[#60a5fa]' : 'bg-[#c9a962]/20 text-[#c9a962]'}`}>
+                      {gen.mode === 'tryon' ? 'Try-on' : 'Remix'}
+                    </span>
+                  </div>
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteGeneration(gen.id); }}
+                    disabled={deletingId === gen.id}
+                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center text-[#6b6b6b] hover:text-red-400 hover:bg-black/85 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-100 active:scale-90"
+                    aria-label="Delete"
+                  >
+                    {deletingId === gen.id ? (
+                      <svg className="w-3 h-3 animate-spin text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Section: Personal Info */}
         <section className="mb-6">
@@ -223,7 +612,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm" />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1">Phone <span className="text-red-400">*</span></label>
+              <label className="text-xs font-medium text-[#a0a0a0] ml-1">Phone <span className="text-[#525252]">(optional)</span></label>
               <div className="flex gap-2 mt-1">
                 <span className="h-11 px-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#6b6b6b] flex items-center text-sm shrink-0">+91</span>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit number"
@@ -256,19 +645,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             <span>🎨</span> Color Preferences
           </h2>
           <div className="space-y-4 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
+            
             <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Theme</label>
-              <div className="flex gap-3">
-                {['light', 'dark'].map((mode) => (
-                  <button key={mode} onClick={() => setColorMode(colorMode === mode ? '' : mode)}
-                    className={`flex-1 p-3 rounded-xl border text-center font-medium text-sm transition-all ${colorMode === mode ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#f5f5f5]' : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'}`}>
-                    {mode === 'light' ? '☀️ Light' : '🌙 Dark'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Favorite colors (up to 3)</label>
+              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Favorite colors <span className="text-red-400">*</span> (up to 3)</label>
               <div className="grid grid-cols-4 gap-2">
                 {PRIMARY_COLORS.map((c) => {
                   const sel = colors.includes(c.id);
@@ -312,7 +691,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </h2>
           <div className="space-y-4 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
             <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Fit size</label>
+              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Fit size <span className="text-red-400">*</span></label>
               <div className="grid grid-cols-3 gap-2">
                 {FIT_SIZES.map((s) => (
                   <button key={s} onClick={() => setFit(fit === s ? '' : s)}
@@ -323,7 +702,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type</label>
+              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
               <div className="grid grid-cols-3 gap-2">
                 {BODY_TYPES.map((b) => (
                   <button key={b.id} onClick={() => setBodyType(bodyType === b.id ? '' : b.id)}
@@ -398,5 +777,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </button>
       </div>
     </div>
+    </>
   );
 };

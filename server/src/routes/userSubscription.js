@@ -21,7 +21,7 @@ export async function userSubscriptionHandler(req, res) {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email, full_name, credits, created_at')
+      .select('id, email, full_name, account_type, monthly_quota, monthly_used, extra_credits, created_at')
       .eq('id', userId)
       .single();
 
@@ -38,10 +38,12 @@ export async function userSubscriptionHandler(req, res) {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    const totalCreditsPurchased = (subscriptions || []).reduce(
-      (sum, sub) => sum + (sub.credits_purchased || 0),
+    const totalCreationsPurchased = (subscriptions || []).reduce(
+      (sum, sub) => sum + (sub.creations_purchased || 0),
       0
     );
+    const monthlyRemaining = Math.max((profile.monthly_quota || 0) - (profile.monthly_used || 0), 0);
+    const creationsLeft = monthlyRemaining + (profile.extra_credits || 0);
 
     return res.status(200).json({
       success: true,
@@ -49,12 +51,16 @@ export async function userSubscriptionHandler(req, res) {
         id: profile.id,
         email: profile.email,
         name: profile.full_name,
-        credits: profile.credits || 0,
+        accountType: profile.account_type || 'free',
+        monthlyQuota: profile.monthly_quota || 0,
+        monthlyUsed: profile.monthly_used || 0,
+        extraCredits: profile.extra_credits || 0,
+        creationsLeft,
         createdAt: profile.created_at,
       },
       subscriptions: subscriptions || [],
       stats: {
-        totalCreditsPurchased,
+        totalCreationsPurchased,
         totalPayments: (subscriptions || []).length,
       },
     });

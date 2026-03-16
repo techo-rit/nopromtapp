@@ -159,11 +159,15 @@ export async function getUserSubscription(): Promise<{
     id: string;
     email: string;
     name: string;
-    credits: number;
+    accountType: 'free' | 'essentials' | 'ultimate';
+    monthlyQuota: number;
+    monthlyUsed: number;
+    extraCredits: number;
+    creationsLeft: number;
   };
   subscriptions?: any[];
   stats?: {
-    totalCreditsPurchased: number;
+    totalCreationsPurchased: number;
     totalPayments: number;
   };
   error?: string;
@@ -221,7 +225,7 @@ export async function openRazorpayCheckout(
     amount: options.amount,
     currency: options.currency,
     name: 'Stiri',
-    description: `${options.planName} Plan`,
+    description: `${options.planName} Account`,
     order_id: options.orderId,
     prefill: options.prefill,
     theme: {
@@ -251,7 +255,7 @@ export async function processPayment(
   callbacks: {
     onOrderCreated?: () => void;
     onCheckoutOpened?: () => void;
-    onPaymentSuccess?: (creditsAdded: number) => void;
+    onPaymentSuccess?: (creationsAdded: number) => void;
     onPaymentFailed?: (error: string) => void;
     onCheckoutDismissed?: () => void;
   }
@@ -288,7 +292,7 @@ export async function processPayment(
         });
 
         if (verifyResponse.success) {
-          callbacks.onPaymentSuccess?.(verifyResponse.creditsAdded || 0);
+          callbacks.onPaymentSuccess?.(verifyResponse.creationsAdded || 0);
         } else {
           callbacks.onPaymentFailed?.(verifyResponse.error || 'Payment verification failed');
         }

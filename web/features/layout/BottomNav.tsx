@@ -8,6 +8,7 @@ interface BottomNavProps {
     user: User | null;
     onSignIn: () => void;
     onLogout: () => void;
+    onUpgrade?: () => void;
 }
 
 const CreatorsIcon: React.FC<{ active?: boolean }> = ({ active }) => (
@@ -93,9 +94,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     user,
     onSignIn,
     onLogout,
+    onUpgrade,
 }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const navigate = useNavigate();
+
+    const accountLabel = user?.accountType ? user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1) : 'Free';
+    const creationsLeft = user?.creationsLeft ?? 0;
+    const isUltimate = user?.accountType === 'ultimate';
+    const canUpgrade = Boolean(user && !isUltimate && onUpgrade);
+    const accountBadgeClass = isUltimate
+        ? 'text-[#c9a962] bg-[#c9a962]/10 border border-[#c9a962]/30'
+        : user?.accountType === 'essentials'
+        ? 'text-[#60a5fa] bg-[#60a5fa]/10 border border-[#60a5fa]/30'
+        : 'text-[#a0a0a0] bg-[#2a2a2a] border border-[#3a3a3a]';
 
     const handleProfileClick = () => {
         if (!user) {
@@ -117,23 +129,57 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
             {/* Profile Menu */}
             {showProfileMenu && user && (
-                <div className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom))] right-4 z-50 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2">
-                    <div className="px-4 py-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                {user.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
-                                ) : null}
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium text-[#f5f5f5] truncate">
-                                        {user.name}
-                                    </p>
-                                    <p className="text-xs text-[#6b6b6b] truncate">{user.email}</p>
+                <div className="md:hidden fixed bottom-[calc(60px+env(safe-area-inset-bottom))] right-4 z-50 w-60 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2">
+                    {/* User info */}
+                    <div className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                            {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
+                            ) : (
+                                <div className="w-8 h-8 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm shrink-0">
+                                    {user.name?.charAt(0)?.toUpperCase()}
                                 </div>
+                            )}
+                            <div className="min-w-0">
+                                <p className="text-sm font-medium text-[#f5f5f5] truncate">{user.name}</p>
+                                <p className="text-xs text-[#6b6b6b] truncate">{user.email}</p>
                             </div>
                         </div>
                     </div>
+
+                    {/* Account status */}
+                    <div className="border-t border-[#2a2a2a] px-4 py-3">
+                        <div className="flex items-center justify-between">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${accountBadgeClass}`}>
+                                {accountLabel}
+                            </span>
+                            <span className="text-xs text-[#6b6b6b]">
+                                <span className="text-[#f5f5f5] font-medium">{creationsLeft}</span> creations left
+                            </span>
+                        </div>
+                        {isUltimate && (
+                            <p className="text-[10px] text-[#6b6b6b] mt-1.5">You're on our best plan ✦</p>
+                        )}
+                    </div>
+
                     <div className="border-t border-[#2a2a2a]">
+                        {/* Upgrade button — only for Free / Essentials */}
+                        {canUpgrade && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onUpgrade!();
+                                    setShowProfileMenu(false);
+                                }}
+                                className="w-full text-left px-4 py-3 text-sm text-[#c9a962] hover:bg-[#c9a962]/5 transition-colors flex items-center gap-3 cursor-pointer"
+                            >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M5 16L3 5l5.5 5L12 2l3.5 8L21 5l-2 11H5zm0 2h14v2H5v-2z" />
+                                </svg>
+                                Upgrade Account
+                            </button>
+                        )}
+
                         <button
                             type="button"
                             onClick={() => {

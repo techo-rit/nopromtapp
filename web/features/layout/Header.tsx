@@ -43,7 +43,6 @@ export const Header: React.FC<HeaderProps> = ({
     onSignIn,
     onLogout,
     onUpgrade,
-    isLoading = false,
     isSecondaryPage = false,
     onBack,
     searchQuery,
@@ -58,7 +57,11 @@ export const Header: React.FC<HeaderProps> = ({
 
     const commonTextClasses =
         "text-[15px] font-normal leading-none text-[#f5f5f5]";
-    const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none w-[11ch] text-left`;
+    const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none w-[11ch] text-center`;
+    const accountLabel = user?.accountType ? user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1) : "Free";
+    const creationsLeft = user?.creationsLeft ?? 0;
+    const isUltimate = user?.accountType === 'ultimate';
+    const pillIsClickable = Boolean(user && !isUltimate && onUpgrade);
 
     useEffect(() => {
         if (!showUserMenu) return;
@@ -72,59 +75,30 @@ export const Header: React.FC<HeaderProps> = ({
         return () => document.removeEventListener("mousedown", onDocumentClick);
     }, [showUserMenu]);
 
-    if (isSecondaryPage) {
-        return (
-            <header className="sticky top-0 z-50 w-full bg-[#0a0a0a] border-b border-[#2a2a2a] h-[60px]">
-                <div className="w-full h-full max-w-[1440px] mx-auto px-3 flex items-center justify-between">
-                    <button
-                        onClick={onBack}
-                        className="p-2 -ml-1 text-[#f5f5f5] hover:text-[#c9a962] transition-colors shrink-0"
-                    >
-                        <ArrowLeftIcon />
-                    </button>
-
-                    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 h-[40px] px-2 bg-transparent cursor-text">
-                        <SearchIcon />
-                        <input
-                            ref={mobileSearchRef}
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
-                            className={inputClasses}
-                        />
-                    </div>
-
-                    <button
-                        onClick={onUpgrade}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95"
-                    >
-                        <svg
-                            className="w-3.5 h-3.5 text-[#c9a962]"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                        >
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span className={commonTextClasses}>
-                            {user ? `${user.credits || 0}` : "0"}{" "}
-                            <span className="text-[#6b6b6b]">credits</span>
-                        </span>
-                    </button>
-                </div>
-            </header>
-        );
-    }
-
     return (
         <>
-            <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50 overflow-hidden">
-                <div className="w-full h-full px-3 flex items-center justify-between relative">
-                    <span className={`${commonTextClasses} text-[#E4C085] z-10`}>
-                        Manifesting
-                    </span>
+            {/* ── Mobile ── */}
+            <header className="md:hidden relative w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50">
+                <div className="w-full h-full px-3 flex items-center gap-2">
+                    {isSecondaryPage && (
+                        <button
+                            onClick={onBack}
+                            className="p-1.5 -ml-1 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors shrink-0"
+                            aria-label="Go back"
+                        >
+                            <ArrowLeftIcon />
+                        </button>
+                    )}
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-1.5 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        aria-label="Go to home"
+                    >
+                        <RemixLogoIcon />
+                        <span className="text-[15px] font-bold tracking-tight text-[#f5f5f5]">stiri.in</span>
+                    </button>
 
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-1 h-[40px] z-0">
+                    <div className="flex-1 min-w-0 mx-2 flex items-center gap-1 h-[40px] px-3 rounded-full border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors">
                         <SearchIcon />
                         <input
                             ref={mobileSearchRef}
@@ -132,51 +106,62 @@ export const Header: React.FC<HeaderProps> = ({
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             placeholder="desire for..."
-                            className={inputClasses}
+                            className={`${inputClasses} flex-1 min-w-0 w-auto`}
                         />
                     </div>
-
-                    <button
-                        onClick={onUpgrade}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-transparent border border-[#3a3a3a] rounded-full z-10 hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95"
-                    >
-                        <svg
-                            className="w-3.5 h-3.5 text-[#c9a962]"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                        >
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span className={commonTextClasses}>
-                            {user ? `${user.credits || 0}` : "0"}{" "}
-                            <span className="text-[#6b6b6b]">credits</span>
-                        </span>
-                    </button>
                 </div>
             </header>
 
-            <header className="hidden md:block relative w-full bg-[#0a0a0a] z-50">
+            {/* ── Desktop ── */}
+            <header className="hidden md:block relative w-full bg-[#0a0a0a] border-b border-[#2a2a2a] z-50">
                 <div className="w-full max-w-[1440px] mx-auto px-8 h-[80px] flex items-center justify-between">
-                    <div className="flex items-center gap-12">
-                        <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5] hover:cursor-pointer">
-                            <RemixLogoIcon />
-                            <span>stiri.in</span>
+                    <div className="flex items-center gap-4">
+                        {isSecondaryPage && (
+                            <button
+                                onClick={onBack}
+                                className="p-2 -ml-2 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors shrink-0"
+                                aria-label="Go back"
+                            >
+                                <ArrowLeftIcon />
+                            </button>
+                        )}
+                        <div className="flex items-center gap-12">
+                            <button
+                                onClick={() => navigate('/')}
+                                className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5] cursor-pointer hover:opacity-80 transition-opacity"
+                                aria-label="Go to home"
+                            >
+                                <RemixLogoIcon />
+                                <span>stiri.in</span>
+                            </button>
+                            <nav className="flex items-center gap-2">
+                                {navItems.map((item) => (
+                                    <button
+                                        key={item}
+                                        onClick={() => onNavClick(item)}
+                                        className={`min-h-[44px] px-5 py-2.5 cursor-pointer text-base font-medium rounded-full transition-all ${
+                                            activeNav === item
+                                                ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]"
+                                                : "text-[#a0a0a0] hover:text-[#f5f5f5]"
+                                        }`}
+                                    >
+                                        {item}
+                                    </button>
+                                ))}
+                            </nav>
                         </div>
-                        <nav className="flex items-center gap-2">
-                            {navItems.map((item) => (
-                                <button
-                                    key={item}
-                                    onClick={() => onNavClick(item)}
-                                    className={`min-h-[44px] px-5 py-2.5 cursor-pointer text-base font-medium rounded-full transition-all ${
-                                        activeNav === item
-                                            ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]"
-                                            : "text-[#a0a0a0] hover:text-[#f5f5f5]"
-                                    }`}
-                                >
-                                    {item}
-                                </button>
-                            ))}
-                        </nav>
+                    </div>
+
+                    <div className="w-[45%] mx-auto flex items-center gap-1.5 h-[40px] px-4 rounded-full border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors">
+                        <SearchIcon />
+                        <input
+                            ref={desktopSearchRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            placeholder="desire for..."
+                            className={`${inputClasses} flex-1 min-w-0 w-auto`}
+                        />
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -222,6 +207,25 @@ export const Header: React.FC<HeaderProps> = ({
                                             </div>
                                         </div>
                                         <div className="border-t border-[#2a2a2a]">
+                                            <div className="px-4 py-3 text-xs text-[#6b6b6b]">
+                                                Account: <span className="text-[#f5f5f5]">{accountLabel}</span>
+                                                <span className="text-[#3a3a3a]"> • </span>
+                                                {creationsLeft} left
+                                            </div>
+                                            {pillIsClickable && (
+                                                <button
+                                                    onClick={() => {
+                                                        onUpgrade!();
+                                                        setShowUserMenu(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 text-sm text-[#c9a962] hover:bg-[#1a1a1a] transition-colors flex items-center gap-3 cursor-pointer"
+                                                >
+                                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                                    </svg>
+                                                    Upgrade Account
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => {
                                                     navigate('/profile');
@@ -254,36 +258,6 @@ export const Header: React.FC<HeaderProps> = ({
                                 )}
                             </div>
                         )}
-                    </div>
-                </div>
-
-                <div className="w-full border-t border-[#2a2a2a]">
-                    <div className="max-w-[720px] mx-auto h-[56px] flex items-center justify-center gap-8">
-                        <span className="text-[#E4C085] text-base font-medium whitespace-nowrap">
-                            Manifesting
-                        </span>
-                        <div className="flex items-center gap-1 h-[40px] px-2 bg-transparent">
-                            <SearchIcon />
-                            <input
-                                ref={desktopSearchRef}
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => onSearchChange(e.target.value)}
-                                placeholder="desire for..."
-                                className={inputClasses}
-                            />
-                        </div>
-                        <button
-                            onClick={onUpgrade}
-                            className="shrink-0 flex items-center gap-2 px-4 py-2 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95 hover:cursor-pointer"
-                        >
-                            <svg className="w-4 h-4 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                            </svg>
-                            <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
-                                {user ? `${user.credits || 0}` : "0"} credits
-                            </span>
-                        </button>
                     </div>
                 </div>
             </header>

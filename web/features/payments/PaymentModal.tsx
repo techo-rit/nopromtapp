@@ -21,7 +21,7 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User;
-  onPaymentSuccess: (creditsAdded: number) => void;
+  onPaymentSuccess: (creationsAdded: number) => void;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -32,7 +32,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const [paymentState, setPaymentState] = useState<PaymentState>('plan-selection');
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
-  const [creditsAdded, setCreditsAdded] = useState(0);
+  const [creationsAdded, setCreationsAdded] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,7 +48,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     if (isOpen) {
       setPaymentState('plan-selection');
       setSelectedPlan(null);
-      setCreditsAdded(0);
+      setCreationsAdded(0);
       setErrorMessage('');
       setIsLoading(false);
     }
@@ -72,10 +72,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           // Razorpay modal is now open
           setIsLoading(false);
         },
-        onPaymentSuccess: (credits) => {
-          setCreditsAdded(credits);
+        onPaymentSuccess: (creations) => {
+          setCreationsAdded(creations);
           setPaymentState('success');
-          onPaymentSuccess(credits);
+          onPaymentSuccess(creations);
         },
         onPaymentFailed: (error) => {
           setErrorMessage(error);
@@ -156,7 +156,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {paymentState === 'success' && (
             <SuccessView
               planName={selectedPlan?.name || ''}
-              creditsAdded={creditsAdded}
+              creationsAdded={creationsAdded}
               onClose={handleClose}
             />
           )}
@@ -267,7 +267,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onSelect, isLoading }) => {
         {/* Trust Badge */}
         <div className="mb-4 text-left">
           <span className={`text-xs uppercase tracking-widest font-medium ${isPopular ? 'text-[#c9a962]/60' : 'text-[#6b6b6b]/60'}`}>
-            100% refund on unused creations
+            Account upgrade
           </span>
         </div>
 
@@ -279,7 +279,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onSelect, isLoading }) => {
         {/* Price */}
         <div className="flex items-baseline gap-1 mb-6">
           <span className="text-3xl md:text-4xl font-bold text-[#f5f5f5]">{plan.displayPrice}</span>
-          <span className="text-[#6b6b6b]">/ month</span>
+          <span className="text-[#6b6b6b]">one-time</span>
         </div>
 
         {/* Features */}
@@ -341,7 +341,7 @@ const ProcessingView: React.FC<ProcessingViewProps> = ({ planName }) => {
           Please complete your payment in the Razorpay window.
         </p>
         <p className="text-[#6b6b6b] text-sm mt-2">
-          Purchasing: <span className="text-[#c9a962]">{planName} Plan</span>
+          Purchasing: <span className="text-[#c9a962]">{planName} account</span>
         </p>
       </div>
 
@@ -359,11 +359,11 @@ const ProcessingView: React.FC<ProcessingViewProps> = ({ planName }) => {
 // ==========================================
 interface SuccessViewProps {
   planName: string;
-  creditsAdded: number;
+  creationsAdded: number;
   onClose: () => void;
 }
 
-const SuccessView: React.FC<SuccessViewProps> = ({ planName, creditsAdded, onClose }) => {
+const SuccessView: React.FC<SuccessViewProps> = ({ planName, creationsAdded, onClose }) => {
   return (
     <div className="px-8 py-16 text-center relative overflow-hidden">
       {/* Confetti-like Background */}
@@ -383,14 +383,14 @@ const SuccessView: React.FC<SuccessViewProps> = ({ planName, creditsAdded, onClo
         </div>
         <h3 className="text-3xl font-bold text-[#f5f5f5] mb-2">Payment Successful!</h3>
         <p className="text-[#a0a0a0] text-lg">
-          Welcome to the <span className="text-[#c9a962]">{planName}</span> plan
+          Your account is now <span className="text-[#c9a962]">{planName}</span>
         </p>
       </div>
 
-      {/* Credits Added */}
+      {/* Creations Added */}
       <div className="relative z-10 bg-[#1a1a1a] rounded-2xl p-6 max-w-sm mx-auto mb-8 border border-[#2a2a2a]">
-        <p className="text-sm text-[#6b6b6b] mb-2">Credits Added</p>
-        <p className="text-4xl font-bold text-[#c9a962]">+{creditsAdded}</p>
+        <p className="text-sm text-[#6b6b6b] mb-2">Creations Added</p>
+        <p className="text-4xl font-bold text-[#c9a962]">+{creationsAdded}</p>
         <p className="text-sm text-[#6b6b6b] mt-2">creations</p>
       </div>
 
