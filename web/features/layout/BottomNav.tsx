@@ -142,7 +142,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                             )}
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-[#f5f5f5] truncate">{user.name}</p>
-                                <p className="text-xs text-[#6b6b6b] truncate">{user.email}</p>
                             </div>
                         </div>
                     </div>

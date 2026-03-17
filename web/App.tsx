@@ -142,7 +142,7 @@ const App: React.FC = () => {
         setOnboardingPercent(data.onboardingPercent ?? 100);
         setOnboardingSteps(data.onboardingSteps ?? 5);
         // Auto-show onboarding after first login if not complete
-        if (data.profile && !data.profile.isOnboardingComplete && data.onboardingSteps === 0) {
+        if (data.profile && !data.profile.isOnboardingComplete) {
           openOnboardingModal();
         }
       }
@@ -186,18 +186,6 @@ const App: React.FC = () => {
     } catch (error: any) {
       setAuthError(error.message || "Authentication failed");
     } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      await authService.signInWithGoogle();
-      // No modal close here: signInWithGoogle redirects the page.
-    } catch (error: any) {
-      setAuthError(error.message || "Google authentication failed");
       setAuthLoading(false);
     }
   };
@@ -338,7 +326,6 @@ const App: React.FC = () => {
       <AuthModal
         isOpen={showAuthModal}
         onClose={closeAuthModal}
-        onGoogleAuth={handleGoogleAuth}
         onSendOtp={async (phone) => {
           setAuthLoading(true);
           setAuthError(null);
@@ -376,7 +363,6 @@ const App: React.FC = () => {
           onClose={closeOnboardingModal}
           onComplete={handleOnboardingComplete}
           userName={user.name || ''}
-          userEmail={user.email || ''}
           userPhone={user.phone || ''}
         />
       )}

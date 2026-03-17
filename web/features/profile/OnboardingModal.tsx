@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CloseIcon } from '../../shared/ui/Icons';
+import { CloseIcon, RefreshIcon } from '../../shared/ui/Icons';
 import { profileService } from '../profile/profileService';
 import { CONFIG } from '../../config';
 
@@ -8,7 +8,6 @@ interface OnboardingModalProps {
   onClose: () => void;
   onComplete: () => void;
   userName?: string;
-  userEmail?: string;
   userPhone?: string;
 }
 
@@ -100,7 +99,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
   onComplete,
   userName = '',
-  userEmail = '',
   userPhone = '',
 }) => {
   const [step, setStep] = useState<OnboardingStep>(1);
@@ -111,7 +109,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     name: string | null;
     phone: string | null;
     ageRange: string | null;
-    email: string | null;
     colors: string[];
     styles: string[];
     fit: string | null;
@@ -125,9 +122,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   // Step 4
   const [name, setName] = useState(userName || '');
-  const [phone, setPhone] = useState(userPhone || '');
+  const [phone, setPhone] = useState(() => { const d = (userPhone || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d; });
   const [ageRange, setAgeRange] = useState<string | null>(null);
-  const [email, setEmail] = useState(userEmail || '');
 
   // Step 1
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -161,8 +157,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         const addressLine = defaultAddress?.addressLine || '';
 
         setName((profile?.name || userName || '').trim());
-        setEmail((profile?.email || userEmail || '').trim());
-        setPhone((profile?.phone || userPhone || '').trim());
+        const rawPhone = (profile?.phone || userPhone || '').replace(/\D/g, '');
+        setPhone(rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone);
         setAgeRange(profile?.ageRange || null);
         setSelectedColors(profile?.colors || []);
         setSelectedStyles(profile?.styles || []);
@@ -175,7 +171,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           name: profile?.name || null,
           phone: profile?.phone || null,
           ageRange: profile?.ageRange || null,
-          email: profile?.email || null,
           colors: profile?.colors || [],
           styles: profile?.styles || [],
           fit: profile?.fit || null,
@@ -210,13 +205,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       } catch {
         if (!alive) return;
         setName(userName || '');
-        setEmail(userEmail || '');
         setPhone(userPhone || '');
         setCachedProfile({
           name: userName || null,
           phone: userPhone || null,
           ageRange: null,
-          email: userEmail || null,
           colors: [],
           styles: [],
           fit: null,
@@ -228,7 +221,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     return () => {
       alive = false;
     };
-  }, [isOpen, userName, userEmail, userPhone]);
+  }, [isOpen, userName, userPhone]);
 
   useEffect(() => {
     if (!error) return;
@@ -304,7 +297,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const addressLine = defaultAddress?.addressLine || '';
 
       setName((profile?.name || userName || '').trim());
-      setEmail((profile?.email || userEmail || '').trim());
       setPhone((profile?.phone || userPhone || '').trim());
       setAgeRange(profile?.ageRange || null);
       setSelectedColors(profile?.colors || []);
@@ -319,7 +311,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         name: profile?.name || null,
         phone: profile?.phone || null,
         ageRange: profile?.ageRange || null,
-        email: profile?.email || null,
         colors: profile?.colors || [],
         styles: profile?.styles || [],
         fit: profile?.fit || null,
@@ -336,7 +327,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userName, userEmail, userPhone]);
+  }, [userName, userPhone]);
 
   const arraysEqual = (a: string[], b: string[]) => {
     if (a.length !== b.length) return false;
@@ -403,11 +394,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             updates.ageRange = ageRange;
             hasWork = true;
           }
-          const trimmedEmail = (email || '').trim();
-          if (trimmedEmail && (!cachedProfile || trimmedEmail !== (cachedProfile.email || ''))) {
-            updates.email = trimmedEmail;
-            hasWork = true;
-          }
           break;
         }
         case 5:
@@ -452,7 +438,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           name: result.profile.name || null,
           phone: result.profile.phone || null,
           ageRange: result.profile.ageRange || null,
-          email: result.profile.email || null,
           colors: result.profile.colors || [],
           styles: result.profile.styles || [],
           fit: result.profile.fit || null,
@@ -467,7 +452,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setIsLoading(false);
       return false;
     }
-  }, [step, name, phone, ageRange, email, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
+  }, [step, name, phone, ageRange, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
 
   const handleNext = useCallback(async () => {
     const saved = await saveCurrentStep();
@@ -521,31 +506,36 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           aria-modal="true"
         >
           {/* Header */}
-          <div className="px-6 pt-6 pb-4 relative shrink-0">
-            <button
-              onClick={onClose}
-              className="absolute right-5 top-5 p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors z-10"
-              aria-label="Close"
-            >
-              <CloseIcon width={18} height={18} />
-            </button>
-
-            <div className="pr-10">
-              <h2 className="text-xl font-semibold text-[#f5f5f5] tracking-tight leading-tight">
-                Welcome to Stiri
-              </h2>
-              <p className="text-[#c9a962] text-xs mt-0.5 font-medium">Your personal fashion assistant</p>
+          <div className="px-6 pt-5 pb-4 shrink-0">
+            {/* Top row: title + actions */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-[#f5f5f5] tracking-tight leading-tight">
+                  Welcome to Stiri
+                </h2>
+                <p className="text-[#c9a962] text-xs mt-0.5 font-medium">Your personal fashion assistant</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors disabled:opacity-50"
+                  aria-label="Refresh"
+                >
+                  <RefreshIcon />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors"
+                  aria-label="Close"
+                >
+                  <CloseIcon width={18} height={18} />
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="absolute left-5 top-5 h-8 px-3 rounded-lg border border-[#2a2a2a] text-[11px] font-medium text-[#a0a0a0] hover:text-[#f5f5f5] hover:border-[#3a3a3a] transition-all disabled:opacity-50"
-            >
-              Refresh
-            </button>
 
             {/* Progress */}
-            <div className="mt-4">
+            <div>
               <div className="flex items-center justify-between mb-2">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <div
@@ -646,19 +636,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     ))}
                   </div>
                 </div>
-
-                <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">Email <span className="text-[#525252]">(optional)</span></label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
-                  />
-                </div>
-              </div>
-            )}
+            </div>
+          )}
 
             {/* Step 1: Color Preferences */}
             {step === 1 && (

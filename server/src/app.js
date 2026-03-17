@@ -10,7 +10,7 @@ import { verifyPaymentHandler } from './routes/verifyPayment.js';
 import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
-import { logoutHandler, meHandler, switchAccountHandler, googleStartHandler, googleCallbackHandler } from './routes/auth.js';
+import { logoutHandler, meHandler, switchAccountHandler } from './routes/auth.js';
 import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
 import { sendOtpHandler, verifyOtpHandler, whatsappWebhookVerify, whatsappWebhookHandler } from './routes/whatsappOtp.js';
 import { geocodeHandler, placesAutocompleteHandler, placeDetailsHandler } from './routes/geocode.js';
@@ -64,8 +64,6 @@ export function createApp() {
   app.post('/auth/logout', logoutHandler);
   app.get('/auth/me', meHandler);
   app.post('/auth/switch', switchAccountHandler);
-  app.get('/auth/google/start', googleStartHandler);
-  app.get('/auth/google/callback', googleCallbackHandler);
   app.post('/auth/otp/send', sendOtpHandler);
   app.post('/auth/otp/verify', verifyOtpHandler);
   app.get('/auth/webhook/whatsapp', whatsappWebhookVerify);

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CloseIcon, GoogleIcon } from '../../shared/ui/Icons';
+import { CloseIcon } from '../../shared/ui/Icons';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGoogleAuth: () => Promise<void>;
   onSendOtp: (phone: string) => Promise<void>;
   onVerifyOtp: (phone: string, code: string) => Promise<void>;
   isLoading: boolean;
@@ -16,7 +15,6 @@ type AuthView = 'phone' | 'otp';
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
-  onGoogleAuth,
   onSendOtp,
   onVerifyOtp,
   isLoading,
@@ -144,6 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading && phone.replace(/\D/g, '').length >= 10) handleSendOtp(); }}
                       placeholder="Enter 10-digit number"
                       className="w-full h-12 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-lg tracking-wider"
                       disabled={isLoading}
@@ -175,25 +174,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </span>
                   )}
                 </button>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#2a2a2a]"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase tracking-wide">
-                    <span className="bg-[#121212] px-3 text-[#525252]">Or continue with</span>
-                  </div>
-                </div>
-
-                {/* Google */}
-                <button
-                  onClick={onGoogleAuth}
-                  disabled={isLoading}
-                  className="w-full h-12 bg-white text-black font-medium rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 active:scale-[0.98] transition-all"
-                >
-                  <GoogleIcon width={20} height={20} />
-                  <span>Continue with Google</span>
-                </button>
               </div>
             )}
 
@@ -207,7 +187,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     inputMode="numeric"
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="• • • • • •"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading && otpCode.length === 6) handleVerifyOtp(); }}
+                    placeholder="- - - - - -"
                     className="w-full h-14 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-2xl tracking-[0.5em] text-center font-mono"
                     disabled={isLoading}
                     autoFocus

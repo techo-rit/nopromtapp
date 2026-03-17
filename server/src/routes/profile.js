@@ -38,8 +38,7 @@ export async function getProfileHandler(req, res) {
         success: true,
         profile: {
           id: authResult.user.id,
-          email: authResult.user.email || null,
-          name: authResult.user.user_metadata?.full_name || authResult.user.email?.split('@')[0] || 'User',
+          name: authResult.user.user_metadata?.full_name || 'User',
           phone: null,
           ageRange: null,
           colors: [],
@@ -99,7 +98,6 @@ export async function updateProfileHandler(req, res) {
     if (body.name !== undefined) update.full_name = body.name;
     if (body.phone !== undefined) update.phone = body.phone;
     if (body.ageRange !== undefined) update.age_range = body.ageRange;
-    if (body.email !== undefined) update.email = body.email;
     if (body.colors !== undefined) update.colors = body.colors;
     if (body.styles !== undefined) update.styles = body.styles;
     if (body.fit !== undefined) update.fit = body.fit;
@@ -437,7 +435,6 @@ function mapProfile(profile, supabaseUser) {
   const monthlyRemaining = Math.max(monthlyQuota - monthlyUsed, 0);
   return {
     id: profile.id,
-    email: profile.email,
     name: profile.full_name,
     phone: profile.phone,
     ageRange: profile.age_range,

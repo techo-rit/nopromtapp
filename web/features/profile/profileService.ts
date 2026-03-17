@@ -29,7 +29,6 @@ export const profileService = {
         return {
           profile: {
             id: fallbackUser?.id || '',
-            email: fallbackUser?.email || '',
             name: publicCached.name || '',
             phone: fallbackUser?.phone || null,
             ageRange: publicCached.ageRange || null,
@@ -95,7 +94,6 @@ export const profileService = {
     name: string;
     phone: string;
     ageRange: string;
-    email: string;
     colors: string[];
     styles: string[];
     fit: string;

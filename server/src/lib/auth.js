@@ -269,7 +269,6 @@ export async function ensureUserProfile(adminClient, supabaseUser) {
     .from('profiles')
     .insert({
       id: supabaseUser.id,
-      email: supabaseUser.email || null,
       full_name: supabaseUser.user_metadata?.full_name || null,
       account_type: 'free',
       monthly_quota: 3,
@@ -282,7 +281,7 @@ export function mapUser(supabaseUser, profile) {
   return {
     id: supabaseUser.id,
     email: supabaseUser.email,
-    name: profile?.name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+    name: profile?.name || supabaseUser.user_metadata?.full_name || null,
     phone: profile?.phone || null,
     ageRange: profile?.ageRange || null,
     colors: profile?.colors || [],

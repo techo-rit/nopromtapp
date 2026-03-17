@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { profileService } from '../profile/profileService';
 import type { User, UserAddress, GeneratedImage } from '../../types';
 
+const stripCountryCode = (p: string) => { const d = (p || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d; };
+
 interface ProfilePageProps {
   user: User;
   onProfileUpdate: () => void;
@@ -84,7 +86,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     name: string;
     phone: string;
     ageRange: string;
-    email: string;
     colors: string[];
     styles: string[];
     fit: string;
@@ -93,9 +94,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Form fields
   const [name, setName] = useState(user.name || '');
-  const [phone, setPhone] = useState(user.phone || '');
+  const [phone, setPhone] = useState(stripCountryCode(user.phone || ''));
   const [ageRange, setAgeRange] = useState(user.ageRange || '');
-  const [email, setEmail] = useState(user.email || '');
   const [colors, setColors] = useState<string[]>(user.colors || []);
   const [styles, setStyles] = useState<string[]>(user.styles || []);
   const [fit, setFit] = useState(user.fit || '');
@@ -108,9 +108,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   useEffect(() => {
     setName(user.name || '');
-    setPhone(user.phone || '');
+    setPhone(stripCountryCode(user.phone || ''));
     setAgeRange(user.ageRange || '');
-    setEmail(user.email || '');
     setColors(user.colors || []);
     setStyles(user.styles || []);
     setFit(user.fit || '');
@@ -119,7 +118,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       name: (user.name || '').trim(),
       phone: (user.phone || '').trim(),
       ageRange: user.ageRange || '',
-      email: (user.email || '').trim(),
       colors: user.colors || [],
       styles: user.styles || [],
       fit: user.fit || '',
@@ -187,12 +185,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       const trimmedName = name.trim();
       const trimmedPhone = phone.trim();
-      const trimmedEmail = email.trim();
       const hasChanges = !cachedProfile
         || trimmedName !== cachedProfile.name
         || trimmedPhone !== cachedProfile.phone
         || (ageRange || '') !== cachedProfile.ageRange
-        || trimmedEmail !== cachedProfile.email
         || !arraysEqual(colors, cachedProfile.colors)
         || !arraysEqual(styles, cachedProfile.styles)
         || fit !== cachedProfile.fit
@@ -211,7 +207,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       if (trimmedPhone) updates.phone = trimmedPhone;
 
       if (ageRange) updates.ageRange = ageRange;
-      if (trimmedEmail) updates.email = trimmedEmail;
       if (colors.length > 0) updates.colors = colors;
       if (styles.length > 0) updates.styles = styles;
       updates.fit = fit;
@@ -223,7 +218,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         name: trimmedName,
         phone: trimmedPhone,
         ageRange: ageRange || '',
-        email: trimmedEmail,
         colors: [...colors],
         styles: [...styles],
         fit,
@@ -237,7 +231,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [name, phone, ageRange, email, colors, styles, fit, bodyType, cachedProfile, onProfileUpdate]);
+  }, [name, phone, ageRange, colors, styles, fit, bodyType, cachedProfile, onProfileUpdate]);
 
   const handleAddAddress = useCallback(async () => {
     if (!newAddress.trim()) return;
@@ -275,9 +269,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       if (data?.profile) {
         const p = data.profile;
         setName(p.name || '');
-        setPhone(p.phone || '');
+        setPhone(stripCountryCode(p.phone || ''));
         setAgeRange(p.ageRange || '');
-        setEmail(p.email || '');
         setColors(p.colors || []);
         setStyles(p.styles || []);
         setFit(p.fit || '');
@@ -286,7 +279,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           name: (p.name || '').trim(),
           phone: (p.phone || '').trim(),
           ageRange: p.ageRange || '',
-          email: (p.email || '').trim(),
           colors: p.colors || [],
           styles: p.styles || [],
           fit: p.fit || '',
@@ -406,7 +398,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-semibold text-[#f5f5f5] truncate">{user.name}</h1>
-            <p className="text-sm text-[#6b6b6b] truncate">{user.email}</p>
             <p className="text-xs text-[#c9a962] mt-0.5">{accountLabel} account • {user.creationsLeft} left</p>
           </div>
           <button
@@ -630,11 +621,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1">Email <span className="text-[#525252]">(optional)</span></label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com"
-                className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm" />
             </div>
           </div>
         </section>

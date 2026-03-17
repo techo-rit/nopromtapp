@@ -20,7 +20,6 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- 1. profiles
 CREATE TABLE IF NOT EXISTS public.profiles (
   id                     uuid        REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  email                  text,
   full_name              text,
   phone                  text,
   age_range              text,          -- 'gen_z' | 'millennial' | 'gen_x' | 'boomer'
@@ -268,15 +267,13 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   BEGIN
-    INSERT INTO public.profiles (id, email, full_name)
+    INSERT INTO public.profiles (id, full_name)
     VALUES (
       NEW.id,
-      NEW.email,
       COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '')
     )
     ON CONFLICT (id) DO UPDATE
     SET
-      email     = EXCLUDED.email,
       full_name = COALESCE(NULLIF(public.profiles.full_name, ''), EXCLUDED.full_name),
       updated_at = timezone('utc', now());
   EXCEPTION

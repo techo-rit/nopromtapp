@@ -84,18 +84,6 @@ export const authService = {
     return user
   },
 
-  // Updated: Returns void (Promise<void>) because it redirects the page
-  async signInWithGoogle(loginHint?: string): Promise<void> {
-    const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '')
-    const baseUrl = apiBase ? `${apiBase}/auth/google/start` : '/auth/google/start'
-    const params = new URLSearchParams({ redirect: '1' })
-    if (loginHint) {
-      params.set('login_hint', loginHint)
-      params.set('prompt', 'select_account')
-    }
-    window.location.href = `${baseUrl}?${params.toString()}`
-  },
-
   async getCurrentUser(): Promise<User | null> {
     if (cachedUser !== undefined) return cachedUser
     const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '')
