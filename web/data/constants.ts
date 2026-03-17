@@ -11,11 +11,11 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: 12900, // ₹129 in paise
     displayPrice: "₹129",
     currency: "INR",
-    credits: 20,
+    creations: 20,
+    accountType: "essentials",
     features: [
-      "20 creations per month",
-      "100% refund of unused creations anytime",
-      "Be a part of the Innercircle to manifest",
+      "20 one-time AI creations",
+      "Keep your monthly free creations",
       "Standard support",
     ],
     isPopular: false,
@@ -27,11 +27,11 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: 74900, // ₹749 in paise
     displayPrice: "₹749",
     currency: "INR",
-    credits: 135,
+    creations: 135,
+    accountType: "ultimate",
     features: [
-      "135 creations per month",
-      "100% refund of unused creations anytime",
-      "Be a part of the Innercircle to manifest",
+      "135 one-time AI creations",
+      "Keep your monthly free creations",
       "24/7 priority support",
       "Early access to premium features",
     ],

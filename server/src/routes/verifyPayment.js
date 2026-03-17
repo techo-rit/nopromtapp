@@ -9,13 +9,14 @@ function verifyRazorpaySignature(orderId, paymentId, signature, secret) {
   return expectedSignature === signature;
 }
 
-async function addCreditsWithRetry(supabase, userId, credits, log) {
+async function addEntitlementsWithRetry(supabase, userId, creations, accountType, log) {
   let lastError = null;
 
   for (let attempt = 1; attempt <= PAYMENT_CONFIG.RETRY_ATTEMPTS; attempt++) {
-    const { error } = await supabase.rpc('add_user_credits', {
+    const { error } = await supabase.rpc('add_user_entitlements', {
       p_user_id: userId,
-      p_credits: credits,
+      p_amount: creations,
+      p_account_type: accountType,
     });
 
     if (!error) {
@@ -25,7 +26,7 @@ async function addCreditsWithRetry(supabase, userId, credits, log) {
     lastError = new Error(error.message);
 
     if (attempt < PAYMENT_CONFIG.RETRY_ATTEMPTS) {
-      log.warn(`Credit addition attempt ${attempt} failed, retrying...`, { error: error.message });
+      log.warn(`Entitlement addition attempt ${attempt} failed, retrying...`, { error: error.message });
       await new Promise((resolve) => setTimeout(resolve, PAYMENT_CONFIG.RETRY_DELAY_MS));
     }
   }
@@ -111,7 +112,7 @@ export async function verifyPaymentHandler(req, res) {
         success: true,
         message: 'Payment already verified',
         subscriptionId: subscription.id,
-        creditsAdded: subscription.credits_purchased,
+        creationsAdded: subscription.creations_purchased,
       });
     }
 
@@ -145,32 +146,38 @@ export async function verifyPaymentHandler(req, res) {
         success: true,
         message: 'Payment already verified',
         subscriptionId: subscription.id,
-        creditsAdded: subscription.credits_purchased,
+        creationsAdded: subscription.creations_purchased,
       });
     }
 
-    const creditResult = await addCreditsWithRetry(supabase, userId, subscription.credits_purchased, userLog);
+    const creditResult = await addEntitlementsWithRetry(
+      supabase,
+      userId,
+      subscription.creations_purchased,
+      subscription.plan_id,
+      userLog
+    );
 
     if (!creditResult.success) {
-      userLog.error('[CRITICAL ALERT] Failed to add credits after payment verification!', {
+      userLog.error('[CRITICAL ALERT] Failed to add creations after payment verification!', {
         subscriptionId: subscription.id,
         razorpayPaymentId,
-        creditsToAdd: subscription.credits_purchased,
+        creationsToAdd: subscription.creations_purchased,
         error: creditResult.error?.message,
       });
 
       await supabase.from('payment_logs').insert({
         user_id: userId,
-        event_type: 'credit_addition_failed',
+        event_type: 'entitlement_addition_failed',
         razorpay_order_id: razorpayOrderId,
         razorpay_payment_id: razorpayPaymentId,
         amount: subscription.amount,
         currency: subscription.currency,
         status: 'error',
-        error_message: `Credit addition failed: ${creditResult.error?.message}`,
+        error_message: `Entitlement addition failed: ${creditResult.error?.message}`,
         metadata: {
           subscriptionId: subscription.id,
-          creditsToAdd: subscription.credits_purchased,
+          creationsToAdd: subscription.creations_purchased,
           requiresManualFix: true,
         },
         ip_address: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
@@ -189,7 +196,7 @@ export async function verifyPaymentHandler(req, res) {
       metadata: {
         planId: subscription.plan_id,
         planName: subscription.plan_name,
-        creditsAdded: subscription.credits_purchased,
+        creationsAdded: subscription.creations_purchased,
       },
       ip_address: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
       user_agent: req.headers['user-agent'],
@@ -197,14 +204,14 @@ export async function verifyPaymentHandler(req, res) {
 
     userLog.info('Payment verified successfully', {
       subscriptionId: subscription.id,
-      creditsAdded: subscription.credits_purchased,
+      creationsAdded: subscription.creations_purchased,
     });
 
     return res.status(200).json({
       success: true,
       message: 'Payment verified successfully',
       subscriptionId: subscription.id,
-      creditsAdded: subscription.credits_purchased,
+      creationsAdded: subscription.creations_purchased,
     });
   } catch (error) {
     console.error('Verify payment error:', error);

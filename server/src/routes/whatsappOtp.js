@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createAdminClient, setSessionCookies, storeSessionForAccount, ensureUserProfile, fetchUserProfile, mapUser } from '../lib/auth.js';
+import { createAdminClient, createAnonClient, setSessionCookies, storeSessionForAccount, ensureUserProfile, fetchUserProfile, mapUser } from '../lib/auth.js';
 
 // OTP storage — in-memory for simplicity, could use Redis (Upstash) for production
 const otpStore = new Map(); // key: phone, value: { code, expiresAt, attempts }
@@ -31,7 +31,7 @@ function generateOtp() {
 }
 
 function getPhoneNumberId() {
-  return process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  return (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
 }
 
 function getWhatsAppToken() {
@@ -40,11 +40,11 @@ function getWhatsAppToken() {
 }
 
 function getWhatsAppTemplateName() {
-  return process.env.WHATSAPP_TEMPLATE_NAME || 'stiri_otp';
+  return (process.env.WHATSAPP_TEMPLATE_NAME || 'stiri_otp').trim();
 }
 
 function getWhatsAppTemplateLanguage() {
-  return process.env.WHATSAPP_TEMPLATE_LANG || 'en';
+  return (process.env.WHATSAPP_TEMPLATE_LANG || 'en_US').trim();
 }
 
 function buildTemplatePayload(templateName, templateLang, code) {
@@ -58,9 +58,8 @@ function buildTemplatePayload(templateName, templateLang, code) {
     return payload;
   }
 
-  // Authentication templates with a copy-code button require both
-  // the OTP body variable and a special COPY_CODE button parameter.
-  // Meta expects sub_type=url with text=COPY_CODE for copy-code auth templates.
+  // Authentication templates with a URL button (OTP as URL suffix).
+  // sub_type must be 'url', parameter is the OTP code appended to the button URL.
   if (templateName.toLowerCase().includes('auth')) {
     return {
       ...payload,
@@ -73,7 +72,7 @@ function buildTemplatePayload(templateName, templateLang, code) {
           type: 'button',
           sub_type: 'url',
           index: '0',
-          parameters: [{ type: 'text', text: 'COPY_CODE' }],
+          parameters: [{ type: 'text', text: code }],
         },
       ],
     };
@@ -227,20 +226,22 @@ export async function verifyOtpHandler(req, res) {
       return res.status(400).json({ success: false, error: 'Phone and OTP code are required' });
     }
 
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    const stored = otpStore.get(cleanPhone);
+    // Normalize exactly the same way sendOtpHandler does: strip all non-digits, then 10-digit → 91XXXXXXXXXX
+    const digits = phone.replace(/\D/g, '');
+    const normalizedPhone = digits.length === 10 ? `91${digits}` : digits;
+    const stored = otpStore.get(normalizedPhone);
 
     if (!stored) {
       return res.status(400).json({ success: false, error: 'No OTP found. Please request a new one.' });
     }
 
     if (stored.expiresAt < Date.now()) {
-      otpStore.delete(cleanPhone);
+      otpStore.delete(normalizedPhone);
       return res.status(400).json({ success: false, error: 'OTP has expired. Please request a new one.' });
     }
 
     if (stored.attempts >= MAX_ATTEMPTS) {
-      otpStore.delete(cleanPhone);
+      otpStore.delete(normalizedPhone);
       return res.status(429).json({ success: false, error: 'Too many attempts. Please request a new OTP.' });
     }
 
@@ -251,59 +252,25 @@ export async function verifyOtpHandler(req, res) {
     }
 
     // OTP verified — clean up
-    otpStore.delete(cleanPhone);
+    otpStore.delete(normalizedPhone);
 
-    // Create or sign in user via Supabase Admin
     const admin = createAdminClient();
-    if (!admin) {
+    const anon = createAnonClient();
+    if (!admin || !anon) {
       return res.status(500).json({ success: false, error: 'Server misconfigured' });
     }
 
-    // Format phone for Supabase (with +)
-    const phoneWithPlus = cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`;
+    const phoneWithPlus = `+${normalizedPhone}`;
+    const tempEmail = `${normalizedPhone}@phone.stiri.in`;
 
-    // Check if user exists with this phone
-    const { data: existingUsers } = await admin.auth.admin.listUsers();
-    let existingUser = existingUsers?.users?.find(u => u.phone === phoneWithPlus);
+    // Reliable user lookup: filter by derived email (avoids pagination limits of plain listUsers())
+    const { data: searchData } = await admin.auth.admin.listUsers({ filter: tempEmail });
+    let supabaseUser = searchData?.users?.find(u => u.email === tempEmail)
+      ?? searchData?.users?.find(u => u.phone === phoneWithPlus)
+      ?? null;
 
-    let userId;
-    let session;
-
-    if (existingUser) {
-      // User exists — generate a session
-      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: existingUser.email || `${cleanPhone}@phone.stiri.in`,
-      });
-
-      if (linkErr || !linkData) {
-        // Fallback: use signInWithPassword if we have an email
-        // For phone-only users, create a session via admin
-        const { data: sessionData, error: sessErr } = await admin.auth.admin.createSession({
-          user_id: existingUser.id,
-        });
-
-        if (sessErr || !sessionData?.session) {
-          console.error('Session creation error:', sessErr);
-          return res.status(500).json({ success: false, error: 'Failed to create session' });
-        }
-
-        session = sessionData.session;
-      } else {
-        // Use the generated link properties
-        const { data: sessionData, error: sessErr } = await admin.auth.admin.createSession({
-          user_id: existingUser.id,
-        });
-
-        if (sessErr || !sessionData?.session) {
-          return res.status(500).json({ success: false, error: 'Failed to create session' });
-        }
-        session = sessionData.session;
-      }
-      userId = existingUser.id;
-    } else {
+    if (!supabaseUser) {
       // New user — create account
-      const tempEmail = `${cleanPhone}@phone.stiri.in`;
       const { data: newUserData, error: createErr } = await admin.auth.admin.createUser({
         phone: phoneWithPlus,
         email: tempEmail,
@@ -317,31 +284,46 @@ export async function verifyOtpHandler(req, res) {
         return res.status(500).json({ success: false, error: 'Failed to create account' });
       }
 
-      userId = newUserData.user.id;
-      existingUser = newUserData.user;
-
-      // Create session
-      const { data: sessionData, error: sessErr } = await admin.auth.admin.createSession({
-        user_id: userId,
-      });
-
-      if (sessErr || !sessionData?.session) {
-        return res.status(500).json({ success: false, error: 'Failed to create session' });
-      }
-      session = sessionData.session;
+      supabaseUser = newUserData.user;
     }
 
-    // Set cookies
-    setSessionCookies(res, session);
-    storeSessionForAccount(req, res, session, existingUser.email || `${cleanPhone}@phone.stiri.in`);
+    // Generate a magic link token and immediately verify it to get a real session.
+    // NOTE: verifyOtp hashes the token before lookup, so we must pass email_otp (raw),
+    // NOT hashed_token (which is SHA256(email_otp)) — passing hashed_token causes
+    // double-hashing → SHA256(SHA256(otp)) which never matches → "otp_expired".
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: tempEmail,
+    });
 
-    // Ensure profile exists
-    await ensureUserProfile(admin, existingUser);
-    const profile = await fetchUserProfile(admin, userId);
+    if (linkErr || !linkData?.properties?.email_otp) {
+      console.error('generateLink error:', linkErr);
+      return res.status(500).json({ success: false, error: 'Failed to create session' });
+    }
+
+    const { data: sessionData, error: sessErr } = await anon.auth.verifyOtp({
+      email: tempEmail,
+      token: linkData.properties.email_otp,
+      type: 'magiclink',
+    });
+
+    if (sessErr || !sessionData?.session) {
+      console.error('verifyOtp session error:', sessErr);
+      return res.status(500).json({ success: false, error: 'Failed to create session' });
+    }
+
+    const session = sessionData.session;
+    const finalUser = sessionData.user || supabaseUser;
+
+    setSessionCookies(res, session);
+    storeSessionForAccount(req, res, session, tempEmail);
+
+    await ensureUserProfile(admin, finalUser);
+    const profile = await fetchUserProfile(admin, finalUser.id);
 
     return res.status(200).json({
       success: true,
-      user: mapUser(existingUser, profile),
+      user: mapUser(finalUser, profile),
     });
   } catch (err) {
     console.error('verifyOtp error:', err);

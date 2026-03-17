@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CloseIcon } from '../../shared/ui/Icons';
+import { CloseIcon, RefreshIcon } from '../../shared/ui/Icons';
 import { profileService } from '../profile/profileService';
 import { CONFIG } from '../../config';
 
@@ -8,7 +8,6 @@ interface OnboardingModalProps {
   onClose: () => void;
   onComplete: () => void;
   userName?: string;
-  userEmail?: string;
   userPhone?: string;
 }
 
@@ -88,10 +87,10 @@ const BODY_TYPES = [
 ];
 
 const STEP_INFO = [
-  { title: 'Tell us about yourself', subtitle: 'Let\'s personalize your fashion journey' },
-  { title: 'Your color palette', subtitle: 'Pick your vibe — light or dark, and your favorite colors' },
+  { title: 'Your color palette', subtitle: 'Pick your favorite colors' },
   { title: 'Style DNA', subtitle: 'What\'s your everyday mood? Select all that resonate' },
   { title: 'Perfect fit', subtitle: 'Help us recommend the right sizes for you' },
+  { title: 'Tell us about yourself', subtitle: 'Let\'s personalize your fashion journey' },
   { title: 'Your location', subtitle: 'For local fashion trends and delivery estimates' },
 ];
 
@@ -100,27 +99,39 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
   onComplete,
   userName = '',
-  userEmail = '',
   userPhone = '',
 }) => {
   const [step, setStep] = useState<OnboardingStep>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Step 1
-  const [name, setName] = useState(userName || '');
-  const [phone, setPhone] = useState(userPhone || '');
-  const [ageRange, setAgeRange] = useState<string | null>(null);
-  const [email, setEmail] = useState(userEmail || '');
-
-  // Step 2
-  const [colorMode, setColorMode] = useState<string | null>(null);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-
-  // Step 3
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [cachedProfile, setCachedProfile] = useState<null | {
+    name: string | null;
+    phone: string | null;
+    ageRange: string | null;
+    colors: string[];
+    styles: string[];
+    fit: string | null;
+    bodyType: string | null;
+  }>(null);
+  const [cachedAddress, setCachedAddress] = useState<null | {
+    addressLine: string;
+    lat: number | null;
+    lng: number | null;
+  }>(null);
 
   // Step 4
+  const [name, setName] = useState(userName || '');
+  const [phone, setPhone] = useState(() => { const d = (userPhone || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d; });
+  const [ageRange, setAgeRange] = useState<string | null>(null);
+
+  // Step 1
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+
+  // Step 2
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+
+  // Step 3
   const [fit, setFit] = useState<string | null>(null);
   const [bodyType, setBodyType] = useState<string | null>(null);
 
@@ -131,14 +142,98 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    let alive = true;
+    const loadProfile = async () => {
       setStep(1);
       setError(null);
-      setName(userName || '');
-      setEmail(userEmail || '');
-      setPhone(userPhone || '');
-    }
-  }, [isOpen, userName, userEmail, userPhone]);
+      try {
+        const data = await profileService.getProfile();
+        const profile = data?.profile || null;
+        const addresses = await profileService.getAddresses();
+        if (!alive) return;
+
+        const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
+        const addressLine = defaultAddress?.addressLine || '';
+
+        setName((profile?.name || userName || '').trim());
+        const rawPhone = (profile?.phone || userPhone || '').replace(/\D/g, '');
+        setPhone(rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone);
+        setAgeRange(profile?.ageRange || null);
+        setSelectedColors(profile?.colors || []);
+        setSelectedStyles(profile?.styles || []);
+        setFit(profile?.fit || null);
+        setBodyType(profile?.bodyType || null);
+        setAddress(addressLine);
+        setLat(defaultAddress?.lat ?? null);
+        setLng(defaultAddress?.lng ?? null);
+        setCachedProfile({
+          name: profile?.name || null,
+          phone: profile?.phone || null,
+          ageRange: profile?.ageRange || null,
+          colors: profile?.colors || [],
+          styles: profile?.styles || [],
+          fit: profile?.fit || null,
+          bodyType: profile?.bodyType || null,
+        });
+        setCachedAddress(defaultAddress ? {
+          addressLine: defaultAddress.addressLine || '',
+          lat: defaultAddress.lat ?? null,
+          lng: defaultAddress.lng ?? null,
+        } : null);
+
+        const hasColors = (profile?.colors || []).length > 0;
+        const hasFit = !!profile?.fit;
+        const hasBodyType = !!profile?.bodyType;
+        const hasName = !!(profile?.name || userName || '').trim();
+        const hasLocation = !!addressLine;
+
+        let nextStep: OnboardingStep = 1;
+        if (!hasColors) {
+          nextStep = 1;
+        } else if (!hasFit || !hasBodyType) {
+          nextStep = 3;
+        } else if (!hasName) {
+          nextStep = 4;
+        } else if (!hasLocation) {
+          nextStep = 5;
+        } else {
+          nextStep = 5;
+        }
+
+        setStep(nextStep);
+      } catch {
+        if (!alive) return;
+        setName(userName || '');
+        setPhone(userPhone || '');
+        setCachedProfile({
+          name: userName || null,
+          phone: userPhone || null,
+          ageRange: null,
+          colors: [],
+          styles: [],
+          fit: null,
+          bodyType: null,
+        });
+      }
+    };
+    loadProfile();
+    return () => {
+      alive = false;
+    };
+  }, [isOpen, userName, userPhone]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(null), 3000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   const toggleColor = useCallback((colorId: string) => {
     setSelectedColors(prev => {
@@ -191,49 +286,164 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     }
   }, []);
 
-  const saveCurrentStep = useCallback(async () => {
+  const handleRefresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      const data = await profileService.getProfile(true);
+      const addresses = await profileService.getAddresses(true);
+      const profile = data?.profile || null;
+      const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
+      const addressLine = defaultAddress?.addressLine || '';
+
+      setName((profile?.name || userName || '').trim());
+      setPhone((profile?.phone || userPhone || '').trim());
+      setAgeRange(profile?.ageRange || null);
+      setSelectedColors(profile?.colors || []);
+      setSelectedStyles(profile?.styles || []);
+      setFit(profile?.fit || null);
+      setBodyType(profile?.bodyType || null);
+      setAddress(addressLine);
+      setLat(defaultAddress?.lat ?? null);
+      setLng(defaultAddress?.lng ?? null);
+
+      setCachedProfile({
+        name: profile?.name || null,
+        phone: profile?.phone || null,
+        ageRange: profile?.ageRange || null,
+        colors: profile?.colors || [],
+        styles: profile?.styles || [],
+        fit: profile?.fit || null,
+        bodyType: profile?.bodyType || null,
+      });
+      setCachedAddress(defaultAddress ? {
+        addressLine: defaultAddress.addressLine || '',
+        lat: defaultAddress.lat ?? null,
+        lng: defaultAddress.lng ?? null,
+      } : null);
+      setSuccess('Refreshed');
+    } catch (err: any) {
+      setError(err.message || 'Failed to refresh');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userName, userPhone]);
+
+  const arraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false;
+    const aSorted = [...a].sort();
+    const bSorted = [...b].sort();
+    return aSorted.every((val, idx) => val === bSorted[idx]);
+  };
+
+  const stepHasRequired = useCallback(() => {
+    if (step === 1) return selectedColors.length > 0;
+    if (step === 2) return selectedStyles.length > 0;
+    if (step === 3) return !!fit && !!bodyType;
+    if (step === 4) return !!(name || '').trim();
+    if (step === 5) return !!address.trim();
+    return true;
+  }, [step, selectedColors.length, selectedStyles.length, fit, bodyType, name, address]);
+
+  const saveCurrentStep = useCallback(async () => {
+    setError(null);
+    try {
       const updates: Record<string, any> = {};
+      let hasWork = false;
 
       switch (step) {
         case 1:
-          if (!(name || '').trim()) { setError('Name is required'); setIsLoading(false); return false; }
-          if (!(phone || '').trim()) { setError('Phone number is required'); setIsLoading(false); return false; }
-          if ((phone || '').trim().length < 10) { setError('Enter a valid phone number'); setIsLoading(false); return false; }
-          updates.name = (name || '').trim();
-          updates.phone = (phone || '').trim();
-          if (ageRange) updates.ageRange = ageRange;
-          if ((email || '').trim()) updates.email = (email || '').trim();
+          if (selectedColors.length === 0) { setError('Select at least one color'); setIsLoading(false); return false; }
+          if (!cachedProfile || !arraysEqual(selectedColors, cachedProfile.colors || [])) {
+            updates.colors = selectedColors;
+            hasWork = true;
+          }
           break;
         case 2:
-          if (colorMode) updates.colorMode = colorMode;
-          if (selectedColors.length > 0) updates.colors = selectedColors;
+          if (!cachedProfile || !arraysEqual(selectedStyles, cachedProfile.styles || [])) {
+            updates.styles = selectedStyles;
+            hasWork = true;
+          }
           break;
         case 3:
-          if (selectedStyles.length > 0) updates.styles = selectedStyles;
+          if (!fit) { setError('Select a fit size'); setIsLoading(false); return false; }
+          if (!bodyType) { setError('Select a body type'); setIsLoading(false); return false; }
+          if (!cachedProfile || fit !== cachedProfile.fit) {
+            updates.fit = fit;
+            hasWork = true;
+          }
+          if (!cachedProfile || bodyType !== cachedProfile.bodyType) {
+            updates.bodyType = bodyType;
+            hasWork = true;
+          }
           break;
-        case 4:
-          if (fit) updates.fit = fit;
-          if (bodyType) updates.bodyType = bodyType;
+        case 4: {
+          const trimmedName = (name || '').trim();
+          const trimmedPhone = (phone || '').trim();
+          if (!trimmedName) { setError('Name is required'); setIsLoading(false); return false; }
+          if (trimmedPhone && trimmedPhone.length < 10) { setError('Enter a valid phone number'); setIsLoading(false); return false; }
+          if (!cachedProfile || trimmedName !== (cachedProfile.name || '')) {
+            updates.name = trimmedName;
+            hasWork = true;
+          }
+          if (trimmedPhone && (!cachedProfile || trimmedPhone !== (cachedProfile.phone || ''))) {
+            updates.phone = trimmedPhone;
+            hasWork = true;
+          }
+          if (ageRange && (!cachedProfile || ageRange !== cachedProfile.ageRange)) {
+            updates.ageRange = ageRange;
+            hasWork = true;
+          }
           break;
+        }
         case 5:
           if (address.trim()) {
+            const sameAddress = cachedAddress
+              && cachedAddress.addressLine === address.trim()
+              && (cachedAddress.lat ?? null) === (lat ?? null)
+              && (cachedAddress.lng ?? null) === (lng ?? null);
+            if (!sameAddress) {
+              hasWork = true;
+            }
             // Save to user_addresses table instead of profile
-            await profileService.addAddress({
-              label: 'Home',
-              addressLine: address.trim(),
-              lat: lat ?? undefined,
-              lng: lng ?? undefined,
-              isDefault: true,
-            });
+            if (!sameAddress) {
+              await profileService.addAddress({
+                label: 'Home',
+                addressLine: address.trim(),
+                lat: lat ?? undefined,
+                lng: lng ?? undefined,
+                isDefault: true,
+              });
+              setCachedAddress({
+                addressLine: address.trim(),
+                lat: lat ?? null,
+                lng: lng ?? null,
+              });
+              setSuccess('Saved');
+            }
           }
           break;
       }
 
+      if (!hasWork) {
+        setIsLoading(false);
+        return true;
+      }
+
+      setIsLoading(true);
+
       if (Object.keys(updates).length > 0) {
-        await profileService.updateProfile(updates);
+        const result = await profileService.updateProfile(updates);
+        setCachedProfile({
+          name: result.profile.name || null,
+          phone: result.profile.phone || null,
+          ageRange: result.profile.ageRange || null,
+          colors: result.profile.colors || [],
+          styles: result.profile.styles || [],
+          fit: result.profile.fit || null,
+          bodyType: result.profile.bodyType || null,
+        });
+        setSuccess('Saved');
       }
       setIsLoading(false);
       return true;
@@ -242,7 +452,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setIsLoading(false);
       return false;
     }
-  }, [step, name, phone, ageRange, email, colorMode, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
+  }, [step, name, phone, ageRange, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
 
   const handleNext = useCallback(async () => {
     const saved = await saveCurrentStep();
@@ -260,10 +470,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   }, [step]);
 
   const handleSkip = useCallback(async () => {
-    // Can skip if step 1 is complete (name + phone)
-    if (step === 1) {
-      if (!(name || '').trim() || !(phone || '').trim()) {
-        setError('Name and phone number are required before skipping');
+    // Personal details need a name before skipping
+    if (step === 4) {
+      if (!(name || '').trim()) {
+        setError('Name is required before skipping');
         return;
       }
       const saved = await saveCurrentStep();
@@ -274,13 +484,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     } else {
       onComplete();
     }
-  }, [step, name, phone, saveCurrentStep, onComplete]);
+  }, [step, name, saveCurrentStep, onComplete]);
 
   if (!isOpen) return null;
 
-  const canSkip = step > 1 || (step === 1 && (name || '').trim() && (phone || '').trim());
+  const canSkip = step === 2 || step === 4 || step === 5;
 
   const progress = (step / 5) * 100;
+  const continueDisabled = isLoading || !stepHasRequired();
 
   return (
     <>
@@ -295,24 +506,36 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           aria-modal="true"
         >
           {/* Header */}
-          <div className="px-6 pt-6 pb-4 relative shrink-0">
-            <button
-              onClick={onClose}
-              className="absolute right-5 top-5 p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors z-10"
-              aria-label="Close"
-            >
-              <CloseIcon width={18} height={18} />
-            </button>
-
-            <div className="pr-10">
-              <h2 className="text-xl font-semibold text-[#f5f5f5] tracking-tight leading-tight">
-                Welcome to Stiri
-              </h2>
-              <p className="text-[#c9a962] text-xs mt-0.5 font-medium">Your personal fashion assistant</p>
+          <div className="px-6 pt-5 pb-4 shrink-0">
+            {/* Top row: title + actions */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-[#f5f5f5] tracking-tight leading-tight">
+                  Welcome to Stiri
+                </h2>
+                <p className="text-[#c9a962] text-xs mt-0.5 font-medium">Your personal fashion assistant</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors disabled:opacity-50"
+                  aria-label="Refresh"
+                >
+                  <RefreshIcon />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors"
+                  aria-label="Close"
+                >
+                  <CloseIcon width={18} height={18} />
+                </button>
+              </div>
             </div>
 
             {/* Progress */}
-            <div className="mt-4">
+            <div>
               <div className="flex items-center justify-between mb-2">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <div
@@ -352,9 +575,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
+            {success && (
+              <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                <p className="text-sm text-green-400">{success}</p>
+              </div>
+            )}
 
-            {/* Step 1: Personal Info */}
-            {step === 1 && (
+            {/* Step 4: Personal Info */}
+            {step === 4 && (
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1">
@@ -371,7 +600,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
                 <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1">
-                    Phone Number <span className="text-red-400">*</span>
+                    Phone Number <span className="text-[#525252]">(optional)</span>
                   </label>
                   <div className="flex gap-2 mt-1">
                     <span className="h-11 px-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#6b6b6b] flex items-center text-sm shrink-0">+91</span>
@@ -407,62 +636,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     ))}
                   </div>
                 </div>
+            </div>
+          )}
 
-                <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">Email <span className="text-[#525252]">(optional)</span></label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Color Preferences */}
-            {step === 2 && (
+            {/* Step 1: Color Preferences */}
+            {step === 1 && (
               <div className="space-y-5">
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Theme preference</label>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setColorMode('light')}
-                      className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                        colorMode === 'light'
-                          ? 'border-[#c9a962] bg-[#c9a962]/10'
-                          : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-white border border-[#e0e0e0] flex items-center justify-center">
-                        <svg className="w-5 h-5 text-[#0a0a0a]" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
-                        </svg>
-                      </div>
-                      <span className={`text-sm font-medium ${colorMode === 'light' ? 'text-[#f5f5f5]' : 'text-[#a0a0a0]'}`}>Light</span>
-                    </button>
-                    <button
-                      onClick={() => setColorMode('dark')}
-                      className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                        colorMode === 'dark'
-                          ? 'border-[#c9a962] bg-[#c9a962]/10'
-                          : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#3a3a3a] flex items-center justify-center">
-                        <svg className="w-5 h-5 text-[#f5f5f5]" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
-                        </svg>
-                      </div>
-                      <span className={`text-sm font-medium ${colorMode === 'dark' ? 'text-[#f5f5f5]' : 'text-[#a0a0a0]'}`}>Dark</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">
-                    Favorite colors <span className="text-[#525252]">(pick up to 3)</span>
+                    Favorite colors <span className="text-red-400">*</span> <span className="text-[#525252]">(pick up to 3)</span>
                   </label>
                   <div className="grid grid-cols-4 gap-2">
                     {PRIMARY_COLORS.map((color) => {
@@ -499,8 +681,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
 
-            {/* Step 3: Style Preferences */}
-            {step === 3 && (
+            {/* Step 2: Style Preferences */}
+            {step === 2 && (
               <div>
                 <div className="grid grid-cols-2 gap-3">
                   {STYLES.map((style) => {
@@ -529,11 +711,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
 
-            {/* Step 4: Fit & Body Type */}
-            {step === 4 && (
+            {/* Step 3: Fit & Body Type */}
+            {step === 3 && (
               <div className="space-y-5">
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">What size fits you best?</label>
+                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">What size fits you best? <span className="text-red-400">*</span></label>
                   <div className="grid grid-cols-3 gap-2">
                     {FIT_SIZES.map((size) => (
                       <button
@@ -552,7 +734,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type</label>
+                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
                   <div className="grid grid-cols-3 gap-2">
                     {BODY_TYPES.map((bt) => (
                       <button
@@ -653,7 +835,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
               <button
                 onClick={handleNext}
-                disabled={isLoading}
+                disabled={continueDisabled}
                 className="flex-1 h-11 bg-[#c9a962] text-[#0a0a0a] font-semibold text-sm rounded-xl hover:bg-[#d4b872] active:scale-[0.98] disabled:opacity-50 transition-all shadow-[0_0_20px_-5px_rgba(201,169,98,0.3)]"
               >
                 {isLoading ? (

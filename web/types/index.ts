@@ -22,14 +22,17 @@ export interface User {
   name: string;
   phone: string | null;
   ageRange: string | null;
-  colorMode: string | null;
   colors: string[];
   styles: string[];
   fit: string | null;
   bodyType: string | null;
   avatarUrl: string | null;
   isOnboardingComplete: boolean;
-  credits: number;
+  accountType: 'free' | 'essentials' | 'ultimate';
+  monthlyQuota: number;
+  monthlyUsed: number;
+  extraCredits: number;
+  creationsLeft: number;
   createdAt: Date;
   lastLogin: Date;
 }
@@ -40,14 +43,17 @@ export interface UserProfile {
   name: string;
   phone: string | null;
   ageRange: string | null;
-  colorMode: string | null;
   colors: string[];
   styles: string[];
   fit: string | null;
   bodyType: string | null;
   avatarUrl: string | null;
   isOnboardingComplete: boolean;
-  credits: number;
+  accountType: 'free' | 'essentials' | 'ultimate';
+  monthlyQuota: number;
+  monthlyUsed: number;
+  extraCredits: number;
+  creationsLeft: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +73,21 @@ export interface UserAddress {
 }
 
 // ==========================================
+// GENERATED IMAGES GALLERY
+// ==========================================
+
+export interface GeneratedImage {
+  id: string;
+  imageUrl: string;
+  templateId: string | null;
+  templateName: string | null;
+  stackId: string | null;
+  mode: 'remix' | 'tryon';
+  aspectRatio: string | null;
+  createdAt: string;
+}
+
+// ==========================================
 // PAYMENT & SUBSCRIPTION TYPES
 // ==========================================
 
@@ -77,7 +98,8 @@ export interface PricingPlan {
   price: number; // Price in smallest currency unit (paise for INR)
   displayPrice: string; // Formatted price for display (e.g., "₹129")
   currency: string;
-  credits: number;
+  creations: number;
+  accountType: 'essentials' | 'ultimate';
   features: string[];
   isPopular?: boolean;
   badge?: string;
@@ -88,7 +110,7 @@ export interface Subscription {
   userId: string;
   planId: string;
   planName: string;
-  creditsPurchased: number;
+  creationsPurchased: number;
   amount: number;
   currency: string;
   razorpayOrderId: string;
@@ -127,7 +149,7 @@ export interface VerifyPaymentResponse {
   success: boolean;
   message?: string;
   subscriptionId?: string;
-  creditsAdded?: number;
+  creationsAdded?: number;
   error?: string;
 }
 

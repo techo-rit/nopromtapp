@@ -1,26 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { CloseIcon, GoogleIcon } from '../../shared/ui/Icons';
+import { CloseIcon } from '../../shared/ui/Icons';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSignUp: (email: string, password: string, name: string) => Promise<void>;
-  onLogin: (email: string, password: string) => Promise<void>;
-  onGoogleAuth: () => Promise<void>;
   onSendOtp: (phone: string) => Promise<void>;
   onVerifyOtp: (phone: string, code: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
 
-type AuthView = 'phone' | 'otp' | 'email-login' | 'email-signup';
+type AuthView = 'phone' | 'otp';
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
-  onSignUp,
-  onLogin,
-  onGoogleAuth,
   onSendOtp,
   onVerifyOtp,
   isLoading,
@@ -29,11 +23,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [view, setView] = useState<AuthView>('phone');
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
   // Reset state when modal opens/closes
@@ -43,10 +33,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setView('phone');
       setPhone('');
       setOtpCode('');
-      setEmail('');
-      setPassword('');
-      setName('');
-      setOtpSent(false);
       setCountdown(0);
     }
   }, [isOpen]);
@@ -70,7 +56,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const fullPhone = `91${cleanPhone.slice(-10)}`;
     try {
       await onSendOtp(fullPhone);
-      setOtpSent(true);
       setView('otp');
       setCountdown(30);
     } catch (err: any) {
@@ -100,25 +85,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-    if (!email || !password) {
-      setLocalError('Please fill in all fields');
-      return;
-    }
-    if (password.length < 8) {
-      setLocalError('Password must be at least 8 characters');
-      return;
-    }
-    if (view === 'email-signup') {
-      if (!name) { setLocalError('Please enter your name'); return; }
-      await onSignUp(email, password, name);
-    } else {
-      await onLogin(email, password);
-    }
-  };
-
   const displayError = localError || error;
 
   return (
@@ -132,12 +98,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       {/* Modal Container */}
       <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
-        <div 
+        <div
           className="bg-[#121212] w-full max-w-[420px] rounded-3xl shadow-2xl border border-[#2a2a2a] overflow-hidden pointer-events-auto transform transition-all duration-300 scale-100 opacity-100"
           role="dialog"
           aria-modal="true"
         >
-
           {/* Header Section */}
           <div className="px-8 pt-8 pb-6 text-center relative">
             <button
@@ -149,19 +114,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
 
             <h2 className="text-3xl font-semibold text-[#f5f5f5] mb-2 tracking-tight">
-              {view === 'otp' ? 'Verify OTP' : view.startsWith('email') ? (view === 'email-signup' ? 'Create account' : 'Welcome back') : 'Sign In'}
+              {view === 'otp' ? 'Verify OTP' : 'Sign In'}
             </h2>
             <p className="text-[#a0a0a0] text-sm">
               {view === 'phone' && 'Enter your mobile number to get started'}
               {view === 'otp' && `We sent a 6-digit code to your WhatsApp on +91 ${phone.replace(/\D/g, '').slice(-10)}`}
-              {view === 'email-login' && 'Enter your email and password'}
-              {view === 'email-signup' && 'Create your account with email'}
             </p>
           </div>
 
           {/* Form Section */}
           <div className="px-8 pb-8">
-
             {displayError && (
               <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -180,6 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading && phone.replace(/\D/g, '').length >= 10) handleSendOtp(); }}
                       placeholder="Enter 10-digit number"
                       className="w-full h-12 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-lg tracking-wider"
                       disabled={isLoading}
@@ -211,33 +174,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </span>
                   )}
                 </button>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#2a2a2a]"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase tracking-wide">
-                    <span className="bg-[#121212] px-3 text-[#525252]">Or continue with</span>
-                  </div>
-                </div>
-
-                {/* Google */}
-                <button
-                  onClick={onGoogleAuth}
-                  disabled={isLoading}
-                  className="w-full h-12 bg-white text-black font-medium rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 active:scale-[0.98] transition-all"
-                >
-                  <GoogleIcon width={20} height={20} />
-                  <span>Continue with Google</span>
-                </button>
-
-                {/* Email toggle */}
-                <button
-                  onClick={() => setView('email-login')}
-                  className="w-full h-10 text-sm text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors"
-                >
-                  Use email & password instead
-                </button>
               </div>
             )}
 
@@ -251,7 +187,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     inputMode="numeric"
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="• • • • • •"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading && otpCode.length === 6) handleVerifyOtp(); }}
+                    placeholder="- - - - - -"
                     className="w-full h-14 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-2xl tracking-[0.5em] text-center font-mono"
                     disabled={isLoading}
                     autoFocus
@@ -290,90 +227,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     {countdown > 0 ? `Resend in ${countdown}s` : 'Resend OTP'}
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Email Login/Signup View */}
-            {(view === 'email-login' || view === 'email-signup') && (
-              <div className="space-y-4">
-                {/* Toggle between login/signup */}
-                <div className="p-1 bg-[#1a1a1a] rounded-xl flex">
-                  <button
-                    onClick={() => { setView('email-login'); setLocalError(null); }}
-                    className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                      view === 'email-login'
-                        ? 'text-[#0a0a0a] bg-[#f5f5f5] shadow-sm'
-                        : 'text-[#6b6b6b] hover:text-[#a0a0a0]'
-                    }`}
-                  >
-                    Log In
-                  </button>
-                  <button
-                    onClick={() => { setView('email-signup'); setLocalError(null); }}
-                    className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                      view === 'email-signup'
-                        ? 'text-[#0a0a0a] bg-[#f5f5f5] shadow-sm'
-                        : 'text-[#6b6b6b] hover:text-[#a0a0a0]'
-                    }`}
-                  >
-                    Sign Up
-                  </button>
-                </div>
-
-                <form onSubmit={handleEmailSubmit} className="space-y-4">
-                  {view === 'email-signup' && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-[#a0a0a0] ml-1">Full Name</label>
-                      <input
-                        type="text" value={name} onChange={(e) => setName(e.target.value)}
-                        placeholder="John Doe"
-                        className="w-full h-12 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors"
-                        disabled={isLoading}
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-[#a0a0a0] ml-1">Email Address</label>
-                    <input
-                      type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
-                      className="w-full h-12 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-[#a0a0a0] ml-1">Password</label>
-                    <input
-                      type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full h-12 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <button
-                    type="submit" disabled={isLoading}
-                    className="w-full h-12 mt-2 bg-[#c9a962] text-black font-semibold rounded-xl hover:bg-[#d4b872] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_-5px_rgba(201,169,98,0.3)]"
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4 text-black" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing
-                      </span>
-                    ) : (
-                      view === 'email-login' ? 'Sign In' : 'Create Account'
-                    )}
-                  </button>
-                </form>
-
-                <button
-                  onClick={() => { setView('phone'); setLocalError(null); }}
-                  className="w-full h-10 text-sm text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors"
-                >
-                  ← Back to phone login
-                </button>
               </div>
             )}
 

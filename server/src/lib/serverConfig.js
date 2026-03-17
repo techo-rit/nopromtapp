@@ -35,13 +35,15 @@ export const PRICING_PLANS = {
   essentials: {
     name: 'Essentials',
     price: 12900,
-    credits: 20,
+    creations: 20,
     currency: 'INR',
+    accountType: 'essentials',
   },
   ultimate: {
     name: 'Ultimate',
     price: 74900,
-    credits: 135,
+    creations: 135,
     currency: 'INR',
+    accountType: 'ultimate',
   },
 };

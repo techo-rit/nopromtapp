@@ -11,6 +11,18 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (id.includes('/data/constants')) return 'data';
+              if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router')) return 'react-vendor';
+              if (id.includes('node_modules/@mediapipe')) return 'mediapipe';
+              if (id.includes('node_modules/react-webcam')) return 'webcam';
+            },
+          },
+        },
+      },
     };
 });
