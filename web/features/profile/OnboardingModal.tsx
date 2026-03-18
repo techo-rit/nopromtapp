@@ -8,7 +8,6 @@ interface OnboardingModalProps {
   onClose: () => void;
   onComplete: () => void;
   userName?: string;
-  userPhone?: string;
 }
 
 type OnboardingStep = 1 | 2 | 3 | 4 | 5;
@@ -99,7 +98,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
   onComplete,
   userName = '',
-  userPhone = '',
 }) => {
   const [step, setStep] = useState<OnboardingStep>(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -107,7 +105,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [success, setSuccess] = useState<string | null>(null);
   const [cachedProfile, setCachedProfile] = useState<null | {
     name: string | null;
-    phone: string | null;
     ageRange: string | null;
     colors: string[];
     styles: string[];
@@ -122,7 +119,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   // Step 4
   const [name, setName] = useState(userName || '');
-  const [phone, setPhone] = useState(() => { const d = (userPhone || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d; });
   const [ageRange, setAgeRange] = useState<string | null>(null);
 
   // Step 1
@@ -157,8 +153,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         const addressLine = defaultAddress?.addressLine || '';
 
         setName((profile?.name || userName || '').trim());
-        const rawPhone = (profile?.phone || userPhone || '').replace(/\D/g, '');
-        setPhone(rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone);
         setAgeRange(profile?.ageRange || null);
         setSelectedColors(profile?.colors || []);
         setSelectedStyles(profile?.styles || []);
@@ -169,7 +163,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         setLng(defaultAddress?.lng ?? null);
         setCachedProfile({
           name: profile?.name || null,
-          phone: profile?.phone || null,
           ageRange: profile?.ageRange || null,
           colors: profile?.colors || [],
           styles: profile?.styles || [],
@@ -191,7 +184,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         let nextStep: OnboardingStep = 1;
         if (!hasColors) {
           nextStep = 1;
-        } else if (!hasFit || !hasBodyType) {
           nextStep = 3;
         } else if (!hasName) {
           nextStep = 4;
@@ -205,10 +197,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       } catch {
         if (!alive) return;
         setName(userName || '');
-        setPhone(userPhone || '');
         setCachedProfile({
           name: userName || null,
-          phone: userPhone || null,
           ageRange: null,
           colors: [],
           styles: [],
@@ -221,7 +211,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     return () => {
       alive = false;
     };
-  }, [isOpen, userName, userPhone]);
+  }, [isOpen, userName]);
 
   useEffect(() => {
     if (!error) return;
@@ -297,7 +287,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const addressLine = defaultAddress?.addressLine || '';
 
       setName((profile?.name || userName || '').trim());
-      setPhone((profile?.phone || userPhone || '').trim());
       setAgeRange(profile?.ageRange || null);
       setSelectedColors(profile?.colors || []);
       setSelectedStyles(profile?.styles || []);
@@ -309,7 +298,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
       setCachedProfile({
         name: profile?.name || null,
-        phone: profile?.phone || null,
         ageRange: profile?.ageRange || null,
         colors: profile?.colors || [],
         styles: profile?.styles || [],
@@ -327,7 +315,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userName, userPhone]);
+  }, [userName]);
 
   const arraysEqual = (a: string[], b: string[]) => {
     if (a.length !== b.length) return false;
@@ -379,15 +367,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           break;
         case 4: {
           const trimmedName = (name || '').trim();
-          const trimmedPhone = (phone || '').trim();
           if (!trimmedName) { setError('Name is required'); setIsLoading(false); return false; }
-          if (trimmedPhone && trimmedPhone.length < 10) { setError('Enter a valid phone number'); setIsLoading(false); return false; }
           if (!cachedProfile || trimmedName !== (cachedProfile.name || '')) {
             updates.name = trimmedName;
-            hasWork = true;
-          }
-          if (trimmedPhone && (!cachedProfile || trimmedPhone !== (cachedProfile.phone || ''))) {
-            updates.phone = trimmedPhone;
             hasWork = true;
           }
           if (ageRange && (!cachedProfile || ageRange !== cachedProfile.ageRange)) {
@@ -436,7 +418,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         const result = await profileService.updateProfile(updates);
         setCachedProfile({
           name: result.profile.name || null,
-          phone: result.profile.phone || null,
           ageRange: result.profile.ageRange || null,
           colors: result.profile.colors || [],
           styles: result.profile.styles || [],
@@ -452,7 +433,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setIsLoading(false);
       return false;
     }
-  }, [step, name, phone, ageRange, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
+  }, [step, name, ageRange, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
 
   const handleNext = useCallback(async () => {
     const saved = await saveCurrentStep();
@@ -596,22 +577,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     placeholder="Enter your name"
                     className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
                   />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">
-                    Phone Number <span className="text-[#525252]">(optional)</span>
-                  </label>
-                  <div className="flex gap-2 mt-1">
-                    <span className="h-11 px-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#6b6b6b] flex items-center text-sm shrink-0">+91</span>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      placeholder="10-digit number"
-                      className="w-full h-11 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
-                    />
-                  </div>
                 </div>
 
                 <div>

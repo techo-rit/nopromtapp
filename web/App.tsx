@@ -363,7 +363,6 @@ const App: React.FC = () => {
           onClose={closeOnboardingModal}
           onComplete={handleOnboardingComplete}
           userName={user.name || ''}
-          userPhone={user.phone || ''}
         />
       )}
       

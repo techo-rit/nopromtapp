@@ -259,17 +259,32 @@ export async function ensureUserProfile(adminClient, supabaseUser) {
 
   const { data: existing } = await adminClient
     .from('profiles')
-    .select('id')
+    .select('id, full_name, phone')
     .eq('id', supabaseUser.id)
     .maybeSingle();
 
-  if (existing) return;
+  const normalizedPhone = supabaseUser.phone || null;
+  const fullName = supabaseUser.user_metadata?.full_name || null;
+
+  if (existing) {
+    const update = {};
+    if (!existing.phone && normalizedPhone) update.phone = normalizedPhone;
+    if (!existing.full_name && fullName) update.full_name = fullName;
+    if (Object.keys(update).length > 0) {
+      await adminClient
+        .from('profiles')
+        .update(update)
+        .eq('id', supabaseUser.id);
+    }
+    return;
+  }
 
   await adminClient
     .from('profiles')
     .insert({
       id: supabaseUser.id,
-      full_name: supabaseUser.user_metadata?.full_name || null,
+      full_name: fullName,
+      phone: normalizedPhone,
       account_type: 'free',
       monthly_quota: 3,
       monthly_used: 0,
@@ -282,7 +297,7 @@ export function mapUser(supabaseUser, profile) {
     id: supabaseUser.id,
     email: supabaseUser.email,
     name: profile?.name || supabaseUser.user_metadata?.full_name || null,
-    phone: profile?.phone || null,
+    phone: profile?.phone || supabaseUser.phone || null,
     ageRange: profile?.ageRange || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],

@@ -39,7 +39,7 @@ export async function getProfileHandler(req, res) {
         profile: {
           id: authResult.user.id,
           name: authResult.user.user_metadata?.full_name || 'User',
-          phone: null,
+          phone: authResult.user.phone || null,
           ageRange: null,
           colors: [],
           styles: [],
