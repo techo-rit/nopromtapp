@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, mkdirSync, createWriteStream } from 'fs';
+import { existsSync, mkdirSync, createWriteStream, readFileSync } from 'fs';
 import { applyCors } from './lib/cors.js';
 import { generateHandler } from './routes/generate.js';
 import { createOrderHandler } from './routes/createOrder.js';
@@ -88,12 +88,32 @@ export function createApp() {
 
   // Serve built web app from server/public
   const publicDir = path.resolve(__dirname, '..', 'public');
+  const indexHtmlPath = path.join(publicDir, 'index.html');
+  const indexHtmlTemplate = existsSync(indexHtmlPath)
+    ? readFileSync(indexHtmlPath, 'utf8')
+    : null;
+  const profileRevalidationThrottleMs = Number(process.env.PROFILE_REVALIDATION_THROTTLE_MS || 15000);
+  const safeProfileRevalidationThrottleMs =
+    Number.isFinite(profileRevalidationThrottleMs) && profileRevalidationThrottleMs > 0
+      ? Math.floor(profileRevalidationThrottleMs)
+      : 15000;
 
-  app.use(express.static(publicDir));
+  function renderIndexHtml() {
+    if (!indexHtmlTemplate) return null;
+    const runtimeScript = `<script>window.__PROFILE_REVALIDATION_THROTTLE_MS__ = ${safeProfileRevalidationThrottleMs};</script>`;
+    return indexHtmlTemplate.replace('</body>', `    ${runtimeScript}\n  </body>`);
+  }
+
+  app.use(express.static(publicDir, { index: false }));
 
   // SPA fallback
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(publicDir, 'index.html'));
+    const rendered = renderIndexHtml();
+    if (rendered) {
+      res.type('html').send(rendered);
+      return;
+    }
+    res.sendFile(indexHtmlPath);
   });
 
   // Error logging

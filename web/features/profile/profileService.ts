@@ -7,8 +7,14 @@ function apiUrl(path: string): string {
   return base ? `${base}${path}` : path;
 }
 
+const PROFILE_REVALIDATION_THROTTLE_MS =
+  Number(CONFIG.PROFILE?.REVALIDATION_THROTTLE_MS ?? 15000) || 15000;
+
 export const profileService = {
   async getProfile(force = false): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number } | null> {
+    const serverProfile = async () => fetchProfileFromServer();
+    const shouldRevalidate = () => shouldRevalidateProfile();
+
     if (!force) {
       const cached = getCachedProfile();
       const cachedUser = authService.getCachedUser();
@@ -19,16 +25,28 @@ export const profileService = {
         setCachedProfile(null);
         setCachedAddresses(null);
       } else if (cached) {
+        if (!shouldRevalidate()) return cached;
+        const fresh = await serverProfile();
+        if (!fresh) return cached;
+        if (hasOnboardingPercentDiff(cached, fresh)) return fresh;
         return cached;
       }
 
       const publicCached = getCachedPublicProfile();
       if (publicCached) {
+        if (shouldRevalidate()) {
+          const fresh = await serverProfile();
+          if (fresh && hasOnboardingPercentDiff(publicCached, fresh)) {
+            return fresh;
+          }
+        }
+
         const now = new Date().toISOString();
         const fallbackUser = authService.getCachedUser();
         return {
           profile: {
             id: fallbackUser?.id || '',
+            email: fallbackUser?.email || '',
             name: publicCached.name || '',
             phone: fallbackUser?.phone || null,
             ageRange: publicCached.ageRange || null,
@@ -51,43 +69,7 @@ export const profileService = {
         };
       }
     }
-    const resp = await fetch(apiUrl('/api/profile'), { credentials: 'include' });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (!data.success) return null;
-    const result = {
-      profile: data.profile,
-      onboardingSteps: data.onboardingSteps,
-      onboardingPercent: data.onboardingPercent,
-    };
-    setCachedProfile(result);
-    setCachedPublicProfile({
-      name: data.profile?.name || '',
-      ageRange: data.profile?.ageRange || null,
-      colors: data.profile?.colors || [],
-      styles: data.profile?.styles || [],
-      fit: data.profile?.fit || null,
-      bodyType: data.profile?.bodyType || null,
-      onboardingSteps: data.onboardingSteps ?? 0,
-      onboardingPercent: data.onboardingPercent ?? 0,
-    });
-    authService.updateCachedUser({
-      name: data.profile?.name || '',
-      phone: data.profile?.phone || null,
-      ageRange: data.profile?.ageRange || null,
-      colors: data.profile?.colors || [],
-      styles: data.profile?.styles || [],
-      fit: data.profile?.fit || null,
-      bodyType: data.profile?.bodyType || null,
-      avatarUrl: data.profile?.avatarUrl || null,
-      isOnboardingComplete: data.profile?.isOnboardingComplete ?? false,
-      accountType: data.profile?.accountType || 'free',
-      monthlyQuota: data.profile?.monthlyQuota ?? 3,
-      monthlyUsed: data.profile?.monthlyUsed ?? 0,
-      extraCredits: data.profile?.extraCredits ?? 0,
-      creationsLeft: data.profile?.creationsLeft ?? 0,
-    });
-    return result;
+    return serverProfile();
   },
 
   async updateProfile(updates: Partial<{
@@ -258,6 +240,7 @@ let cachedProfile: { profile: UserProfile; onboardingSteps: number; onboardingPe
 let cachedAddresses: UserAddress[] | null | undefined = undefined;
 let cachedPublicProfile: PublicProfileCache | null | undefined = undefined;
 let cachedGenerations: { generations: GeneratedImage[]; total: number } | null | undefined = undefined;
+let lastProfileRevalidationAt = 0;
 
 function getCachedProfile() {
   if (cachedProfile !== undefined) return cachedProfile;
@@ -353,6 +336,68 @@ function getCachedGenerations() {
 
 function setCachedGenerations(value: { generations: GeneratedImage[]; total: number } | null) {
   cachedGenerations = value;
+}
+
+async function fetchProfileFromServer(): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number } | null> {
+  markProfileRevalidatedNow();
+  const resp = await fetch(apiUrl('/api/profile'), { credentials: 'include' });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  if (!data.success) return null;
+
+  const result = {
+    profile: data.profile,
+    onboardingSteps: data.onboardingSteps,
+    onboardingPercent: data.onboardingPercent,
+  };
+
+  setCachedProfile(result);
+  setCachedPublicProfile({
+    name: data.profile?.name || '',
+    ageRange: data.profile?.ageRange || null,
+    colors: data.profile?.colors || [],
+    styles: data.profile?.styles || [],
+    fit: data.profile?.fit || null,
+    bodyType: data.profile?.bodyType || null,
+    onboardingSteps: data.onboardingSteps ?? 0,
+    onboardingPercent: data.onboardingPercent ?? 0,
+  });
+
+  authService.updateCachedUser({
+    name: data.profile?.name || '',
+    phone: data.profile?.phone || null,
+    ageRange: data.profile?.ageRange || null,
+    colors: data.profile?.colors || [],
+    styles: data.profile?.styles || [],
+    fit: data.profile?.fit || null,
+    bodyType: data.profile?.bodyType || null,
+    avatarUrl: data.profile?.avatarUrl || null,
+    isOnboardingComplete: data.profile?.isOnboardingComplete ?? false,
+    accountType: data.profile?.accountType || 'free',
+    monthlyQuota: data.profile?.monthlyQuota ?? 3,
+    monthlyUsed: data.profile?.monthlyUsed ?? 0,
+    extraCredits: data.profile?.extraCredits ?? 0,
+    creationsLeft: data.profile?.creationsLeft ?? 0,
+  });
+
+  return result;
+}
+
+function hasOnboardingPercentDiff(
+  cached: { onboardingPercent?: number } | null,
+  fresh: { onboardingPercent?: number } | null,
+): boolean {
+  const cachedPercent = Number(cached?.onboardingPercent ?? 0);
+  const freshPercent = Number(fresh?.onboardingPercent ?? 0);
+  return cachedPercent !== freshPercent;
+}
+
+function shouldRevalidateProfile(now = Date.now()): boolean {
+  return now - lastProfileRevalidationAt >= PROFILE_REVALIDATION_THROTTLE_MS;
+}
+
+function markProfileRevalidatedNow(now = Date.now()) {
+  lastProfileRevalidationAt = now;
 }
 
 function mapGeneration(raw: Record<string, unknown>): GeneratedImage {

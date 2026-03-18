@@ -223,7 +223,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [name, phone, ageRange, colors, styles, fit, bodyType, cachedProfile, onProfileUpdate]);
+  }, [name, ageRange, colors, styles, fit, bodyType, cachedProfile, onProfileUpdate]);
 
   const handleAddAddress = useCallback(async () => {
     if (!newAddress.trim()) return;
@@ -261,7 +261,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       if (data?.profile) {
         const p = data.profile;
         setName(p.name || '');
-        setPhone(stripCountryCode(p.phone || ''));
         setAgeRange(p.ageRange || '');
         setColors(p.colors || []);
         setStyles(p.styles || []);
@@ -269,7 +268,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         setBodyType(p.bodyType || '');
         setCachedProfile({
           name: (p.name || '').trim(),
-          phone: (p.phone || '').trim(),
           ageRange: p.ageRange || '',
           colors: p.colors || [],
           styles: p.styles || [],
