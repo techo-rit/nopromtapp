@@ -228,7 +228,7 @@ export async function getUserFromRequest(req, res) {
 export async function fetchUserProfile(adminClient, userId) {
   const { data: profile } = await adminClient
     .from('profiles')
-    .select('full_name, phone, age_range, colors, styles, fit, body_type, is_onboarding_complete, account_type, monthly_quota, monthly_used, extra_credits')
+    .select('full_name, phone, age_range, colors, styles, fit, body_type, skin_tone, is_onboarding_complete, account_type, monthly_quota, monthly_used, extra_credits')
     .eq('id', userId)
     .single();
 
@@ -245,6 +245,7 @@ export async function fetchUserProfile(adminClient, userId) {
     styles: profile?.styles || [],
     fit: profile?.fit || null,
     bodyType: profile?.body_type || null,
+    skinTone: profile?.skin_tone || null,
     isOnboardingComplete: profile?.is_onboarding_complete || false,
     accountType: profile?.account_type || 'free',
     monthlyQuota,
@@ -304,6 +305,7 @@ export function mapUser(supabaseUser, profile) {
     styles: profile?.styles || [],
     fit: profile?.fit || null,
     bodyType: profile?.bodyType || null,
+    skinTone: profile?.skinTone || null,
     avatarUrl: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture || null,
     isOnboardingComplete: profile?.isOnboardingComplete || false,
     accountType: profile?.accountType || 'free',

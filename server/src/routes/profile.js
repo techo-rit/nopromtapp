@@ -46,6 +46,7 @@ export async function getProfileHandler(req, res) {
           styles: [],
           fit: null,
           bodyType: null,
+          skinTone: null,
           avatarUrl: authResult.user.user_metadata?.avatar_url || authResult.user.user_metadata?.picture || null,
           isOnboardingComplete: false,
           accountType: 'free',
@@ -61,9 +62,9 @@ export async function getProfileHandler(req, res) {
       return res.status(200).json(payload);
     }
 
-    // Compute steps completed
+    // Compute steps completed and heal mistaken false flags when data is already complete.
     const steps = await computeSteps(profile, supabase, authResult.user.id);
-    await syncOnboardingStatus(profile, supabase, steps);
+    await syncOnboardingCompletionOnRead(profile, supabase, steps);
 
     const payload = {
       success: true,
@@ -94,6 +95,12 @@ export async function updateProfileHandler(req, res) {
     // Ensure profile row exists (auto-create if missing)
     await ensureUserProfile(supabase, authResult.user);
 
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('age_range, styles')
+      .eq('id', userId)
+      .single();
+
     // Build update object — only include fields that are provided
     const update = {};
 
@@ -104,6 +111,27 @@ export async function updateProfileHandler(req, res) {
     if (body.styles !== undefined) update.styles = body.styles;
     if (body.fit !== undefined) update.fit = body.fit;
     if (body.bodyType !== undefined) update.body_type = body.bodyType;
+    if (body.skinTone !== undefined) update.skin_tone = body.skinTone;
+
+    const ageRangeCleared = body.ageRange !== undefined && !body.ageRange;
+    if (ageRangeCleared && existingProfile?.age_range) {
+      return res.status(400).json({
+        success: false,
+        error: 'Generation cannot be empty once selected. You can change it, but not remove it.',
+      });
+    }
+
+    const stylesCleared = body.styles !== undefined
+      && Array.isArray(body.styles)
+      && body.styles.length === 0
+      && Array.isArray(existingProfile?.styles)
+      && existingProfile.styles.length > 0;
+    if (stylesCleared) {
+      return res.status(400).json({
+        success: false,
+        error: 'Style preferences cannot be empty once selected. You can change them, but not remove all.',
+      });
+    }
 
     if (Object.keys(update).length === 0) {
       return res.status(400).json({ success: false, error: 'No fields to update' });
@@ -220,6 +248,18 @@ export async function addAddressHandler(req, res) {
     } else {
       addressCache.set(cacheKey, { success: true, addresses: [mapped] });
     }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authResult.user.id)
+      .single();
+
+    if (profile) {
+      const steps = await computeSteps(profile, supabase, authResult.user.id);
+      await syncOnboardingStatus(profile, supabase, steps);
+    }
+
     profileCache.del(`profile:${authResult.user.id}`);
 
     return res.status(200).json({ success: true, address: mapped });
@@ -240,6 +280,16 @@ export async function deleteAddressHandler(req, res) {
 
     const addressId = req.params.id;
     if (!addressId) return res.status(400).json({ success: false, error: 'Address ID required' });
+
+    const { count, error: countError } = await supabase
+      .from('user_addresses')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', authResult.user.id);
+
+    if (countError) return res.status(500).json({ success: false, error: 'Failed to validate addresses' });
+    if ((count || 0) <= 1) {
+      return res.status(400).json({ success: false, error: 'You cannot delete your only saved address.' });
+    }
 
     const { error } = await supabase
       .from('user_addresses')
@@ -403,16 +453,37 @@ function _clearUserGalleryCache(userId) {
 }
 
 async function syncOnboardingStatus(profile, supabase, steps) {
-  const isComplete = steps >= ONBOARDING_TOTAL_STEPS;
-  if ((profile.is_onboarding_complete ?? false) === isComplete) {
+  const wasComplete = profile.is_onboarding_complete ?? false;
+  const isCompleteNow = steps >= ONBOARDING_TOTAL_STEPS;
+  const nextIsComplete = isCompleteNow;
+  if (wasComplete === nextIsComplete) {
     return;
   }
 
-  profile.is_onboarding_complete = isComplete;
+  profile.is_onboarding_complete = nextIsComplete;
   await supabase
     .from('profiles')
     .update({
-      is_onboarding_complete: isComplete,
+      is_onboarding_complete: nextIsComplete,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', profile.id);
+}
+
+async function syncOnboardingCompletionOnRead(profile, supabase, steps) {
+  const wasComplete = profile.is_onboarding_complete ?? false;
+  const isCompleteNow = steps >= ONBOARDING_TOTAL_STEPS;
+
+  // Allow manual false resets, but heal them on the next visit if the data is already complete.
+  if (wasComplete || !isCompleteNow) {
+    return;
+  }
+
+  profile.is_onboarding_complete = true;
+  await supabase
+    .from('profiles')
+    .update({
+      is_onboarding_complete: true,
       updated_at: new Date().toISOString(),
     })
     .eq('id', profile.id);
@@ -432,8 +503,8 @@ async function computeSteps(profile, supabase, userId) {
   // Step 3: Style preferences
   if (profile.styles && profile.styles.length > 0) steps++;
 
-  // Step 4: Fit & Body type
-  if (profile.fit && profile.body_type) steps++;
+  // Step 4: Fit + Body type + Skin tone
+  if (profile.fit && profile.body_type && profile.skin_tone) steps++;
 
   // Step 5: Location — check user_addresses table
   try {
@@ -452,7 +523,7 @@ function mapProfile(profile, supabaseUser, steps) {
   const monthlyUsed = profile.monthly_used || 0;
   const extraCredits = profile.extra_credits || 0;
   const monthlyRemaining = Math.max(monthlyQuota - monthlyUsed, 0);
-  const isOnboardingComplete = steps >= ONBOARDING_TOTAL_STEPS;
+  const isOnboardingComplete = profile.is_onboarding_complete ?? false;
   return {
     id: profile.id,
     name: profile.full_name,
@@ -462,6 +533,7 @@ function mapProfile(profile, supabaseUser, steps) {
     styles: profile.styles || [],
     fit: profile.fit,
     bodyType: profile.body_type,
+    skinTone: profile.skin_tone,
     avatarUrl: supabaseUser?.user_metadata?.avatar_url || supabaseUser?.user_metadata?.picture || null,
     isOnboardingComplete,
     accountType: profile.account_type || 'free',

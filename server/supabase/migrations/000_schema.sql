@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   styles                 text[]      DEFAULT '{}',
   fit                    text,
   body_type              text,
+  skin_tone              text        CHECK (skin_tone IN ('fair', 'medium', 'dark') OR skin_tone IS NULL),
   is_onboarding_complete boolean     NOT NULL DEFAULT false,
   account_type           text        NOT NULL DEFAULT 'free',
   monthly_quota          integer     NOT NULL DEFAULT 3,
@@ -233,7 +234,8 @@ BEGIN
   IF array_length(v_profile.colors, 1) > 0 THEN v_steps := v_steps + 1; END IF;
   IF array_length(v_profile.styles, 1) > 0 THEN v_steps := v_steps + 1; END IF;
 
-  IF v_profile.fit IS NOT NULL AND v_profile.body_type IS NOT NULL THEN
+  IF v_profile.fit IS NOT NULL AND v_profile.body_type IS NOT NULL
+     AND v_profile.skin_tone IS NOT NULL AND v_profile.skin_tone != '' THEN
     v_steps := v_steps + 1;
   END IF;
 
@@ -426,7 +428,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS trg_update_onboarding ON public.profiles;
 CREATE TRIGGER trg_update_onboarding
-  BEFORE UPDATE ON public.profiles
+  BEFORE UPDATE OF full_name, age_range, colors, styles, fit, body_type, skin_tone ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_onboarding_status();
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

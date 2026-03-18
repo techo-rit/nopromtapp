@@ -54,6 +54,7 @@ export const profileService = {
             styles: publicCached.styles || [],
             fit: publicCached.fit || null,
             bodyType: publicCached.bodyType || null,
+            skinTone: publicCached.skinTone || null,
             avatarUrl: fallbackUser?.avatarUrl || null,
             isOnboardingComplete: fallbackUser?.isOnboardingComplete || false,
             accountType: fallbackUser?.accountType || 'free',
@@ -80,6 +81,7 @@ export const profileService = {
     styles: string[];
     fit: string;
     bodyType: string;
+    skinTone: string;
   }>): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number }> {
     const resp = await fetch(apiUrl('/api/profile'), {
       method: 'PUT',
@@ -104,6 +106,7 @@ export const profileService = {
       styles: data.profile?.styles || [],
       fit: data.profile?.fit || null,
       bodyType: data.profile?.bodyType || null,
+      skinTone: data.profile?.skinTone || null,
       onboardingSteps: data.onboardingSteps ?? 0,
       onboardingPercent: data.onboardingPercent ?? 0,
     });
@@ -115,6 +118,7 @@ export const profileService = {
       styles: data.profile?.styles || [],
       fit: data.profile?.fit || null,
       bodyType: data.profile?.bodyType || null,
+      skinTone: data.profile?.skinTone || null,
       avatarUrl: data.profile?.avatarUrl || null,
       isOnboardingComplete: data.profile?.isOnboardingComplete ?? false,
       accountType: data.profile?.accountType || 'free',
@@ -269,6 +273,7 @@ type PublicProfileCache = {
   styles: string[];
   fit: string | null;
   bodyType: string | null;
+  skinTone: string | null;
   onboardingSteps: number;
   onboardingPercent: number;
 };
@@ -359,6 +364,7 @@ async function fetchProfileFromServer(): Promise<{ profile: UserProfile; onboard
     styles: data.profile?.styles || [],
     fit: data.profile?.fit || null,
     bodyType: data.profile?.bodyType || null,
+    skinTone: data.profile?.skinTone || null,
     onboardingSteps: data.onboardingSteps ?? 0,
     onboardingPercent: data.onboardingPercent ?? 0,
   });
@@ -371,6 +377,7 @@ async function fetchProfileFromServer(): Promise<{ profile: UserProfile; onboard
     styles: data.profile?.styles || [],
     fit: data.profile?.fit || null,
     bodyType: data.profile?.bodyType || null,
+    skinTone: data.profile?.skinTone || null,
     avatarUrl: data.profile?.avatarUrl || null,
     isOnboardingComplete: data.profile?.isOnboardingComplete ?? false,
     accountType: data.profile?.accountType || 'free',

@@ -106,6 +106,7 @@ const App: React.FC = () => {
         styles: profile.styles || [],
         fit: profile.fit,
         bodyType: profile.bodyType,
+        skinTone: profile.skinTone,
         avatarUrl: profile.avatarUrl,
         isOnboardingComplete: profile.isOnboardingComplete,
         accountType: profile.accountType,
