@@ -176,20 +176,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         } : null);
 
         const hasColors = (profile?.colors || []).length > 0;
-        const hasFit = !!profile?.fit;
-        const hasBodyType = !!profile?.bodyType;
+        const hasStyles = (profile?.styles || []).length > 0;
+        const hasFitProfile = !!profile?.fit && !!profile?.bodyType;
         const hasName = !!(profile?.name || userName || '').trim();
         const hasLocation = !!addressLine;
 
-        let nextStep: OnboardingStep = 1;
+        let nextStep: OnboardingStep = 5;
         if (!hasColors) {
           nextStep = 1;
+        } else if (!hasStyles) {
+          nextStep = 2;
+        } else if (!hasFitProfile) {
           nextStep = 3;
         } else if (!hasName) {
           nextStep = 4;
         } else if (!hasLocation) {
-          nextStep = 5;
-        } else {
           nextStep = 5;
         }
 

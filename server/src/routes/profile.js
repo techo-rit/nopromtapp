@@ -3,6 +3,7 @@ import { createTtlCache } from '../lib/cache.js';
 
 const CACHE_TTL_MS = Number(process.env.SERVER_CACHE_TTL_MS || 60000);
 const GALLERY_CACHE_TTL_MS = Number(process.env.GALLERY_CACHE_TTL_MS || 120000); // 2 min
+const ONBOARDING_TOTAL_STEPS = 5;
 const profileCache = createTtlCache(CACHE_TTL_MS);
 const addressCache = createTtlCache(CACHE_TTL_MS);
 const galleryCache = createTtlCache(GALLERY_CACHE_TTL_MS);
@@ -39,7 +40,7 @@ export async function getProfileHandler(req, res) {
         profile: {
           id: authResult.user.id,
           name: authResult.user.user_metadata?.full_name || 'User',
-          phone: authResult.user.phone || null,
+          phone: normalizeIndiaPhone(authResult.user.phone),
           ageRange: null,
           colors: [],
           styles: [],
@@ -62,12 +63,13 @@ export async function getProfileHandler(req, res) {
 
     // Compute steps completed
     const steps = await computeSteps(profile, supabase, authResult.user.id);
+    await syncOnboardingStatus(profile, supabase, steps);
 
     const payload = {
       success: true,
-      profile: mapProfile(profile, authResult.user),
+      profile: mapProfile(profile, authResult.user, steps),
       onboardingSteps: steps,
-      onboardingPercent: Math.round((steps / 5) * 100),
+      onboardingPercent: Math.round((steps / ONBOARDING_TOTAL_STEPS) * 100),
     };
     profileCache.set(cacheKey, payload);
     return res.status(200).json(payload);
@@ -96,7 +98,7 @@ export async function updateProfileHandler(req, res) {
     const update = {};
 
     if (body.name !== undefined) update.full_name = body.name;
-    if (body.phone !== undefined) update.phone = body.phone;
+    if (body.phone !== undefined) update.phone = normalizeIndiaPhone(body.phone);
     if (body.ageRange !== undefined) update.age_range = body.ageRange;
     if (body.colors !== undefined) update.colors = body.colors;
     if (body.styles !== undefined) update.styles = body.styles;
@@ -122,12 +124,13 @@ export async function updateProfileHandler(req, res) {
     }
 
     const steps = await computeSteps(profile, supabase, userId);
+    await syncOnboardingStatus(profile, supabase, steps);
 
     const payload = {
       success: true,
-      profile: mapProfile(profile, authResult.user),
+      profile: mapProfile(profile, authResult.user, steps),
       onboardingSteps: steps,
-      onboardingPercent: Math.round((steps / 5) * 100),
+      onboardingPercent: Math.round((steps / ONBOARDING_TOTAL_STEPS) * 100),
     };
     profileCache.set(`profile:${userId}`, payload);
     return res.status(200).json(payload);
@@ -399,6 +402,22 @@ function _clearUserGalleryCache(userId) {
   galleryCache.clear();
 }
 
+async function syncOnboardingStatus(profile, supabase, steps) {
+  const isComplete = steps >= ONBOARDING_TOTAL_STEPS;
+  if ((profile.is_onboarding_complete ?? false) === isComplete) {
+    return;
+  }
+
+  profile.is_onboarding_complete = isComplete;
+  await supabase
+    .from('profiles')
+    .update({
+      is_onboarding_complete: isComplete,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', profile.id);
+}
+
 // ---- Helpers ----
 
 async function computeSteps(profile, supabase, userId) {
@@ -428,22 +447,23 @@ async function computeSteps(profile, supabase, userId) {
   return steps;
 }
 
-function mapProfile(profile, supabaseUser) {
+function mapProfile(profile, supabaseUser, steps) {
   const monthlyQuota = profile.monthly_quota || 0;
   const monthlyUsed = profile.monthly_used || 0;
   const extraCredits = profile.extra_credits || 0;
   const monthlyRemaining = Math.max(monthlyQuota - monthlyUsed, 0);
+  const isOnboardingComplete = steps >= ONBOARDING_TOTAL_STEPS;
   return {
     id: profile.id,
     name: profile.full_name,
-    phone: profile.phone,
+    phone: normalizeIndiaPhone(profile.phone) || normalizeIndiaPhone(supabaseUser?.phone),
     ageRange: profile.age_range,
     colors: profile.colors || [],
     styles: profile.styles || [],
     fit: profile.fit,
     bodyType: profile.body_type,
     avatarUrl: supabaseUser?.user_metadata?.avatar_url || supabaseUser?.user_metadata?.picture || null,
-    isOnboardingComplete: profile.is_onboarding_complete,
+    isOnboardingComplete,
     accountType: profile.account_type || 'free',
     monthlyQuota,
     monthlyUsed,
@@ -452,6 +472,15 @@ function mapProfile(profile, supabaseUser) {
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   };
+}
+
+function normalizeIndiaPhone(value) {
+  if (!value) return null;
+  const digits = String(value).replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
 }
 
 function mapAddress(address) {

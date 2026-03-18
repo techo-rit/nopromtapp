@@ -226,8 +226,7 @@ BEGIN
   SELECT * INTO v_profile FROM public.profiles WHERE id = p_user_id;
   IF v_profile.id IS NULL THEN RETURN 0; END IF;
 
-  IF v_profile.full_name IS NOT NULL AND v_profile.full_name != ''
-     AND v_profile.phone IS NOT NULL AND v_profile.phone != '' THEN
+  IF v_profile.full_name IS NOT NULL AND v_profile.full_name != '' THEN
     v_steps := v_steps + 1;
   END IF;
 

@@ -239,7 +239,7 @@ export async function fetchUserProfile(adminClient, userId) {
 
   return {
     name: profile?.full_name || null,
-    phone: profile?.phone || null,
+    phone: normalizeIndiaPhone(profile?.phone),
     ageRange: profile?.age_range || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],
@@ -263,12 +263,13 @@ export async function ensureUserProfile(adminClient, supabaseUser) {
     .eq('id', supabaseUser.id)
     .maybeSingle();
 
-  const normalizedPhone = supabaseUser.phone || null;
+  const normalizedPhone = normalizeIndiaPhone(supabaseUser.phone);
   const fullName = supabaseUser.user_metadata?.full_name || null;
 
   if (existing) {
     const update = {};
-    if (!existing.phone && normalizedPhone) update.phone = normalizedPhone;
+    const existingPhone = normalizeIndiaPhone(existing.phone);
+    if (normalizedPhone && existingPhone !== normalizedPhone) update.phone = normalizedPhone;
     if (!existing.full_name && fullName) update.full_name = fullName;
     if (Object.keys(update).length > 0) {
       await adminClient
@@ -297,7 +298,7 @@ export function mapUser(supabaseUser, profile) {
     id: supabaseUser.id,
     email: supabaseUser.email,
     name: profile?.name || supabaseUser.user_metadata?.full_name || null,
-    phone: profile?.phone || supabaseUser.phone || null,
+    phone: normalizeIndiaPhone(profile?.phone) || normalizeIndiaPhone(supabaseUser.phone),
     ageRange: profile?.ageRange || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],
@@ -317,6 +318,15 @@ export function mapUser(supabaseUser, profile) {
 
 function base64Url(input) {
   return input.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function normalizeIndiaPhone(value) {
+  if (!value) return null;
+  const digits = String(value).replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
 }
 
 export function generatePkcePair() {

@@ -21,7 +21,7 @@ import { profileService } from "./features/profile/profileService";
 import { searchTemplates } from "./shared/utils/searchLogic";
 import { useDebounce } from "./shared/hooks/useDebounce";
 import { STACKS, TEMPLATES, TEMPLATES_BY_ID, TRENDING_TEMPLATE_IDS } from "./data/constants";
-import type { Template, User, NavCategory, Stack } from "./types";
+import type { Template, User, UserProfile, NavCategory, Stack } from "./types";
 
 // Storage Helper
 const STORAGE_KEY_NAV = "stiri_nav";
@@ -93,6 +93,29 @@ const App: React.FC = () => {
     () => TRENDING_TEMPLATE_IDS.map((id) => TEMPLATES_BY_ID.get(id)).filter((t): t is Template => !!t),
     []
   );
+
+  const syncUserFromProfile = useCallback((profile: UserProfile) => {
+    setUser((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        name: profile.name || current.name,
+        phone: profile.phone,
+        ageRange: profile.ageRange,
+        colors: profile.colors || [],
+        styles: profile.styles || [],
+        fit: profile.fit,
+        bodyType: profile.bodyType,
+        avatarUrl: profile.avatarUrl,
+        isOnboardingComplete: profile.isOnboardingComplete,
+        accountType: profile.accountType,
+        monthlyQuota: profile.monthlyQuota,
+        monthlyUsed: profile.monthlyUsed,
+        extraCredits: profile.extraCredits,
+        creationsLeft: profile.creationsLeft,
+      };
+    });
+  }, []);
 
   // --- Effects ---
   useEffect(() => {
@@ -243,29 +266,26 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = useCallback(async () => {
     closeOnboardingModal();
-    // Refresh profile data
     try {
-      const data = await profileService.getProfile();
+      const data = await profileService.getProfile(true);
       if (data) {
         setOnboardingPercent(data.onboardingPercent);
         setOnboardingSteps(data.onboardingSteps);
+        syncUserFromProfile(data.profile);
       }
-      const u = await authService.getCurrentUser();
-      if (u) setUser(u);
     } catch { /* ignore */ }
-  }, [closeOnboardingModal]);
+  }, [closeOnboardingModal, syncUserFromProfile]);
 
   const handleProfileUpdate = useCallback(async () => {
     try {
-      const data = await profileService.getProfile();
+      const data = await profileService.getProfile(true);
       if (data) {
         setOnboardingPercent(data.onboardingPercent);
         setOnboardingSteps(data.onboardingSteps);
+        syncUserFromProfile(data.profile);
       }
-      const u = await authService.getCurrentUser();
-      if (u) setUser(u);
     } catch { /* ignore */ }
-  }, []);
+  }, [syncUserFromProfile]);
 
   useEffect(() => {
     const onPopState = () => {

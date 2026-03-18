@@ -185,6 +185,8 @@ export const profileService = {
     const nextAddress = data.address;
     const existing = getCachedAddresses() || [];
     setCachedAddresses([nextAddress, ...existing.filter(a => a.id !== nextAddress.id)]);
+    setCachedProfile(null);
+    setCachedPublicProfile(null);
     return nextAddress;
   },
 
@@ -197,6 +199,8 @@ export const profileService = {
     if (!resp.ok || !data.success) throw new Error(data.error || 'Failed to delete address');
     const existing = getCachedAddresses() || [];
     setCachedAddresses(existing.filter(a => a.id !== id));
+    setCachedProfile(null);
+    setCachedPublicProfile(null);
   },
 
   async getGenerations(force = false): Promise<{ generations: GeneratedImage[]; total: number }> {
