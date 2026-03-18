@@ -11,7 +11,7 @@ import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
 import { logoutHandler, meHandler, switchAccountHandler } from './routes/auth.js';
-import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
+import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, updateAddressHandler, setDefaultAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
 import { sendOtpHandler, verifyOtpHandler, whatsappWebhookVerify, whatsappWebhookHandler } from './routes/whatsappOtp.js';
 import { geocodeHandler, placesAutocompleteHandler, placeDetailsHandler } from './routes/geocode.js';
 
@@ -81,6 +81,8 @@ export function createApp() {
   app.put('/api/profile', updateProfileHandler);
   app.get('/api/profile/addresses', getAddressesHandler);
   app.post('/api/profile/addresses', addAddressHandler);
+  app.put('/api/profile/addresses/:id', updateAddressHandler);
+  app.put('/api/profile/addresses/:id/default', setDefaultAddressHandler);
   app.delete('/api/profile/addresses/:id', deleteAddressHandler);
   app.get('/api/profile/generations', getGenerationsHandler);
   app.delete('/api/profile/generations/:id', deleteGenerationHandler);

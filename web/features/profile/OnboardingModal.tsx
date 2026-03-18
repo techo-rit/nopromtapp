@@ -98,6 +98,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   }>(null);
   const [cachedAddress, setCachedAddress] = useState<null | {
     addressLine: string;
+    city: string | null;
+    state: string | null;
+    pincode: string | null;
     lat: number | null;
     lng: number | null;
   }>(null);
@@ -119,6 +122,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   // Step 5
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState<string | null>(null);
+  const [state, setState] = useState<string | null>(null);
+  const [pincode, setPincode] = useState<string | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -151,6 +157,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         setBodyType(profile?.bodyType || null);
         setSkinTone(profile?.skinTone || null);
         setAddress(addressLine);
+        setCity(defaultAddress?.city ?? null);
+        setState(defaultAddress?.state ?? null);
+        setPincode(defaultAddress?.pincode ?? null);
         setLat(defaultAddress?.lat ?? null);
         setLng(defaultAddress?.lng ?? null);
         setCachedProfile({
@@ -164,6 +173,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         });
         setCachedAddress(defaultAddress ? {
           addressLine: defaultAddress.addressLine || '',
+          city: defaultAddress.city ?? null,
+          state: defaultAddress.state ?? null,
+          pincode: defaultAddress.pincode ?? null,
           lat: defaultAddress.lat ?? null,
           lng: defaultAddress.lng ?? null,
         } : null);
@@ -261,8 +273,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         } else {
           setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         }
+        setCity(data.city || null);
+        setState(data.state || null);
+        setPincode(data.pincode || null);
       } catch {
         setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setCity(null);
+        setState(null);
+        setPincode(null);
       }
     } catch (err: any) {
       setError('Location access denied. You can enter your address manually.');
@@ -273,6 +291,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleAddressInput = useCallback((value: string) => {
     setAddress(value);
+    setCity(null);
+    setState(null);
+    setPincode(null);
     // Clear resolved lat/lng since the user is typing a new address
     setLat(null);
     setLng(null);
@@ -320,10 +341,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const resp = await fetch(url, { credentials: 'include' });
       const data = await resp.json();
       if (data.address) setAddress(data.address);
+      setCity(data.city || null);
+      setState(data.state || null);
+      setPincode(data.pincode || null);
       if (data.lat != null) setLat(data.lat);
       if (data.lng != null) setLng(data.lng);
     } catch {
       // keep the description as the address text
+      setCity(null);
+      setState(null);
+      setPincode(null);
     } finally {
       setSuggestionsLoading(false);
     }
@@ -347,6 +374,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setBodyType(profile?.bodyType || null);
       setSkinTone(profile?.skinTone || null);
       setAddress(addressLine);
+      setCity(defaultAddress?.city ?? null);
+      setState(defaultAddress?.state ?? null);
+      setPincode(defaultAddress?.pincode ?? null);
       setLat(defaultAddress?.lat ?? null);
       setLng(defaultAddress?.lng ?? null);
 
@@ -361,6 +391,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       });
       setCachedAddress(defaultAddress ? {
         addressLine: defaultAddress.addressLine || '',
+        city: defaultAddress.city ?? null,
+        state: defaultAddress.state ?? null,
+        pincode: defaultAddress.pincode ?? null,
         lat: defaultAddress.lat ?? null,
         lng: defaultAddress.lng ?? null,
       } : null);
@@ -442,6 +475,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           if (address.trim()) {
             const sameAddress = cachedAddress
               && cachedAddress.addressLine === address.trim()
+              && (cachedAddress.city ?? null) === (city ?? null)
+              && (cachedAddress.state ?? null) === (state ?? null)
+              && (cachedAddress.pincode ?? null) === (pincode ?? null)
               && (cachedAddress.lat ?? null) === (lat ?? null)
               && (cachedAddress.lng ?? null) === (lng ?? null);
             if (!sameAddress) {
@@ -452,12 +488,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               await profileService.addAddress({
                 label: 'Home',
                 addressLine: address.trim(),
+                ...(city ? { city } : {}),
+                ...(state ? { state } : {}),
+                ...(pincode ? { pincode } : {}),
                 lat: lat ?? undefined,
                 lng: lng ?? undefined,
                 isDefault: true,
               });
               setCachedAddress({
                 addressLine: address.trim(),
+                city: city ?? null,
+                state: state ?? null,
+                pincode: pincode ?? null,
                 lat: lat ?? null,
                 lng: lng ?? null,
               });
@@ -494,7 +536,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setIsLoading(false);
       return false;
     }
-  }, [step, name, ageRange, selectedColors, selectedStyles, fit, bodyType, skinTone, address, lat, lng]);
+  }, [step, name, ageRange, selectedColors, selectedStyles, fit, bodyType, skinTone, address, city, state, pincode, lat, lng]);
 
   const handleNext = useCallback(async () => {
     const saved = await saveCurrentStep();

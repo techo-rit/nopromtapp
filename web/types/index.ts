@@ -64,6 +64,7 @@ export interface UserAddress {
   id: string;
   userId: string;
   label: string;
+  addressLine1: string | null;
   addressLine: string;
   city: string | null;
   state: string | null;

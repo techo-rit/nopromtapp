@@ -12,7 +12,7 @@ const PROFILE_REVALIDATION_THROTTLE_MS =
 
 export const profileService = {
   async getProfile(force = false): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number } | null> {
-    const serverProfile = async () => fetchProfileFromServer();
+    const serverProfile = async () => fetchProfileFromServer(force);
     const shouldRevalidate = () => shouldRevalidateProfile();
 
     if (!force) {
@@ -142,7 +142,7 @@ export const profileService = {
         return cached;
       }
     }
-    const resp = await fetch(apiUrl('/api/profile/addresses'), { credentials: 'include' });
+    const resp = await fetch(apiUrl(`/api/profile/addresses${force ? '?force=1' : ''}`), { credentials: 'include' });
     if (!resp.ok) return [];
     const data = await resp.json();
     const addresses = data.addresses || [];
@@ -152,6 +152,7 @@ export const profileService = {
 
   async addAddress(address: {
     label?: string;
+    addressLine1?: string;
     addressLine: string;
     city?: string;
     state?: string;
@@ -176,6 +177,35 @@ export const profileService = {
     return nextAddress;
   },
 
+  async updateAddress(id: string, updates: {
+    label?: string;
+    addressLine1?: string | null;
+    addressLine?: string;
+    city?: string | null;
+    state?: string | null;
+    pincode?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  }): Promise<UserAddress> {
+    const resp = await fetch(apiUrl(`/api/profile/addresses/${id}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(updates),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Failed to update address');
+
+    const updatedAddress = data.address as UserAddress;
+    const existing = getCachedAddresses() || [];
+    if (existing.length > 0) {
+      setCachedAddresses(existing.map((address) => (
+        address.id === id ? updatedAddress : address
+      )));
+    }
+    return updatedAddress;
+  },
+
   async deleteAddress(id: string): Promise<void> {
     const resp = await fetch(apiUrl(`/api/profile/addresses/${id}`), {
       method: 'DELETE',
@@ -187,6 +217,26 @@ export const profileService = {
     setCachedAddresses(existing.filter(a => a.id !== id));
     setCachedProfile(null);
     setCachedPublicProfile(null);
+  },
+
+  async setDefaultAddress(id: string): Promise<UserAddress> {
+    const resp = await fetch(apiUrl(`/api/profile/addresses/${id}/default`), {
+      method: 'PUT',
+      credentials: 'include',
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Failed to set default address');
+
+    const defaultAddress = data.address as UserAddress;
+    const existing = getCachedAddresses() || [];
+    if (existing.length > 0) {
+      setCachedAddresses(existing.map((address) => ({
+        ...address,
+        isDefault: address.id === id,
+      })));
+    }
+
+    return defaultAddress;
   },
 
   async getGenerations(force = false): Promise<{ generations: GeneratedImage[]; total: number }> {
@@ -343,9 +393,9 @@ function setCachedGenerations(value: { generations: GeneratedImage[]; total: num
   cachedGenerations = value;
 }
 
-async function fetchProfileFromServer(): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number } | null> {
+async function fetchProfileFromServer(force = false): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number } | null> {
   markProfileRevalidatedNow();
-  const resp = await fetch(apiUrl('/api/profile'), { credentials: 'include' });
+  const resp = await fetch(apiUrl(`/api/profile${force ? '?force=1' : ''}`), { credentials: 'include' });
   if (!resp.ok) return null;
   const data = await resp.json();
   if (!data.success) return null;

@@ -18,9 +18,12 @@ export async function getProfileHandler(req, res) {
     if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
 
     const cacheKey = `profile:${authResult.user.id}`;
-    const cached = profileCache.get(cacheKey);
-    if (cached) {
-      return res.status(200).json(cached);
+    const forceRefresh = req.query?.force === '1' || req.query?.force === 'true';
+    if (!forceRefresh) {
+      const cached = profileCache.get(cacheKey);
+      if (cached) {
+        return res.status(200).json(cached);
+      }
     }
 
     // Ensure profile row exists (auto-create if missing)
@@ -180,9 +183,12 @@ export async function getAddressesHandler(req, res) {
     if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
 
     const cacheKey = `addresses:${authResult.user.id}`;
-    const cached = addressCache.get(cacheKey);
-    if (cached) {
-      return res.status(200).json(cached);
+    const forceRefresh = req.query?.force === '1' || req.query?.force === 'true';
+    if (!forceRefresh) {
+      const cached = addressCache.get(cacheKey);
+      if (cached) {
+        return res.status(200).json(cached);
+      }
     }
 
     const { data, error } = await supabase
@@ -211,8 +217,22 @@ export async function addAddressHandler(req, res) {
     const authResult = await getUserFromRequest(req, res);
     if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
 
-    const { label, addressLine, city, state, pincode, lat, lng, isDefault } = req.body || {};
+    const { label, addressLine1, addressLine, city, state, pincode, lat, lng, isDefault } = req.body || {};
     if (!addressLine) return res.status(400).json({ success: false, error: 'Address line is required' });
+
+    const validatedAddress = await validateAndNormalizeAddress({
+      addressLine1,
+      addressLine,
+      city,
+      state,
+      pincode,
+      lat,
+      lng,
+    });
+
+    if (!validatedAddress.valid) {
+      return res.status(400).json({ success: false, error: validatedAddress.error || 'Please enter a valid address.' });
+    }
 
     // If setting as default, unset other defaults
     if (isDefault) {
@@ -227,12 +247,13 @@ export async function addAddressHandler(req, res) {
       .insert({
         user_id: authResult.user.id,
         label: label || 'Home',
-        address_line: addressLine,
-        city: city || null,
-        state: state || null,
-        pincode: pincode || null,
-        lat: lat || null,
-        lng: lng || null,
+        address_line_1: validatedAddress.addressLine1,
+        address_line: validatedAddress.addressLine,
+        city: validatedAddress.city,
+        state: validatedAddress.state,
+        pincode: validatedAddress.pincode,
+        lat: validatedAddress.lat,
+        lng: validatedAddress.lng,
         is_default: isDefault || false,
       })
       .select()
@@ -269,6 +290,154 @@ export async function addAddressHandler(req, res) {
   }
 }
 
+// PUT /api/profile/addresses/:id
+export async function updateAddressHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const addressId = req.params.id;
+    const body = req.body || {};
+    const { label, addressLine1, addressLine, city, state, pincode, lat, lng } = body;
+    if (!addressId) return res.status(400).json({ success: false, error: 'Address ID required' });
+
+    const { data: existingAddress, error: existingError } = await supabase
+      .from('user_addresses')
+      .select('*')
+      .eq('id', addressId)
+      .eq('user_id', authResult.user.id)
+      .single();
+
+    if (existingError || !existingAddress) {
+      return res.status(404).json({ success: false, error: 'Address not found' });
+    }
+
+    const candidate = {
+      addressLine1: addressLine1 !== undefined ? addressLine1 : existingAddress.address_line_1,
+      addressLine: addressLine !== undefined ? addressLine : existingAddress.address_line,
+      city: city !== undefined ? city : existingAddress.city,
+      state: state !== undefined ? state : existingAddress.state,
+      pincode: pincode !== undefined ? pincode : existingAddress.pincode,
+      lat: lat !== undefined ? lat : existingAddress.lat,
+      lng: lng !== undefined ? lng : existingAddress.lng,
+    };
+
+    const validatedAddress = await validateAndNormalizeAddress(candidate, { requireAddressLine1: true });
+
+    if (!validatedAddress.valid) {
+      return res.status(400).json({ success: false, error: validatedAddress.error || 'Please enter a valid address.' });
+    }
+
+    const { data, error } = await supabase
+      .from('user_addresses')
+      .update({
+        label: typeof label === 'string' && label.trim() ? label.trim() : existingAddress.label,
+        address_line_1: validatedAddress.addressLine1,
+        address_line: validatedAddress.addressLine,
+        city: validatedAddress.city,
+        state: validatedAddress.state,
+        pincode: validatedAddress.pincode,
+        lat: validatedAddress.lat,
+        lng: validatedAddress.lng,
+      })
+      .eq('id', addressId)
+      .eq('user_id', authResult.user.id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, error: 'Address not found' });
+    }
+
+    const cacheKey = `addresses:${authResult.user.id}`;
+    const cached = addressCache.get(cacheKey);
+    const mapped = mapAddress(data);
+    if (cached?.addresses) {
+      addressCache.set(cacheKey, {
+        success: true,
+        addresses: cached.addresses.map((address) => (
+          address.id === addressId ? mapped : address
+        )),
+      });
+    } else {
+      addressCache.del(cacheKey);
+    }
+
+    return res.status(200).json({ success: true, address: mapped });
+  } catch (err) {
+    console.error('updateAddress error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update address' });
+  }
+}
+
+// PUT /api/profile/addresses/:id/default
+export async function setDefaultAddressHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const addressId = req.params.id;
+    if (!addressId) return res.status(400).json({ success: false, error: 'Address ID required' });
+
+    const { data: existing, error: existingError } = await supabase
+      .from('user_addresses')
+      .select('id')
+      .eq('id', addressId)
+      .eq('user_id', authResult.user.id)
+      .single();
+
+    if (existingError || !existing) {
+      return res.status(404).json({ success: false, error: 'Address not found' });
+    }
+
+    const { error: unsetError } = await supabase
+      .from('user_addresses')
+      .update({ is_default: false })
+      .eq('user_id', authResult.user.id);
+
+    if (unsetError) {
+      return res.status(500).json({ success: false, error: 'Failed to update default address' });
+    }
+
+    const { data, error } = await supabase
+      .from('user_addresses')
+      .update({ is_default: true })
+      .eq('id', addressId)
+      .eq('user_id', authResult.user.id)
+      .select()
+      .single();
+
+    if (error || !data) {
+      return res.status(500).json({ success: false, error: 'Failed to update default address' });
+    }
+
+    const cacheKey = `addresses:${authResult.user.id}`;
+    const cached = addressCache.get(cacheKey);
+    if (cached?.addresses) {
+      addressCache.set(cacheKey, {
+        success: true,
+        addresses: cached.addresses.map((address) => ({
+          ...address,
+          isDefault: address.id === addressId,
+        })),
+      });
+    } else {
+      addressCache.del(cacheKey);
+    }
+
+    return res.status(200).json({ success: true, address: mapAddress(data) });
+  } catch (err) {
+    console.error('setDefaultAddress error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update default address' });
+  }
+}
+
 // DELETE /api/profile/addresses/:id
 export async function deleteAddressHandler(req, res) {
   try {
@@ -280,6 +449,21 @@ export async function deleteAddressHandler(req, res) {
 
     const addressId = req.params.id;
     if (!addressId) return res.status(400).json({ success: false, error: 'Address ID required' });
+
+    const { data: targetAddress, error: targetError } = await supabase
+      .from('user_addresses')
+      .select('id, is_default')
+      .eq('id', addressId)
+      .eq('user_id', authResult.user.id)
+      .single();
+
+    if (targetError || !targetAddress) {
+      return res.status(404).json({ success: false, error: 'Address not found' });
+    }
+
+    if (targetAddress.is_default) {
+      return res.status(400).json({ success: false, error: 'You cannot delete your default address. Set another address as default first.' });
+    }
 
     const { count, error: countError } = await supabase
       .from('user_addresses')
@@ -555,11 +739,110 @@ function normalizeIndiaPhone(value) {
   return digits;
 }
 
+function toFiniteNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function isValidLatLng(lat, lng) {
+  return Number.isFinite(lat)
+    && Number.isFinite(lng)
+    && lat >= -90
+    && lat <= 90
+    && lng >= -180
+    && lng <= 180;
+}
+
+function normalizeAddressLine1(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+async function validateAndNormalizeAddress(input, options = {}) {
+  const rawAddress = String(input?.addressLine || '').trim();
+  if (!rawAddress) {
+    return { valid: false, error: 'Address line is required.' };
+  }
+
+  if (rawAddress.length < 8) {
+    return { valid: false, error: 'Please enter a valid address.' };
+  }
+
+  const addressLine1 = normalizeAddressLine1(input?.addressLine1);
+  if (options.requireAddressLine1 && !addressLine1) {
+    return { valid: false, error: 'Address details are required.' };
+  }
+  if (addressLine1 && addressLine1.length > 160) {
+    return { valid: false, error: 'Address line 1 is too long.' };
+  }
+
+  const latNum = toFiniteNumber(input?.lat);
+  const lngNum = toFiniteNumber(input?.lng);
+
+  if (latNum !== null || lngNum !== null) {
+    if (!isValidLatLng(latNum, lngNum)) {
+      return { valid: false, error: 'Invalid location coordinates. Please reselect the address.' };
+    }
+
+    return {
+      valid: true,
+      addressLine1,
+      addressLine: rawAddress,
+      city: input?.city ? String(input.city).trim() : null,
+      state: input?.state ? String(input.state).trim() : null,
+      pincode: input?.pincode ? String(input.pincode).trim() : null,
+      lat: latNum,
+      lng: lngNum,
+    };
+  }
+
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    return { valid: false, error: 'Address validation service is unavailable. Please use location suggestion or current location.' };
+  }
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(rawAddress)}&components=country:in&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !Array.isArray(data.results) || data.results.length === 0) {
+      return { valid: false, error: 'Please enter a valid address from suggestions or use current location.' };
+    }
+
+    const first = data.results[0];
+    const components = first.address_components || [];
+    const get = (type) => components.find((c) => Array.isArray(c.types) && c.types.includes(type))?.long_name || null;
+    const geoLat = toFiniteNumber(first?.geometry?.location?.lat);
+    const geoLng = toFiniteNumber(first?.geometry?.location?.lng);
+
+    if (!isValidLatLng(geoLat, geoLng)) {
+      return { valid: false, error: 'Unable to validate this address. Please choose a suggested address.' };
+    }
+
+    return {
+      valid: true,
+      addressLine1,
+      addressLine: String(first.formatted_address || rawAddress),
+      city: get('locality') || get('administrative_area_level_2'),
+      state: get('administrative_area_level_1'),
+      pincode: get('postal_code'),
+      lat: geoLat,
+      lng: geoLng,
+    };
+  } catch {
+    return { valid: false, error: 'Could not validate address right now. Please try again.' };
+  }
+}
+
 function mapAddress(address) {
   return {
     id: address.id,
     userId: address.user_id,
     label: address.label,
+    addressLine1: address.address_line_1 ?? null,
     addressLine: address.address_line,
     city: address.city ?? null,
     state: address.state ?? null,

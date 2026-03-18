@@ -111,8 +111,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Addresses
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [settingDefaultAddressId, setSettingDefaultAddressId] = useState<string | null>(null);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [editingAddressLabel, setEditingAddressLabel] = useState('Home');
+  const [editingAddressLine1, setEditingAddressLine1] = useState('');
+  const [editingAddress, setEditingAddress] = useState('');
+  const [editingAddressCity, setEditingAddressCity] = useState<string | null>(null);
+  const [editingAddressState, setEditingAddressState] = useState<string | null>(null);
+  const [editingAddressPincode, setEditingAddressPincode] = useState<string | null>(null);
+  const [editingAddressLat, setEditingAddressLat] = useState<number | null>(null);
+  const [editingAddressLng, setEditingAddressLng] = useState<number | null>(null);
+  const [editingAddressLocationLoading, setEditingAddressLocationLoading] = useState(false);
+  const [editingAddressSuggestions, setEditingAddressSuggestions] = useState<Array<{ place_id: string; description: string }>>([]);
+  const [showEditingAddressSuggestions, setShowEditingAddressSuggestions] = useState(false);
+  const [editingAddressSuggestionsLoading, setEditingAddressSuggestionsLoading] = useState(false);
+  const editingAddressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editingAddressAbortRef = useRef<AbortController | null>(null);
+  const [updatingAddressId, setUpdatingAddressId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState('');
+  const [newAddressLine1, setNewAddressLine1] = useState('');
   const [newLabel, setNewLabel] = useState('Home');
+  const [newAddressCity, setNewAddressCity] = useState<string | null>(null);
+  const [newAddressState, setNewAddressState] = useState<string | null>(null);
+  const [newAddressPincode, setNewAddressPincode] = useState<string | null>(null);
   const [newAddressLat, setNewAddressLat] = useState<number | null>(null);
   const [newAddressLng, setNewAddressLng] = useState<number | null>(null);
   const [newAddressLocationLoading, setNewAddressLocationLoading] = useState(false);
@@ -274,8 +295,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         const resp = await fetch(`${apiBase || ''}/api/geocode?lat=${latitude}&lng=${longitude}`, { credentials: 'include' });
         const data = await resp.json();
         setNewAddress(data.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setNewAddressCity(data.city || null);
+        setNewAddressState(data.state || null);
+        setNewAddressPincode(data.pincode || null);
       } catch {
         setNewAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setNewAddressCity(null);
+        setNewAddressState(null);
+        setNewAddressPincode(null);
       }
     } catch {
       setError('Location access denied. Enter address manually.');
@@ -287,6 +314,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   const handleNewAddressInput = useCallback((value: string) => {
     setNewAddress(value);
+    setNewAddressCity(null);
+    setNewAddressState(null);
+    setNewAddressPincode(null);
     setNewAddressLat(null);
     setNewAddressLng(null);
     setShowNewAddressSuggestions(false);
@@ -326,24 +356,44 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       const resp = await fetch(`${apiBase || ''}/api/places/details?place_id=${encodeURIComponent(s.place_id)}`, { credentials: 'include' });
       const data = await resp.json();
       if (data.address) setNewAddress(data.address);
+      setNewAddressCity(data.city || null);
+      setNewAddressState(data.state || null);
+      setNewAddressPincode(data.pincode || null);
       if (data.lat != null) setNewAddressLat(data.lat);
       if (data.lng != null) setNewAddressLng(data.lng);
-    } catch { /* keep description */ } finally {
+    } catch {
+      setNewAddressCity(null);
+      setNewAddressState(null);
+      setNewAddressPincode(null);
+    } finally {
       setNewAddressSuggestionsLoading(false);
     }
   }, []);
 
   const handleAddAddress = useCallback(async () => {
+    if (!newAddressLine1.trim()) {
+      setError('Address details are required.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
     if (!newAddress.trim()) return;
     try {
       await profileService.addAddress({
         label: newLabel,
+        addressLine1: newAddressLine1.trim(),
         addressLine: newAddress.trim(),
+        ...(newAddressCity ? { city: newAddressCity } : {}),
+        ...(newAddressState ? { state: newAddressState } : {}),
+        ...(newAddressPincode ? { pincode: newAddressPincode } : {}),
         ...(newAddressLat != null ? { lat: newAddressLat } : {}),
         ...(newAddressLng != null ? { lng: newAddressLng } : {}),
       });
+      setNewAddressLine1('');
       setNewAddress('');
       setNewLabel('Home');
+      setNewAddressCity(null);
+      setNewAddressState(null);
+      setNewAddressPincode(null);
       setNewAddressLat(null);
       setNewAddressLng(null);
       loadAddresses();
@@ -351,9 +401,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       setError(err.message || 'Failed to add address');
       setTimeout(() => setError(null), 4000);
     }
-  }, [newAddress, newLabel, newAddressLat, newAddressLng, loadAddresses]);
+  }, [newAddress, newAddressLine1, newLabel, newAddressCity, newAddressState, newAddressPincode, newAddressLat, newAddressLng, loadAddresses]);
 
   const handleDeleteAddress = useCallback(async (id: string) => {
+    const target = addresses.find((addr) => addr.id === id);
+    if (target?.isDefault) {
+      setError('You cannot delete your default address. Set another address as default first.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
     if (addresses.length <= 1) {
       setError('You cannot delete your only saved address.');
       setTimeout(() => setError(null), 4000);
@@ -366,7 +423,183 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       setError(err.message || 'Failed to delete address');
       setTimeout(() => setError(null), 4000);
     }
-  }, [addresses.length, loadAddresses]);
+  }, [addresses, loadAddresses]);
+
+  const handleSetDefaultAddress = useCallback(async (id: string) => {
+    try {
+      setSettingDefaultAddressId(id);
+      await profileService.setDefaultAddress(id);
+      setAddresses((prev) => prev.map((addr) => ({
+        ...addr,
+        isDefault: addr.id === id,
+      })));
+      setSuccess('Default address updated');
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to set default address');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setSettingDefaultAddressId(null);
+    }
+  }, []);
+
+  const handleStartEditAddressLine1 = useCallback((address: UserAddress) => {
+    setEditingAddressId(address.id);
+    setEditingAddressLabel(address.label || 'Home');
+    setEditingAddressLine1(address.addressLine1 || '');
+    setEditingAddress(address.addressLine || '');
+    setEditingAddressCity(address.city ?? null);
+    setEditingAddressState(address.state ?? null);
+    setEditingAddressPincode(address.pincode ?? null);
+    setEditingAddressLat(address.lat ?? null);
+    setEditingAddressLng(address.lng ?? null);
+  }, []);
+
+  const handleCancelEditAddressLine1 = useCallback(() => {
+    setEditingAddressId(null);
+    setEditingAddressLabel('Home');
+    setEditingAddressLine1('');
+    setEditingAddress('');
+    setEditingAddressCity(null);
+    setEditingAddressState(null);
+    setEditingAddressPincode(null);
+    setEditingAddressLat(null);
+    setEditingAddressLng(null);
+    setEditingAddressSuggestions([]);
+    setShowEditingAddressSuggestions(false);
+  }, []);
+
+  const handleEditingAddressInput = useCallback((value: string) => {
+    setEditingAddress(value);
+    setEditingAddressCity(null);
+    setEditingAddressState(null);
+    setEditingAddressPincode(null);
+    setEditingAddressLat(null);
+    setEditingAddressLng(null);
+    setShowEditingAddressSuggestions(false);
+    if (editingAddressDebounceRef.current) clearTimeout(editingAddressDebounceRef.current);
+    if (editingAddressAbortRef.current) editingAddressAbortRef.current.abort();
+    if (!value.trim() || value.trim().length < 3) {
+      setEditingAddressSuggestions([]);
+      setEditingAddressSuggestionsLoading(false);
+      return;
+    }
+    setEditingAddressSuggestionsLoading(true);
+    editingAddressDebounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      editingAddressAbortRef.current = controller;
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const resp = await fetch(`${apiBase || ''}/api/places/autocomplete?input=${encodeURIComponent(value)}`, { credentials: 'include', signal: controller.signal });
+        const data = await resp.json();
+        const predictions = (data.predictions || []).slice(0, 5).map((p: any) => ({ place_id: p.place_id, description: p.description }));
+        setEditingAddressSuggestions(predictions);
+        setShowEditingAddressSuggestions(predictions.length > 0);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') setEditingAddressSuggestions([]);
+      } finally {
+        setEditingAddressSuggestionsLoading(false);
+      }
+    }, 350);
+  }, []);
+
+  const handleEditingAddressSelectSuggestion = useCallback(async (s: { place_id: string; description: string }) => {
+    setShowEditingAddressSuggestions(false);
+    setEditingAddressSuggestions([]);
+    setEditingAddress(s.description);
+    setEditingAddressSuggestionsLoading(true);
+    try {
+      const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${apiBase || ''}/api/places/details?place_id=${encodeURIComponent(s.place_id)}`, { credentials: 'include' });
+      const data = await resp.json();
+      if (data.address) setEditingAddress(data.address);
+      setEditingAddressCity(data.city || null);
+      setEditingAddressState(data.state || null);
+      setEditingAddressPincode(data.pincode || null);
+      if (data.lat != null) setEditingAddressLat(data.lat);
+      if (data.lng != null) setEditingAddressLng(data.lng);
+    } catch {
+      setEditingAddressCity(null);
+      setEditingAddressState(null);
+      setEditingAddressPincode(null);
+    } finally {
+      setEditingAddressSuggestionsLoading(false);
+    }
+  }, []);
+
+  const handleEditingAddressLocationGet = useCallback(async () => {
+    setEditingAddressLocationLoading(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+      );
+      const { latitude, longitude } = position.coords;
+      setEditingAddressLat(latitude);
+      setEditingAddressLng(longitude);
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const resp = await fetch(`${apiBase || ''}/api/geocode?lat=${latitude}&lng=${longitude}`, { credentials: 'include' });
+        const data = await resp.json();
+        setEditingAddress(data.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setEditingAddressCity(data.city || null);
+        setEditingAddressState(data.state || null);
+        setEditingAddressPincode(data.pincode || null);
+      } catch {
+        setEditingAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setEditingAddressCity(null);
+        setEditingAddressState(null);
+        setEditingAddressPincode(null);
+      }
+    } catch {
+      setError('Location access denied. Enter address manually.');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setEditingAddressLocationLoading(false);
+    }
+  }, []);
+
+  const handleSaveAddressLine1 = useCallback(async (id: string) => {
+    if (!editingAddressLine1.trim()) {
+      setError('Address details are required.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    if (!editingAddress.trim()) {
+      setError('Main address is required.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    try {
+      setUpdatingAddressId(id);
+      const updated = await profileService.updateAddress(id, {
+        label: editingAddressLabel,
+        addressLine1: editingAddressLine1.trim(),
+        addressLine: editingAddress.trim(),
+        city: editingAddressCity,
+        state: editingAddressState,
+        pincode: editingAddressPincode,
+        lat: editingAddressLat,
+        lng: editingAddressLng,
+      });
+      setAddresses((prev) => prev.map((addr) => addr.id === id ? updated : addr));
+      setEditingAddressId(null);
+      setEditingAddressLabel('Home');
+      setEditingAddressLine1('');
+      setEditingAddress('');
+      setEditingAddressCity(null);
+      setEditingAddressState(null);
+      setEditingAddressPincode(null);
+      setEditingAddressLat(null);
+      setEditingAddressLng(null);
+      setSuccess('Address updated');
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update address');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setUpdatingAddressId(null);
+    }
+  }, [editingAddressLabel, editingAddressLine1, editingAddress, editingAddressCity, editingAddressState, editingAddressPincode, editingAddressLat, editingAddressLng]);
 
   const handleRefresh = useCallback(async () => {
     setIsLoading(true);
@@ -860,15 +1093,143 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             {addresses.map((addr) => (
               <div key={addr.id} className="p-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-medium text-[#c9a962]">{addr.label}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-[#c9a962]">{addr.label}</p>
+                    {addr.isDefault && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#c9a962]/20 text-[#c9a962] border border-[#c9a962]/35">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  {editingAddressId === addr.id ? (
+                    <div className="mt-2 flex flex-col gap-2 max-w-[440px]">
+                      <div className="flex gap-2">
+                        {['Home', 'Work', 'Other'].map((label) => (
+                          <button key={label} onClick={() => setEditingAddressLabel(label)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${editingAddressLabel === label ? 'bg-[#c9a962]/15 text-[#c9a962] border border-[#c9a962]/30' : 'bg-[#1a1a1a] text-[#6b6b6b]'}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={handleEditingAddressLocationGet}
+                        disabled={editingAddressLocationLoading}
+                        className="w-full p-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#c9a962]/50 transition-all flex items-center justify-center gap-2"
+                      >
+                        <span className="text-xs font-medium text-[#a0a0a0]">
+                          {editingAddressLocationLoading ? 'Fetching location...' : 'Use my current location'}
+                        </span>
+                      </button>
+                      <input
+                        type="text"
+                        value={editingAddressLine1}
+                        onChange={(e) => setEditingAddressLine1(e.target.value)}
+                        placeholder="Flat No., Building Name, Landmark"
+                        className="w-full h-12 px-4 bg-[#121212] border border-[#2a2a2a] rounded-lg text-[#f5f5f5] placeholder-[#505050] focus:outline-none focus:border-[#c9a962] text-sm"
+                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={editingAddress}
+                          onChange={(e) => handleEditingAddressInput(e.target.value)}
+                          onFocus={() => { if (editingAddressSuggestions.length > 0) setShowEditingAddressSuggestions(true); }}
+                          onBlur={() => setTimeout(() => setShowEditingAddressSuggestions(false), 150)}
+                          placeholder="Search address or locality"
+                          className="w-full h-11 px-4 bg-[#121212] border border-[#2a2a2a] rounded-lg text-[#f5f5f5] placeholder-[#505050] focus:outline-none focus:border-[#c9a962] text-sm"
+                        />
+                        {editingAddressSuggestionsLoading && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <svg className="animate-spin h-4 w-4 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          </div>
+                        )}
+                        {showEditingAddressSuggestions && editingAddressSuggestions.length > 0 && (
+                          <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-xl">
+                            {editingAddressSuggestions.map((s) => (
+                              <li key={s.place_id}>
+                                <button
+                                  type="button"
+                                  onMouseDown={() => handleEditingAddressSelectSuggestion(s)}
+                                  className="w-full text-left px-4 py-3 text-sm text-[#d0d0d0] hover:bg-[#252525] transition-colors border-b border-[#1e1e1e] last:border-0"
+                                >
+                                  <span className="leading-snug">{s.description}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveAddressLine1(addr.id)}
+                          disabled={updatingAddressId === addr.id}
+                          className="px-3 h-8 rounded-lg text-[11px] font-medium bg-[#c9a962] text-[#0a0a0a] disabled:opacity-50 transition-all"
+                        >
+                          {updatingAddressId === addr.id ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={handleCancelEditAddressLine1}
+                          disabled={updatingAddressId === addr.id}
+                          className="px-3 h-8 rounded-lg text-[11px] font-medium border border-[#2a2a2a] text-[#a0a0a0] disabled:opacity-50 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {addr.addressLine1 && (
+                        <p className="text-sm text-[#d0d0d0] mt-1">{addr.addressLine1}</p>
+                      )}
+                      {!addr.addressLine1 && (
+                        <button
+                          onClick={() => handleStartEditAddressLine1(addr)}
+                          className="mt-2 h-10 px-4 rounded-xl border border-[#c9a962]/25 bg-[#c9a962]/10 text-sm font-medium text-[#c9a962] hover:border-[#c9a962]/45 transition-all"
+                        >
+                          Add address details
+                        </button>
+                      )}
+                    </>
+                  )}
                   <p className="text-sm text-[#a0a0a0] mt-0.5">{addr.addressLine}</p>
                   {addr.city && <p className="text-xs text-[#6b6b6b] mt-0.5">{addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.pincode || ''}</p>}
+                  {addr.isDefault && (
+                    <p className="text-[11px] text-[#6b6b6b] mt-1">
+                      INFO: You cannot delete your default address.
+                    </p>
+                  )}
                 </div>
-                <button onClick={() => handleDeleteAddress(addr.id)} className="p-1.5 text-[#6b6b6b] hover:text-red-400 transition-colors shrink-0">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" strokeLinecap="round" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {addresses.length > 1 && !addr.isDefault && (
+                    <button
+                      onClick={() => handleSetDefaultAddress(addr.id)}
+                      disabled={settingDefaultAddressId === addr.id}
+                      className="px-2.5 h-7 rounded-lg text-[11px] font-medium text-[#a0a0a0] border border-[#2a2a2a] hover:border-[#c9a962]/40 hover:text-[#c9a962] disabled:opacity-50 transition-all"
+                    >
+                      {settingDefaultAddressId === addr.id ? 'Setting...' : 'Set default'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleStartEditAddressLine1(addr)}
+                    className="p-1.5 text-[#6b6b6b] hover:text-[#c9a962] transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20h9" strokeLinecap="round" />
+                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAddress(addr.id)}
+                    disabled={addr.isDefault}
+                    className="p-1.5 text-[#6b6b6b] hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -902,6 +1263,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   {newAddressLocationLoading ? 'Fetching location...' : 'Use my current location'}
                 </span>
               </button>
+              <input
+                type="text"
+                value={newAddressLine1}
+                onChange={(e) => setNewAddressLine1(e.target.value)}
+                placeholder="Flat No., Building Name, Landmark"
+                className="w-full h-12 px-4 mb-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm"
+              />
 
               {/* Autocomplete address input */}
               <div className="relative">
@@ -942,7 +1310,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 )}
               </div>
 
-              <button onClick={handleAddAddress} disabled={!newAddress.trim()}
+              <button onClick={handleAddAddress} disabled={!newAddress.trim() || !newAddressLine1.trim()}
                 className="w-full h-10 mt-2 bg-[#1a1a1a] text-[#a0a0a0] text-sm font-medium rounded-xl border border-[#2a2a2a] hover:border-[#c9a962]/30 hover:text-[#f5f5f5] disabled:opacity-40 transition-all">
                 + Add Address
               </button>

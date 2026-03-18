@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.user_addresses (
   id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id      uuid        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   label        text        DEFAULT 'Home',
+  address_line_1 text,
   address_line text        NOT NULL,
   city         text,
   state        text,
