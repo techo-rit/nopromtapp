@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CloseIcon, RefreshIcon } from '../../shared/ui/Icons';
 import { profileService } from '../profile/profileService';
 import { CONFIG } from '../../config';
@@ -8,42 +8,42 @@ interface OnboardingModalProps {
   onClose: () => void;
   onComplete: () => void;
   userName?: string;
-  userPhone?: string;
 }
 
 type OnboardingStep = 1 | 2 | 3 | 4 | 5;
 
 const AGE_RANGES = [
-  { id: 'gen_z', label: 'Gen Z', desc: '1997 – 2012', icon: '⚡' },
-  { id: 'millennial', label: 'Millennial', desc: '1981 – 1996', icon: '🌟' },
-  { id: 'gen_x', label: 'Gen X', desc: '1965 – 1980', icon: '🎯' },
-  { id: 'boomer', label: 'Boomer', desc: '1946 – 1964', icon: '🏆' },
+  { id: 'gen_alpha', label: 'Gen Alpha', desc: '2013 - Present', image: '/images/onboarding/gen/gen_alpha.webp' },
+  { id: 'gen_z', label: 'Gen Z', desc: '1997 - 2012', image: '/images/onboarding/gen/genz.webp' },
+  { id: 'millennial', label: 'Millennial', desc: '1981 - 1996', image: '/images/onboarding/gen/millenial.webp' },
+  { id: 'gen_x', label: 'Gen X', desc: '1965 - 1980', image: '/images/onboarding/gen/genx.webp' },
+  { id: 'boomer', label: 'Boomer', desc: '1946 - 1964', image: '/images/onboarding/gen/boomer.webp' },
 ];
 
 const PRIMARY_COLORS = [
-  { id: 'red', label: 'Red', hex: '#EF4444' },
-  { id: 'blue', label: 'Blue', hex: '#3B82F6' },
-  { id: 'yellow', label: 'Yellow', hex: '#EAB308' },
-  { id: 'green', label: 'Green', hex: '#22C55E' },
-  { id: 'orange', label: 'Orange', hex: '#F97316' },
-  { id: 'purple', label: 'Purple', hex: '#A855F7' },
-  { id: 'pink', label: 'Pink', hex: '#EC4899' },
-  { id: 'black', label: 'Black', hex: '#1a1a1a' },
-  { id: 'white', label: 'White', hex: '#f5f5f5' },
-  { id: 'brown', label: 'Brown', hex: '#92400E' },
-  { id: 'navy', label: 'Navy', hex: '#1E3A5F' },
-  { id: 'teal', label: 'Teal', hex: '#14B8A6' },
+  { id: 'red', label: 'Red', image: '/images/onboarding/colors/red.webp' },
+  { id: 'blue', label: 'Blue', image: '/images/onboarding/colors/blue.webp' },
+  { id: 'yellow', label: 'Yellow', image: '/images/onboarding/colors/yellow.webp' },
+  { id: 'green', label: 'Green', image: '/images/onboarding/colors/green.webp' },
+  { id: 'orange', label: 'Orange', image: '/images/onboarding/colors/orange.webp' },
+  { id: 'purple', label: 'Purple', image: '/images/onboarding/colors/purple.webp' },
+  { id: 'pink', label: 'Pink', image: '/images/onboarding/colors/pink.webp' },
+  { id: 'black', label: 'Black', image: '/images/onboarding/colors/black.webp' },
+  { id: 'white', label: 'White', image: '/images/onboarding/colors/white.webp' },
+  { id: 'brown', label: 'Brown', image: '/images/onboarding/colors/brown.webp' },
+  { id: 'navy', label: 'Navy', image: '/images/onboarding/colors/navy.webp' },
+  { id: 'teal', label: 'Teal', image: '/images/onboarding/colors/teal.webp' },
 ];
 
 const STYLES = [
-  { id: 'casual', label: 'Casual', icon: '👕' },
-  { id: 'formal', label: 'Formal', icon: '👔' },
-  { id: 'party', label: 'Party', icon: '🎉' },
-  { id: 'beachwear', label: 'Beachwear', icon: '🏖️' },
-  { id: 'streetwear', label: 'Streetwear', icon: '🧢' },
-  { id: 'ethnic', label: 'Ethnic', icon: '🪷' },
-  { id: 'sporty', label: 'Sporty', icon: '⚽' },
-  { id: 'minimalist', label: 'Minimalist', icon: '◻️' },
+  { id: 'casual', label: 'Casual', image: '/images/onboarding/styles/casual.webp' },
+  { id: 'formal', label: 'Formal', image: '/images/onboarding/styles/formal.webp' },
+  { id: 'party', label: 'Party', image: '/images/onboarding/styles/party.webp' },
+  { id: 'beachwear', label: 'Beachwear', image: '/images/onboarding/styles/beach.webp' },
+  { id: 'streetwear', label: 'Streetwear', image: '/images/onboarding/styles/streetwear.webp' },
+  { id: 'ethnic', label: 'Ethnic', image: '/images/onboarding/styles/ethnic.webp' },
+  { id: 'sporty', label: 'Sporty', image: '/images/onboarding/styles/sporty.webp' },
+  { id: 'minimalist', label: 'Minimalist', image: '/images/onboarding/styles/minimal.webp' },
 ];
 
 const FIT_SIZES = [
@@ -55,35 +55,18 @@ const FIT_SIZES = [
   { id: 'xxl', label: 'XXL' },
 ];
 
+const SKIN_TONES = [
+  { id: 'fair', label: 'Fair' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'dark', label: 'Dark' },
+];
+
 const BODY_TYPES = [
-  { id: 'hourglass', label: 'Hourglass', svg: (
-    <svg viewBox="0 0 40 60" className="w-8 h-12" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M10 5 C10 5 8 20 20 30 C32 20 30 5 30 5" />
-      <path d="M10 55 C10 55 8 40 20 30 C32 40 30 55 30 55" />
-      <line x1="8" y1="5" x2="32" y2="5" />
-      <line x1="8" y1="55" x2="32" y2="55" />
-    </svg>
-  )},
-  { id: 'triangle', label: 'Triangle', svg: (
-    <svg viewBox="0 0 40 60" className="w-8 h-12" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M15 5 L15 5 L25 5 L32 55 L8 55 Z" />
-    </svg>
-  )},
-  { id: 'inverted_triangle', label: 'Inverted Triangle', svg: (
-    <svg viewBox="0 0 40 60" className="w-8 h-12" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M8 5 L32 5 L25 55 L15 55 Z" />
-    </svg>
-  )},
-  { id: 'rectangle', label: 'Rectangle', svg: (
-    <svg viewBox="0 0 40 60" className="w-8 h-12" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="12" y="5" width="16" height="50" rx="2" />
-    </svg>
-  )},
-  { id: 'round', label: 'Round', svg: (
-    <svg viewBox="0 0 40 60" className="w-8 h-12" fill="none" stroke="currentColor" strokeWidth="2">
-      <ellipse cx="20" cy="30" rx="14" ry="25" />
-    </svg>
-  )},
+  { id: 'hourglass', label: 'Hourglass', image: '/images/onboarding/body_types/hourglass.webp' },
+  { id: 'pear', label: 'Pear', image: '/images/onboarding/body_types/pear.webp' },
+  { id: 'inverted_triangle', label: 'Inverted Triangle', image: '/images/onboarding/body_types/inverted_triangle.webp' },
+  { id: 'rectangle', label: 'Rectangle', image: '/images/onboarding/body_types/rectangle.webp' },
+  { id: 'round', label: 'Round', image: '/images/onboarding/body_types/round.webp' },
 ];
 
 const STEP_INFO = [
@@ -99,7 +82,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
   onComplete,
   userName = '',
-  userPhone = '',
 }) => {
   const [step, setStep] = useState<OnboardingStep>(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -107,22 +89,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [success, setSuccess] = useState<string | null>(null);
   const [cachedProfile, setCachedProfile] = useState<null | {
     name: string | null;
-    phone: string | null;
     ageRange: string | null;
     colors: string[];
     styles: string[];
     fit: string | null;
     bodyType: string | null;
+    skinTone: string | null;
   }>(null);
   const [cachedAddress, setCachedAddress] = useState<null | {
     addressLine: string;
+    city: string | null;
+    state: string | null;
+    pincode: string | null;
     lat: number | null;
     lng: number | null;
   }>(null);
 
   // Step 4
   const [name, setName] = useState(userName || '');
-  const [phone, setPhone] = useState(() => { const d = (userPhone || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d; });
   const [ageRange, setAgeRange] = useState<string | null>(null);
 
   // Step 1
@@ -134,12 +118,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   // Step 3
   const [fit, setFit] = useState<string | null>(null);
   const [bodyType, setBodyType] = useState<string | null>(null);
+  const [skinTone, setSkinTone] = useState<string | null>(null);
 
   // Step 5
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState<string | null>(null);
+  const [state, setState] = useState<string | null>(null);
+  const [pincode, setPincode] = useState<string | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [placeSuggestions, setPlaceSuggestions] = useState<Array<{ place_id: string; description: string }>>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const autocompleteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autocompleteAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -157,47 +150,52 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         const addressLine = defaultAddress?.addressLine || '';
 
         setName((profile?.name || userName || '').trim());
-        const rawPhone = (profile?.phone || userPhone || '').replace(/\D/g, '');
-        setPhone(rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone);
         setAgeRange(profile?.ageRange || null);
         setSelectedColors(profile?.colors || []);
         setSelectedStyles(profile?.styles || []);
         setFit(profile?.fit || null);
         setBodyType(profile?.bodyType || null);
+        setSkinTone(profile?.skinTone || null);
         setAddress(addressLine);
+        setCity(defaultAddress?.city ?? null);
+        setState(defaultAddress?.state ?? null);
+        setPincode(defaultAddress?.pincode ?? null);
         setLat(defaultAddress?.lat ?? null);
         setLng(defaultAddress?.lng ?? null);
         setCachedProfile({
           name: profile?.name || null,
-          phone: profile?.phone || null,
           ageRange: profile?.ageRange || null,
           colors: profile?.colors || [],
           styles: profile?.styles || [],
           fit: profile?.fit || null,
           bodyType: profile?.bodyType || null,
+          skinTone: profile?.skinTone || null,
         });
         setCachedAddress(defaultAddress ? {
           addressLine: defaultAddress.addressLine || '',
+          city: defaultAddress.city ?? null,
+          state: defaultAddress.state ?? null,
+          pincode: defaultAddress.pincode ?? null,
           lat: defaultAddress.lat ?? null,
           lng: defaultAddress.lng ?? null,
         } : null);
 
         const hasColors = (profile?.colors || []).length > 0;
-        const hasFit = !!profile?.fit;
-        const hasBodyType = !!profile?.bodyType;
+        const hasStyles = (profile?.styles || []).length > 0;
+        const hasFitProfile = !!profile?.fit && !!profile?.bodyType && !!profile?.skinTone;
         const hasName = !!(profile?.name || userName || '').trim();
         const hasLocation = !!addressLine;
 
-        let nextStep: OnboardingStep = 1;
+        let nextStep: OnboardingStep = 5;
         if (!hasColors) {
           nextStep = 1;
-        } else if (!hasFit || !hasBodyType) {
+        } else if (!hasStyles) {
+          nextStep = 2;
+        } else if (!hasFitProfile) {
           nextStep = 3;
         } else if (!hasName) {
           nextStep = 4;
         } else if (!hasLocation) {
-          nextStep = 5;
-        } else {
           nextStep = 5;
         }
 
@@ -205,15 +203,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       } catch {
         if (!alive) return;
         setName(userName || '');
-        setPhone(userPhone || '');
         setCachedProfile({
           name: userName || null,
-          phone: userPhone || null,
           ageRange: null,
           colors: [],
           styles: [],
           fit: null,
           bodyType: null,
+          skinTone: null,
         });
       }
     };
@@ -221,7 +218,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     return () => {
       alive = false;
     };
-  }, [isOpen, userName, userPhone]);
+  }, [isOpen, userName]);
 
   useEffect(() => {
     if (!error) return;
@@ -276,13 +273,86 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         } else {
           setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         }
+        setCity(data.city || null);
+        setState(data.state || null);
+        setPincode(data.pincode || null);
       } catch {
         setAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setCity(null);
+        setState(null);
+        setPincode(null);
       }
     } catch (err: any) {
       setError('Location access denied. You can enter your address manually.');
     } finally {
       setLocationLoading(false);
+    }
+  }, []);
+
+  const handleAddressInput = useCallback((value: string) => {
+    setAddress(value);
+    setCity(null);
+    setState(null);
+    setPincode(null);
+    // Clear resolved lat/lng since the user is typing a new address
+    setLat(null);
+    setLng(null);
+    setShowSuggestions(false);
+
+    if (autocompleteDebounceRef.current) clearTimeout(autocompleteDebounceRef.current);
+    if (autocompleteAbortRef.current) autocompleteAbortRef.current.abort();
+
+    if (!value.trim() || value.trim().length < 3) {
+      setPlaceSuggestions([]);
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    autocompleteDebounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      autocompleteAbortRef.current = controller;
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const url = `${apiBase || ''}/api/places/autocomplete?input=${encodeURIComponent(value)}`;
+        const resp = await fetch(url, { credentials: 'include', signal: controller.signal });
+        const data = await resp.json();
+        const predictions: Array<{ place_id: string; description: string }> = (data.predictions || [])
+          .slice(0, 5)
+          .map((p: any) => ({ place_id: p.place_id, description: p.description }));
+        setPlaceSuggestions(predictions);
+        setShowSuggestions(predictions.length > 0);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') setPlaceSuggestions([]);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, 350);
+  }, []);
+
+  const handleSelectSuggestion = useCallback(async (suggestion: { place_id: string; description: string }) => {
+    setShowSuggestions(false);
+    setPlaceSuggestions([]);
+    setAddress(suggestion.description);
+    setSuggestionsLoading(true);
+    try {
+      const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+      const url = `${apiBase || ''}/api/places/details?place_id=${encodeURIComponent(suggestion.place_id)}`;
+      const resp = await fetch(url, { credentials: 'include' });
+      const data = await resp.json();
+      if (data.address) setAddress(data.address);
+      setCity(data.city || null);
+      setState(data.state || null);
+      setPincode(data.pincode || null);
+      if (data.lat != null) setLat(data.lat);
+      if (data.lng != null) setLng(data.lng);
+    } catch {
+      // keep the description as the address text
+      setCity(null);
+      setState(null);
+      setPincode(null);
+    } finally {
+      setSuggestionsLoading(false);
     }
   }, []);
 
@@ -297,27 +367,33 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const addressLine = defaultAddress?.addressLine || '';
 
       setName((profile?.name || userName || '').trim());
-      setPhone((profile?.phone || userPhone || '').trim());
       setAgeRange(profile?.ageRange || null);
       setSelectedColors(profile?.colors || []);
       setSelectedStyles(profile?.styles || []);
       setFit(profile?.fit || null);
       setBodyType(profile?.bodyType || null);
+      setSkinTone(profile?.skinTone || null);
       setAddress(addressLine);
+      setCity(defaultAddress?.city ?? null);
+      setState(defaultAddress?.state ?? null);
+      setPincode(defaultAddress?.pincode ?? null);
       setLat(defaultAddress?.lat ?? null);
       setLng(defaultAddress?.lng ?? null);
 
       setCachedProfile({
         name: profile?.name || null,
-        phone: profile?.phone || null,
         ageRange: profile?.ageRange || null,
         colors: profile?.colors || [],
         styles: profile?.styles || [],
         fit: profile?.fit || null,
         bodyType: profile?.bodyType || null,
+        skinTone: profile?.skinTone || null,
       });
       setCachedAddress(defaultAddress ? {
         addressLine: defaultAddress.addressLine || '',
+        city: defaultAddress.city ?? null,
+        state: defaultAddress.state ?? null,
+        pincode: defaultAddress.pincode ?? null,
         lat: defaultAddress.lat ?? null,
         lng: defaultAddress.lng ?? null,
       } : null);
@@ -327,7 +403,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userName, userPhone]);
+  }, [userName]);
 
   const arraysEqual = (a: string[], b: string[]) => {
     if (a.length !== b.length) return false;
@@ -339,11 +415,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const stepHasRequired = useCallback(() => {
     if (step === 1) return selectedColors.length > 0;
     if (step === 2) return selectedStyles.length > 0;
-    if (step === 3) return !!fit && !!bodyType;
+    if (step === 3) return !!fit && !!bodyType && !!skinTone;
     if (step === 4) return !!(name || '').trim();
     if (step === 5) return !!address.trim();
     return true;
-  }, [step, selectedColors.length, selectedStyles.length, fit, bodyType, name, address]);
+  }, [step, selectedColors.length, selectedStyles.length, fit, bodyType, skinTone, name, address]);
 
   const saveCurrentStep = useCallback(async () => {
     setError(null);
@@ -368,6 +444,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         case 3:
           if (!fit) { setError('Select a fit size'); setIsLoading(false); return false; }
           if (!bodyType) { setError('Select a body type'); setIsLoading(false); return false; }
+          if (!skinTone) { setError('Select a skin tone'); setIsLoading(false); return false; }
           if (!cachedProfile || fit !== cachedProfile.fit) {
             updates.fit = fit;
             hasWork = true;
@@ -376,18 +453,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             updates.bodyType = bodyType;
             hasWork = true;
           }
+          if (!cachedProfile || skinTone !== cachedProfile.skinTone) {
+            updates.skinTone = skinTone;
+            hasWork = true;
+          }
           break;
         case 4: {
           const trimmedName = (name || '').trim();
-          const trimmedPhone = (phone || '').trim();
           if (!trimmedName) { setError('Name is required'); setIsLoading(false); return false; }
-          if (trimmedPhone && trimmedPhone.length < 10) { setError('Enter a valid phone number'); setIsLoading(false); return false; }
           if (!cachedProfile || trimmedName !== (cachedProfile.name || '')) {
             updates.name = trimmedName;
-            hasWork = true;
-          }
-          if (trimmedPhone && (!cachedProfile || trimmedPhone !== (cachedProfile.phone || ''))) {
-            updates.phone = trimmedPhone;
             hasWork = true;
           }
           if (ageRange && (!cachedProfile || ageRange !== cachedProfile.ageRange)) {
@@ -400,6 +475,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           if (address.trim()) {
             const sameAddress = cachedAddress
               && cachedAddress.addressLine === address.trim()
+              && (cachedAddress.city ?? null) === (city ?? null)
+              && (cachedAddress.state ?? null) === (state ?? null)
+              && (cachedAddress.pincode ?? null) === (pincode ?? null)
               && (cachedAddress.lat ?? null) === (lat ?? null)
               && (cachedAddress.lng ?? null) === (lng ?? null);
             if (!sameAddress) {
@@ -410,12 +488,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               await profileService.addAddress({
                 label: 'Home',
                 addressLine: address.trim(),
+                ...(city ? { city } : {}),
+                ...(state ? { state } : {}),
+                ...(pincode ? { pincode } : {}),
                 lat: lat ?? undefined,
                 lng: lng ?? undefined,
                 isDefault: true,
               });
               setCachedAddress({
                 addressLine: address.trim(),
+                city: city ?? null,
+                state: state ?? null,
+                pincode: pincode ?? null,
                 lat: lat ?? null,
                 lng: lng ?? null,
               });
@@ -436,12 +520,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         const result = await profileService.updateProfile(updates);
         setCachedProfile({
           name: result.profile.name || null,
-          phone: result.profile.phone || null,
           ageRange: result.profile.ageRange || null,
           colors: result.profile.colors || [],
           styles: result.profile.styles || [],
           fit: result.profile.fit || null,
           bodyType: result.profile.bodyType || null,
+          skinTone: result.profile.skinTone || null,
         });
         setSuccess('Saved');
       }
@@ -452,7 +536,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setIsLoading(false);
       return false;
     }
-  }, [step, name, phone, ageRange, selectedColors, selectedStyles, fit, bodyType, address, lat, lng]);
+  }, [step, name, ageRange, selectedColors, selectedStyles, fit, bodyType, skinTone, address, city, state, pincode, lat, lng]);
 
   const handleNext = useCallback(async () => {
     const saved = await saveCurrentStep();
@@ -599,39 +683,31 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">
-                    Phone Number <span className="text-[#525252]">(optional)</span>
-                  </label>
-                  <div className="flex gap-2 mt-1">
-                    <span className="h-11 px-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#6b6b6b] flex items-center text-sm shrink-0">+91</span>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      placeholder="10-digit number"
-                      className="w-full h-11 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1">Generation <span className="text-[#525252]">(optional)</span></label>
-                  <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="grid grid-cols-2 gap-3 mt-2">
                     {AGE_RANGES.map((age) => (
                       <button
                         key={age.id}
                         onClick={() => setAgeRange(ageRange === age.id ? null : age.id)}
-                        className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all text-sm ${
+                        className={`relative overflow-hidden rounded-xl border text-left transition-all ${
                           ageRange === age.id
-                            ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#f5f5f5]'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'
+                            ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
+                            : 'border-[#2a2a2a] hover:border-[#3a3a3a]'
                         }`}
                       >
-                        <span className="text-lg">{age.icon}</span>
-                        <div>
-                          <p className="font-medium text-xs">{age.label}</p>
-                          <p className="text-[10px] text-[#6b6b6b]">{age.desc}</p>
+                        <img
+                          src={age.image}
+                          alt={age.label}
+                          className="w-full h-24 object-cover object-top"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                          <p className="font-medium text-xs text-[#f5f5f5]">{age.label}</p>
+                          <p className="text-[10px] text-[#d0d0d0]">{age.desc}</p>
                         </div>
+                        {ageRange === age.id && (
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -646,7 +722,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">
                     Favorite colors <span className="text-red-400">*</span> <span className="text-[#525252]">(pick up to 3)</span>
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     {PRIMARY_COLORS.map((color) => {
                       const isSelected = selectedColors.includes(color.id);
                       const isDisabled = !isSelected && selectedColors.length >= 3;
@@ -655,21 +731,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                           key={color.id}
                           onClick={() => !isDisabled && toggleColor(color.id)}
                           disabled={isDisabled}
-                          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${
+                          className={`relative overflow-hidden rounded-xl border transition-all ${
                             isSelected
-                              ? 'border-[#c9a962] bg-[#c9a962]/10 scale-105'
+                              ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
                               : isDisabled
                               ? 'border-[#1a1a1a] opacity-40 cursor-not-allowed'
-                              : 'border-[#2a2a2a] hover:border-[#3a3a3a]'
+                              : 'border-[#2a2a2a] hover:border-[#3a3a3a] hover:-translate-y-0.5'
                           }`}
                         >
-                          <div
-                            className={`w-8 h-8 rounded-full border-2 transition-all ${
-                              isSelected ? 'border-[#c9a962] ring-2 ring-[#c9a962]/30' : 'border-[#3a3a3a]'
-                            }`}
-                            style={{ backgroundColor: color.hex }}
+                          <img
+                            src={color.image}
+                            alt={color.label}
+                            className="w-full h-24 object-cover"
+                            loading="lazy"
                           />
-                          <span className="text-[10px] text-[#a0a0a0]">{color.label}</span>
+                          <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                            <span className="text-xs font-medium text-[#f5f5f5]">{color.label}</span>
+                          </div>
+                          {isSelected && (
+                            <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                          )}
                         </button>
                       );
                     })}
@@ -691,16 +772,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       <button
                         key={style.id}
                         onClick={() => toggleStyle(style.id)}
-                        className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left ${
+                        className={`relative overflow-hidden rounded-xl border transition-all text-left ${
                           isSelected
-                            ? 'border-[#c9a962] bg-[#c9a962]/10'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'
+                            ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
+                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a] hover:-translate-y-0.5'
                         }`}
                       >
-                        <span className="text-2xl">{style.icon}</span>
-                        <span className={`text-sm font-medium ${isSelected ? 'text-[#f5f5f5]' : 'text-[#a0a0a0]'}`}>
-                          {style.label}
-                        </span>
+                        <img
+                          src={style.image}
+                          alt={style.label}
+                          className="w-full h-28 object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                          <span className="text-sm font-medium text-[#f5f5f5]">{style.label}</span>
+                        </div>
+                        {isSelected && (
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                        )}
                       </button>
                     );
                   })}
@@ -735,19 +824,48 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
                 <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-3">
                     {BODY_TYPES.map((bt) => (
                       <button
                         key={bt.id}
                         onClick={() => setBodyType(bodyType === bt.id ? null : bt.id)}
-                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                        className={`relative overflow-hidden rounded-xl border transition-all ${
                           bodyType === bt.id
-                            ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#6b6b6b] hover:border-[#3a3a3a]'
+                            ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
+                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a] hover:-translate-y-0.5'
                         }`}
                       >
-                        {bt.svg}
-                        <span className="text-[10px] font-medium">{bt.label}</span>
+                        <img
+                          src={bt.image}
+                          alt={bt.label}
+                          className="w-full h-40 object-cover object-top"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                          <span className="text-xs font-medium text-[#f5f5f5]">{bt.label}</span>
+                        </div>
+                        {bodyType === bt.id && (
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Skin tone <span className="text-red-400">*</span></label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SKIN_TONES.map((tone) => (
+                      <button
+                        key={tone.id}
+                        onClick={() => setSkinTone(skinTone === tone.id ? null : tone.id)}
+                        className={`h-11 rounded-xl border font-semibold text-sm transition-all ${
+                          skinTone === tone.id
+                            ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
+                            : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'
+                        }`}
+                      >
+                        {tone.label}
                       </button>
                     ))}
                   </div>
@@ -789,13 +907,43 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
                 <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1">Address</label>
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter your address or locality"
-                    rows={3}
-                    className="w-full px-4 py-3 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm resize-none"
-                  />
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => handleAddressInput(e.target.value)}
+                      onFocus={() => { if (placeSuggestions.length > 0) setShowSuggestions(true); }}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      placeholder="Search your address or locality"
+                      className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
+                    />
+                    {suggestionsLoading && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg className="animate-spin h-4 w-4 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      </div>
+                    )}
+                    {showSuggestions && placeSuggestions.length > 0 && (
+                      <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-xl">
+                        {placeSuggestions.map((s) => (
+                          <li key={s.place_id}>
+                            <button
+                              type="button"
+                              onMouseDown={() => handleSelectSuggestion(s)}
+                              className="w-full text-left px-4 py-3 text-sm text-[#d0d0d0] hover:bg-[#252525] flex items-start gap-3 transition-colors border-b border-[#1e1e1e] last:border-0"
+                            >
+                              <svg className="w-4 h-4 mt-0.5 shrink-0 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                              </svg>
+                              <span className="leading-snug">{s.description}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
 
                 {address && (

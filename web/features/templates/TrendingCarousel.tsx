@@ -108,6 +108,23 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
         }
     };
 
+    const handleCarouselWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+        // Route vertical wheel intent to the page scroll container instead of the horizontal carousel.
+        e.preventDefault();
+        const pageScrollContainer = document.querySelector(
+            '[data-home-scroll="true"]'
+        ) as HTMLElement | null;
+
+        if (pageScrollContainer) {
+            pageScrollContainer.scrollBy({ top: e.deltaY, behavior: "auto" });
+            return;
+        }
+
+        window.scrollBy({ top: e.deltaY, behavior: "auto" });
+    };
+
     return (
         <section className="bg-[#0a0a0a] pt-12 pb-6 md:py-16 relative overflow-hidden">
             <div className="w-full h-full relative group/section">
@@ -136,11 +153,13 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                 {/* Carousel Container */}
                 <div
                     ref={scrollContainerRef}
+                    onWheel={handleCarouselWheel}
                     className="
                         flex overflow-x-auto 
                         gap-4 md:gap-8 
                         snap-x snap-mandatory 
                         scroll-smooth scrollbar-hide 
+                        touch-pan-y
                         items-center
                         /* FIX: Padding matches exactly (100vw - 85vw) / 2 = 7.5vw */
                         /* This ensures the first card starts exactly in the center */

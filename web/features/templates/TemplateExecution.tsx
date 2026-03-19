@@ -120,7 +120,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                 wearableImage,
             );
             setGeneratedImages(result);
-            if (isFititStack && result.length < 4) {
+            if (result.length === 0) {
                 setPartialResults(true);
             }
         } catch (e: any) {

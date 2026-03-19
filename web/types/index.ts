@@ -26,6 +26,7 @@ export interface User {
   styles: string[];
   fit: string | null;
   bodyType: string | null;
+  skinTone: string | null;
   avatarUrl: string | null;
   isOnboardingComplete: boolean;
   accountType: 'free' | 'essentials' | 'ultimate';
@@ -47,6 +48,7 @@ export interface UserProfile {
   styles: string[];
   fit: string | null;
   bodyType: string | null;
+  skinTone: string | null;
   avatarUrl: string | null;
   isOnboardingComplete: boolean;
   accountType: 'free' | 'essentials' | 'ultimate';
@@ -62,6 +64,7 @@ export interface UserAddress {
   id: string;
   userId: string;
   label: string;
+  addressLine1: string | null;
   addressLine: string;
   city: string | null;
   state: string | null;

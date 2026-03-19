@@ -46,12 +46,20 @@ export const CONFIG = {
     SEARCH_DEBOUNCE_MS: 250,
     ANIMATION_DURATION_MS: 300,
   },
+  PROFILE: {
+    // Revalidate profile/onboarding state against server at this interval.
+    REVALIDATION_THROTTLE_MS:
+      Number(
+        (typeof window !== 'undefined' && (window as any).__PROFILE_REVALIDATION_THROTTLE_MS__)
+          || 15000
+      ) || 15000,
+  },
   APP: {
     NAME: "Stiri",
     // Used in App.tsx for logic
     CREATOR_STACKS: [
       "flex", "aesthetics", "sceneries", "clothes", 
-      "monuments", "celebration", "fitit", "animation"
+      "monuments", "celebration", "animation"
     ],
   }
 };

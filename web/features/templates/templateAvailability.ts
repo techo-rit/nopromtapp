@@ -9,7 +9,7 @@ const AVAILABLE_TEMPLATE_IDS = new Set([
 ]);
 
 export function isTemplateAvailable(template: Template): boolean {
-  return AVAILABLE_TEMPLATE_IDS.has(template.id);
+  return template.stackId === "fitit" || AVAILABLE_TEMPLATE_IDS.has(template.id);
 }
 
 export function sortTemplatesByAvailability(templates: Template[]): Template[] {

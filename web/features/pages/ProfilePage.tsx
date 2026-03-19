@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { profileService } from '../profile/profileService';
+import { CONFIG } from '../../config';
 import type { User, UserAddress, GeneratedImage } from '../../types';
 
 const stripCountryCode = (p: string) => { const d = (p || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d; };
@@ -13,47 +14,53 @@ interface ProfilePageProps {
 }
 
 const AGE_RANGES = [
-  { id: 'gen_z', label: 'Gen Z', desc: '1997 – 2012' },
-  { id: 'millennial', label: 'Millennial', desc: '1981 – 1996' },
-  { id: 'gen_x', label: 'Gen X', desc: '1965 – 1980' },
-  { id: 'boomer', label: 'Boomer', desc: '1946 – 1964' },
+  { id: 'gen_z', label: 'Gen Z', desc: '1997 – 2012', image: '/images/onboarding/gen/genz.webp' },
+  { id: 'gen_alpha', label: 'Gen Alpha', desc: '2013 – Present', image: '/images/onboarding/gen/gen_alpha.webp' },
+  { id: 'millennial', label: 'Millennial', desc: '1981 – 1996', image: '/images/onboarding/gen/millenial.webp' },
+  { id: 'gen_x', label: 'Gen X', desc: '1965 – 1980', image: '/images/onboarding/gen/genx.webp' },
+  { id: 'boomer', label: 'Boomer', desc: '1946 – 1964', image: '/images/onboarding/gen/boomer.webp' },
 ];
 
 const PRIMARY_COLORS = [
-  { id: 'red', label: 'Red', hex: '#EF4444' },
-  { id: 'blue', label: 'Blue', hex: '#3B82F6' },
-  { id: 'yellow', label: 'Yellow', hex: '#EAB308' },
-  { id: 'green', label: 'Green', hex: '#22C55E' },
-  { id: 'orange', label: 'Orange', hex: '#F97316' },
-  { id: 'purple', label: 'Purple', hex: '#A855F7' },
-  { id: 'pink', label: 'Pink', hex: '#EC4899' },
-  { id: 'black', label: 'Black', hex: '#1a1a1a' },
-  { id: 'white', label: 'White', hex: '#f5f5f5' },
-  { id: 'brown', label: 'Brown', hex: '#92400E' },
-  { id: 'navy', label: 'Navy', hex: '#1E3A5F' },
-  { id: 'teal', label: 'Teal', hex: '#14B8A6' },
+  { id: 'red', label: 'Red', image: '/images/onboarding/colors/red.webp' },
+  { id: 'blue', label: 'Blue', image: '/images/onboarding/colors/blue.webp' },
+  { id: 'yellow', label: 'Yellow', image: '/images/onboarding/colors/yellow.webp' },
+  { id: 'green', label: 'Green', image: '/images/onboarding/colors/green.webp' },
+  { id: 'orange', label: 'Orange', image: '/images/onboarding/colors/orange.webp' },
+  { id: 'purple', label: 'Purple', image: '/images/onboarding/colors/purple.webp' },
+  { id: 'pink', label: 'Pink', image: '/images/onboarding/colors/pink.webp' },
+  { id: 'black', label: 'Black', image: '/images/onboarding/colors/black.webp' },
+  { id: 'white', label: 'White', image: '/images/onboarding/colors/white.webp' },
+  { id: 'brown', label: 'Brown', image: '/images/onboarding/colors/brown.webp' },
+  { id: 'navy', label: 'Navy', image: '/images/onboarding/colors/navy.webp' },
+  { id: 'teal', label: 'Teal', image: '/images/onboarding/colors/teal.webp' },
 ];
 
 const STYLES = [
-  { id: 'casual', label: 'Casual', icon: '👕' },
-  { id: 'formal', label: 'Formal', icon: '👔' },
-  { id: 'party', label: 'Party', icon: '🎉' },
-  { id: 'beachwear', label: 'Beachwear', icon: '🏖️' },
-  { id: 'streetwear', label: 'Streetwear', icon: '🧢' },
-  { id: 'ethnic', label: 'Ethnic', icon: '🪷' },
-  { id: 'sporty', label: 'Sporty', icon: '⚽' },
-  { id: 'minimalist', label: 'Minimalist', icon: '◻️' },
+  { id: 'casual', label: 'Casual', image: '/images/onboarding/styles/casual.webp' },
+  { id: 'formal', label: 'Formal', image: '/images/onboarding/styles/formal.webp' },
+  { id: 'party', label: 'Party', image: '/images/onboarding/styles/party.webp' },
+  { id: 'beachwear', label: 'Beachwear', image: '/images/onboarding/styles/beach.webp' },
+  { id: 'streetwear', label: 'Streetwear', image: '/images/onboarding/styles/streetwear.webp' },
+  { id: 'ethnic', label: 'Ethnic', image: '/images/onboarding/styles/ethnic.webp' },
+  { id: 'sporty', label: 'Sporty', image: '/images/onboarding/styles/sporty.webp' },
+  { id: 'minimalist', label: 'Minimalist', image: '/images/onboarding/styles/minimal.webp' },
 ];
 
 const FIT_SIZES = ['xs', 's', 'm', 'l', 'xl', 'xxl'];
 const FIT_LABELS: Record<string, string> = { xs: 'XS', s: 'S', m: 'M', l: 'L', xl: 'XL', xxl: 'XXL' };
+const SKIN_TONES = [
+  { id: 'fair', label: 'Fair' },
+  { id: 'medium', label: 'Medium' },
+  { id: 'dark', label: 'Dark' },
+];
 
 const BODY_TYPES = [
-  { id: 'hourglass', label: 'Hourglass' },
-  { id: 'triangle', label: 'Triangle' },
-  { id: 'inverted_triangle', label: 'Inv. Triangle' },
-  { id: 'rectangle', label: 'Rectangle' },
-  { id: 'round', label: 'Round' },
+  { id: 'hourglass', label: 'Hourglass', image: '/images/onboarding/body_types/hourglass.webp' },
+  { id: 'pear', label: 'Pear', image: '/images/onboarding/body_types/pear.webp' },
+  { id: 'inverted_triangle', label: 'Inv. Triangle', image: '/images/onboarding/body_types/inverted_triangle.webp' },
+  { id: 'rectangle', label: 'Rectangle', image: '/images/onboarding/body_types/rectangle.webp' },
+  { id: 'round', label: 'Round', image: '/images/onboarding/body_types/round.webp' },
 ];
 
 function formatDate(iso: string): string {
@@ -84,44 +91,74 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [cachedProfile, setCachedProfile] = useState<null | {
     name: string;
-    phone: string;
     ageRange: string;
     colors: string[];
     styles: string[];
     fit: string;
     bodyType: string;
+    skinTone: string;
   }>(null);
 
   // Form fields
   const [name, setName] = useState(user.name || '');
-  const [phone, setPhone] = useState(stripCountryCode(user.phone || ''));
   const [ageRange, setAgeRange] = useState(user.ageRange || '');
   const [colors, setColors] = useState<string[]>(user.colors || []);
   const [styles, setStyles] = useState<string[]>(user.styles || []);
   const [fit, setFit] = useState(user.fit || '');
   const [bodyType, setBodyType] = useState(user.bodyType || '');
+  const [skinTone, setSkinTone] = useState(user.skinTone || '');
+  const accountPhone = stripCountryCode(user.phone || '');
 
   // Addresses
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [settingDefaultAddressId, setSettingDefaultAddressId] = useState<string | null>(null);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [editingAddressLabel, setEditingAddressLabel] = useState('Home');
+  const [editingAddressLine1, setEditingAddressLine1] = useState('');
+  const [editingAddress, setEditingAddress] = useState('');
+  const [editingAddressCity, setEditingAddressCity] = useState<string | null>(null);
+  const [editingAddressState, setEditingAddressState] = useState<string | null>(null);
+  const [editingAddressPincode, setEditingAddressPincode] = useState<string | null>(null);
+  const [editingAddressLat, setEditingAddressLat] = useState<number | null>(null);
+  const [editingAddressLng, setEditingAddressLng] = useState<number | null>(null);
+  const [editingAddressLocationLoading, setEditingAddressLocationLoading] = useState(false);
+  const [editingAddressSuggestions, setEditingAddressSuggestions] = useState<Array<{ place_id: string; description: string }>>([]);
+  const [showEditingAddressSuggestions, setShowEditingAddressSuggestions] = useState(false);
+  const [editingAddressSuggestionsLoading, setEditingAddressSuggestionsLoading] = useState(false);
+  const editingAddressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editingAddressAbortRef = useRef<AbortController | null>(null);
+  const [updatingAddressId, setUpdatingAddressId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState('');
+  const [newAddressLine1, setNewAddressLine1] = useState('');
   const [newLabel, setNewLabel] = useState('Home');
+  const [newAddressCity, setNewAddressCity] = useState<string | null>(null);
+  const [newAddressState, setNewAddressState] = useState<string | null>(null);
+  const [newAddressPincode, setNewAddressPincode] = useState<string | null>(null);
+  const [newAddressLat, setNewAddressLat] = useState<number | null>(null);
+  const [newAddressLng, setNewAddressLng] = useState<number | null>(null);
+  const [newAddressLocationLoading, setNewAddressLocationLoading] = useState(false);
+  const [newAddressSuggestions, setNewAddressSuggestions] = useState<Array<{ place_id: string; description: string }>>([]);
+  const [showNewAddressSuggestions, setShowNewAddressSuggestions] = useState(false);
+  const [newAddressSuggestionsLoading, setNewAddressSuggestionsLoading] = useState(false);
+  const newAddressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const newAddressAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setName(user.name || '');
-    setPhone(stripCountryCode(user.phone || ''));
     setAgeRange(user.ageRange || '');
     setColors(user.colors || []);
     setStyles(user.styles || []);
     setFit(user.fit || '');
     setBodyType(user.bodyType || '');
+    setSkinTone(user.skinTone || '');
     setCachedProfile({
       name: (user.name || '').trim(),
-      phone: (user.phone || '').trim(),
       ageRange: user.ageRange || '',
       colors: user.colors || [],
       styles: user.styles || [],
       fit: user.fit || '',
       bodyType: user.bodyType || '',
+      skinTone: user.skinTone || '',
     });
     loadAddresses();
     loadGallery();
@@ -179,20 +216,31 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setSuccess(null);
     try {
       if (!name.trim()) { setError('Name is required'); setIsLoading(false); return; }
-      if (phone.trim() && phone.trim().length < 10) { setError('Enter a valid phone number'); setIsLoading(false); return; }
       if (!fit) { setError('Fit size is required'); setIsLoading(false); return; }
       if (!bodyType) { setError('Body type is required'); setIsLoading(false); return; }
+      if (!skinTone) { setError('Skin tone is required'); setIsLoading(false); return; }
+
+      if ((cachedProfile?.ageRange || '') && !ageRange) {
+        setError('Generation cannot be empty once selected. You can change it, but not remove it.');
+        setIsLoading(false);
+        return;
+      }
+
+      if ((cachedProfile?.styles || []).length > 0 && styles.length === 0) {
+        setError('Style preferences cannot be empty once selected. You can change them, but not remove all.');
+        setIsLoading(false);
+        return;
+      }
 
       const trimmedName = name.trim();
-      const trimmedPhone = phone.trim();
       const hasChanges = !cachedProfile
         || trimmedName !== cachedProfile.name
-        || trimmedPhone !== cachedProfile.phone
         || (ageRange || '') !== cachedProfile.ageRange
         || !arraysEqual(colors, cachedProfile.colors)
         || !arraysEqual(styles, cachedProfile.styles)
         || fit !== cachedProfile.fit
-        || bodyType !== cachedProfile.bodyType;
+        || bodyType !== cachedProfile.bodyType
+        || skinTone !== cachedProfile.skinTone;
 
       if (!hasChanges) {
       setSuccess('No changes to save');
@@ -204,24 +252,24 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       const updates: Record<string, any> = {
         name: trimmedName,
       };
-      if (trimmedPhone) updates.phone = trimmedPhone;
 
-      if (ageRange) updates.ageRange = ageRange;
+      if (!cachedProfile || ageRange !== cachedProfile.ageRange) updates.ageRange = ageRange || null;
       if (colors.length > 0) updates.colors = colors;
-      if (styles.length > 0) updates.styles = styles;
+      if (!cachedProfile || !arraysEqual(styles, cachedProfile.styles)) updates.styles = styles;
       updates.fit = fit;
       updates.bodyType = bodyType;
+      updates.skinTone = skinTone;
 
       await profileService.updateProfile(updates);
       setSuccess('Profile updated successfully');
       setCachedProfile({
         name: trimmedName,
-        phone: trimmedPhone,
         ageRange: ageRange || '',
         colors: [...colors],
         styles: [...styles],
         fit,
         bodyType,
+        skinTone,
       });
       onProfileUpdate();
       setTimeout(() => setSuccess(null), 3000);
@@ -231,25 +279,143 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [name, phone, ageRange, colors, styles, fit, bodyType, cachedProfile, onProfileUpdate]);
+  }, [name, ageRange, colors, styles, fit, bodyType, skinTone, cachedProfile, onProfileUpdate]);
+
+  const handleNewAddressLocationGet = useCallback(async () => {
+    setNewAddressLocationLoading(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+      );
+      const { latitude, longitude } = position.coords;
+      setNewAddressLat(latitude);
+      setNewAddressLng(longitude);
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const resp = await fetch(`${apiBase || ''}/api/geocode?lat=${latitude}&lng=${longitude}`, { credentials: 'include' });
+        const data = await resp.json();
+        setNewAddress(data.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setNewAddressCity(data.city || null);
+        setNewAddressState(data.state || null);
+        setNewAddressPincode(data.pincode || null);
+      } catch {
+        setNewAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setNewAddressCity(null);
+        setNewAddressState(null);
+        setNewAddressPincode(null);
+      }
+    } catch {
+      setError('Location access denied. Enter address manually.');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setNewAddressLocationLoading(false);
+    }
+  }, []);
+
+  const handleNewAddressInput = useCallback((value: string) => {
+    setNewAddress(value);
+    setNewAddressCity(null);
+    setNewAddressState(null);
+    setNewAddressPincode(null);
+    setNewAddressLat(null);
+    setNewAddressLng(null);
+    setShowNewAddressSuggestions(false);
+    if (newAddressDebounceRef.current) clearTimeout(newAddressDebounceRef.current);
+    if (newAddressAbortRef.current) newAddressAbortRef.current.abort();
+    if (!value.trim() || value.trim().length < 3) {
+      setNewAddressSuggestions([]);
+      setNewAddressSuggestionsLoading(false);
+      return;
+    }
+    setNewAddressSuggestionsLoading(true);
+    newAddressDebounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      newAddressAbortRef.current = controller;
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const resp = await fetch(`${apiBase || ''}/api/places/autocomplete?input=${encodeURIComponent(value)}`, { credentials: 'include', signal: controller.signal });
+        const data = await resp.json();
+        const predictions = (data.predictions || []).slice(0, 5).map((p: any) => ({ place_id: p.place_id, description: p.description }));
+        setNewAddressSuggestions(predictions);
+        setShowNewAddressSuggestions(predictions.length > 0);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') setNewAddressSuggestions([]);
+      } finally {
+        setNewAddressSuggestionsLoading(false);
+      }
+    }, 350);
+  }, []);
+
+  const handleNewAddressSelectSuggestion = useCallback(async (s: { place_id: string; description: string }) => {
+    setShowNewAddressSuggestions(false);
+    setNewAddressSuggestions([]);
+    setNewAddress(s.description);
+    setNewAddressSuggestionsLoading(true);
+    try {
+      const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${apiBase || ''}/api/places/details?place_id=${encodeURIComponent(s.place_id)}`, { credentials: 'include' });
+      const data = await resp.json();
+      if (data.address) setNewAddress(data.address);
+      setNewAddressCity(data.city || null);
+      setNewAddressState(data.state || null);
+      setNewAddressPincode(data.pincode || null);
+      if (data.lat != null) setNewAddressLat(data.lat);
+      if (data.lng != null) setNewAddressLng(data.lng);
+    } catch {
+      setNewAddressCity(null);
+      setNewAddressState(null);
+      setNewAddressPincode(null);
+    } finally {
+      setNewAddressSuggestionsLoading(false);
+    }
+  }, []);
 
   const handleAddAddress = useCallback(async () => {
+    if (!newAddressLine1.trim()) {
+      setError('Address details are required.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
     if (!newAddress.trim()) return;
     try {
       await profileService.addAddress({
         label: newLabel,
+        addressLine1: newAddressLine1.trim(),
         addressLine: newAddress.trim(),
+        ...(newAddressCity ? { city: newAddressCity } : {}),
+        ...(newAddressState ? { state: newAddressState } : {}),
+        ...(newAddressPincode ? { pincode: newAddressPincode } : {}),
+        ...(newAddressLat != null ? { lat: newAddressLat } : {}),
+        ...(newAddressLng != null ? { lng: newAddressLng } : {}),
       });
+      setNewAddressLine1('');
       setNewAddress('');
       setNewLabel('Home');
+      setNewAddressCity(null);
+      setNewAddressState(null);
+      setNewAddressPincode(null);
+      setNewAddressLat(null);
+      setNewAddressLng(null);
       loadAddresses();
     } catch (err: any) {
       setError(err.message || 'Failed to add address');
       setTimeout(() => setError(null), 4000);
     }
-  }, [newAddress, newLabel, loadAddresses]);
+  }, [newAddress, newAddressLine1, newLabel, newAddressCity, newAddressState, newAddressPincode, newAddressLat, newAddressLng, loadAddresses]);
 
   const handleDeleteAddress = useCallback(async (id: string) => {
+    const target = addresses.find((addr) => addr.id === id);
+    if (target?.isDefault) {
+      setError('You cannot delete your default address. Set another address as default first.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    if (addresses.length <= 1) {
+      setError('You cannot delete your only saved address.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
     try {
       await profileService.deleteAddress(id);
       loadAddresses();
@@ -257,7 +423,183 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       setError(err.message || 'Failed to delete address');
       setTimeout(() => setError(null), 4000);
     }
-  }, [loadAddresses]);
+  }, [addresses, loadAddresses]);
+
+  const handleSetDefaultAddress = useCallback(async (id: string) => {
+    try {
+      setSettingDefaultAddressId(id);
+      await profileService.setDefaultAddress(id);
+      setAddresses((prev) => prev.map((addr) => ({
+        ...addr,
+        isDefault: addr.id === id,
+      })));
+      setSuccess('Default address updated');
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to set default address');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setSettingDefaultAddressId(null);
+    }
+  }, []);
+
+  const handleStartEditAddressLine1 = useCallback((address: UserAddress) => {
+    setEditingAddressId(address.id);
+    setEditingAddressLabel(address.label || 'Home');
+    setEditingAddressLine1(address.addressLine1 || '');
+    setEditingAddress(address.addressLine || '');
+    setEditingAddressCity(address.city ?? null);
+    setEditingAddressState(address.state ?? null);
+    setEditingAddressPincode(address.pincode ?? null);
+    setEditingAddressLat(address.lat ?? null);
+    setEditingAddressLng(address.lng ?? null);
+  }, []);
+
+  const handleCancelEditAddressLine1 = useCallback(() => {
+    setEditingAddressId(null);
+    setEditingAddressLabel('Home');
+    setEditingAddressLine1('');
+    setEditingAddress('');
+    setEditingAddressCity(null);
+    setEditingAddressState(null);
+    setEditingAddressPincode(null);
+    setEditingAddressLat(null);
+    setEditingAddressLng(null);
+    setEditingAddressSuggestions([]);
+    setShowEditingAddressSuggestions(false);
+  }, []);
+
+  const handleEditingAddressInput = useCallback((value: string) => {
+    setEditingAddress(value);
+    setEditingAddressCity(null);
+    setEditingAddressState(null);
+    setEditingAddressPincode(null);
+    setEditingAddressLat(null);
+    setEditingAddressLng(null);
+    setShowEditingAddressSuggestions(false);
+    if (editingAddressDebounceRef.current) clearTimeout(editingAddressDebounceRef.current);
+    if (editingAddressAbortRef.current) editingAddressAbortRef.current.abort();
+    if (!value.trim() || value.trim().length < 3) {
+      setEditingAddressSuggestions([]);
+      setEditingAddressSuggestionsLoading(false);
+      return;
+    }
+    setEditingAddressSuggestionsLoading(true);
+    editingAddressDebounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      editingAddressAbortRef.current = controller;
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const resp = await fetch(`${apiBase || ''}/api/places/autocomplete?input=${encodeURIComponent(value)}`, { credentials: 'include', signal: controller.signal });
+        const data = await resp.json();
+        const predictions = (data.predictions || []).slice(0, 5).map((p: any) => ({ place_id: p.place_id, description: p.description }));
+        setEditingAddressSuggestions(predictions);
+        setShowEditingAddressSuggestions(predictions.length > 0);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') setEditingAddressSuggestions([]);
+      } finally {
+        setEditingAddressSuggestionsLoading(false);
+      }
+    }, 350);
+  }, []);
+
+  const handleEditingAddressSelectSuggestion = useCallback(async (s: { place_id: string; description: string }) => {
+    setShowEditingAddressSuggestions(false);
+    setEditingAddressSuggestions([]);
+    setEditingAddress(s.description);
+    setEditingAddressSuggestionsLoading(true);
+    try {
+      const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+      const resp = await fetch(`${apiBase || ''}/api/places/details?place_id=${encodeURIComponent(s.place_id)}`, { credentials: 'include' });
+      const data = await resp.json();
+      if (data.address) setEditingAddress(data.address);
+      setEditingAddressCity(data.city || null);
+      setEditingAddressState(data.state || null);
+      setEditingAddressPincode(data.pincode || null);
+      if (data.lat != null) setEditingAddressLat(data.lat);
+      if (data.lng != null) setEditingAddressLng(data.lng);
+    } catch {
+      setEditingAddressCity(null);
+      setEditingAddressState(null);
+      setEditingAddressPincode(null);
+    } finally {
+      setEditingAddressSuggestionsLoading(false);
+    }
+  }, []);
+
+  const handleEditingAddressLocationGet = useCallback(async () => {
+    setEditingAddressLocationLoading(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+      );
+      const { latitude, longitude } = position.coords;
+      setEditingAddressLat(latitude);
+      setEditingAddressLng(longitude);
+      try {
+        const apiBase = CONFIG.API.BASE_URL.replace(/\/$/, '');
+        const resp = await fetch(`${apiBase || ''}/api/geocode?lat=${latitude}&lng=${longitude}`, { credentials: 'include' });
+        const data = await resp.json();
+        setEditingAddress(data.address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setEditingAddressCity(data.city || null);
+        setEditingAddressState(data.state || null);
+        setEditingAddressPincode(data.pincode || null);
+      } catch {
+        setEditingAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setEditingAddressCity(null);
+        setEditingAddressState(null);
+        setEditingAddressPincode(null);
+      }
+    } catch {
+      setError('Location access denied. Enter address manually.');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setEditingAddressLocationLoading(false);
+    }
+  }, []);
+
+  const handleSaveAddressLine1 = useCallback(async (id: string) => {
+    if (!editingAddressLine1.trim()) {
+      setError('Address details are required.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    if (!editingAddress.trim()) {
+      setError('Main address is required.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+    try {
+      setUpdatingAddressId(id);
+      const updated = await profileService.updateAddress(id, {
+        label: editingAddressLabel,
+        addressLine1: editingAddressLine1.trim(),
+        addressLine: editingAddress.trim(),
+        city: editingAddressCity,
+        state: editingAddressState,
+        pincode: editingAddressPincode,
+        lat: editingAddressLat,
+        lng: editingAddressLng,
+      });
+      setAddresses((prev) => prev.map((addr) => addr.id === id ? updated : addr));
+      setEditingAddressId(null);
+      setEditingAddressLabel('Home');
+      setEditingAddressLine1('');
+      setEditingAddress('');
+      setEditingAddressCity(null);
+      setEditingAddressState(null);
+      setEditingAddressPincode(null);
+      setEditingAddressLat(null);
+      setEditingAddressLng(null);
+      setSuccess('Address updated');
+      setTimeout(() => setSuccess(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update address');
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setUpdatingAddressId(null);
+    }
+  }, [editingAddressLabel, editingAddressLine1, editingAddress, editingAddressCity, editingAddressState, editingAddressPincode, editingAddressLat, editingAddressLng]);
 
   const handleRefresh = useCallback(async () => {
     setIsLoading(true);
@@ -269,20 +611,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       if (data?.profile) {
         const p = data.profile;
         setName(p.name || '');
-        setPhone(stripCountryCode(p.phone || ''));
         setAgeRange(p.ageRange || '');
         setColors(p.colors || []);
         setStyles(p.styles || []);
         setFit(p.fit || '');
         setBodyType(p.bodyType || '');
+        setSkinTone(p.skinTone || '');
         setCachedProfile({
           name: (p.name || '').trim(),
-          phone: (p.phone || '').trim(),
           ageRange: p.ageRange || '',
           colors: p.colors || [],
           styles: p.styles || [],
           fit: p.fit || '',
           bodyType: p.bodyType || '',
+          skinTone: p.skinTone || '',
         });
       }
       setAddresses(addrs);
@@ -603,21 +945,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm" />
             </div>
             <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1">Phone <span className="text-[#525252]">(optional)</span></label>
+              <label className="text-xs font-medium text-[#a0a0a0] ml-1">Phone</label>
               <div className="flex gap-2 mt-1">
                 <span className="h-11 px-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#6b6b6b] flex items-center text-sm shrink-0">+91</span>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit number"
-                  className="w-full h-11 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm" />
+                <input type="tel" value={accountPhone} readOnly
+                  className="w-full h-11 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#8c8c8c] text-sm cursor-not-allowed"
+                  aria-label="Phone"
+                />
               </div>
             </div>
             <div>
               <label className="text-xs font-medium text-[#a0a0a0] ml-1">Generation <span className="text-[#525252]">(optional)</span></label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="grid grid-cols-2 gap-3 mt-2">
                 {AGE_RANGES.map((a) => (
                   <button key={a.id} onClick={() => setAgeRange(ageRange === a.id ? '' : a.id)}
-                    className={`p-3 rounded-xl border text-left text-sm transition-all ${ageRange === a.id ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#f5f5f5]' : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'}`}>
-                    <p className="font-medium text-xs">{a.label}</p>
-                    <p className="text-[10px] text-[#6b6b6b]">{a.desc}</p>
+                    className={`relative overflow-hidden rounded-xl border text-left transition-all ${ageRange === a.id ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40' : 'border-[#2a2a2a] hover:border-[#3a3a3a]'}`}>
+                    <img src={a.image} alt={a.label} className="w-full h-24 object-cover object-top" loading="lazy" />
+                    <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                      <p className="font-medium text-xs text-[#f5f5f5]">{a.label}</p>
+                      <p className="text-[10px] text-[#d0d0d0]">{a.desc}</p>
+                    </div>
+                    {ageRange === a.id && (
+                      <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -634,15 +984,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             
             <div>
               <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Favorite colors <span className="text-red-400">*</span> (up to 3)</label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {PRIMARY_COLORS.map((c) => {
                   const sel = colors.includes(c.id);
                   const dis = !sel && colors.length >= 3;
                   return (
                     <button key={c.id} onClick={() => !dis && toggleColor(c.id)} disabled={dis}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all ${sel ? 'border-[#c9a962] bg-[#c9a962]/10' : dis ? 'opacity-40 border-[#1a1a1a]' : 'border-[#2a2a2a] hover:border-[#3a3a3a]'}`}>
-                      <div className={`w-7 h-7 rounded-full border-2 ${sel ? 'border-[#c9a962]' : 'border-[#3a3a3a]'}`} style={{ backgroundColor: c.hex }} />
-                      <span className="text-[10px] text-[#a0a0a0]">{c.label}</span>
+                      className={`relative overflow-hidden rounded-xl border transition-all ${sel ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40' : dis ? 'opacity-40 border-[#1a1a1a]' : 'border-[#2a2a2a] hover:border-[#3a3a3a]'}`}>
+                      <img src={c.image} alt={c.label} className="w-full h-20 object-cover" loading="lazy" />
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                        <span className="text-[11px] font-medium text-[#f5f5f5]">{c.label}</span>
+                      </div>
+                      {sel && (
+                        <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                      )}
                     </button>
                   );
                 })}
@@ -656,24 +1011,31 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           <h2 className="text-sm font-semibold text-[#c9a962] mb-3 flex items-center gap-2">
             <span>✨</span> Style Preferences
           </h2>
-          <div className="grid grid-cols-2 gap-3 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
-            {STYLES.map((s) => {
-              const sel = styles.includes(s.id);
-              return (
-                <button key={s.id} onClick={() => toggleStyle(s.id)}
-                  className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${sel ? 'border-[#c9a962] bg-[#c9a962]/10' : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'}`}>
-                  <span className="text-2xl">{s.icon}</span>
-                  <span className={`text-sm font-medium ${sel ? 'text-[#f5f5f5]' : 'text-[#a0a0a0]'}`}>{s.label}</span>
-                </button>
-              );
-            })}
+          <div className="bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
+            <div className="grid grid-cols-2 gap-3">
+              {STYLES.map((s) => {
+                const sel = styles.includes(s.id);
+                return (
+                  <button key={s.id} onClick={() => toggleStyle(s.id)}
+                    className={`relative overflow-hidden rounded-xl border text-left transition-all ${sel ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40' : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'}`}>
+                    <img src={s.image} alt={s.label} className="w-full h-24 object-cover" loading="lazy" />
+                    <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                      <span className="text-sm font-medium text-[#f5f5f5]">{s.label}</span>
+                    </div>
+                    {sel && (
+                      <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        {/* Section: Fit & Body */}
+        {/* Section: Fit, Body & Skin Tone */}
         <section className="mb-6">
           <h2 className="text-sm font-semibold text-[#c9a962] mb-3 flex items-center gap-2">
-            <span>📐</span> Fit & Body Type
+            <span>📐</span> Fit, Body Type & Skin Tone
           </h2>
           <div className="space-y-4 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
             <div>
@@ -689,11 +1051,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
             <div>
               <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 {BODY_TYPES.map((b) => (
                   <button key={b.id} onClick={() => setBodyType(bodyType === b.id ? '' : b.id)}
-                    className={`p-3 rounded-xl border text-center text-xs font-medium transition-all ${bodyType === b.id ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'}`}>
-                    {b.label}
+                    className={`relative overflow-hidden rounded-xl border transition-all ${bodyType === b.id ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40' : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'}`}>
+                    <img src={b.image} alt={b.label} className="w-full h-40 object-cover object-top" loading="lazy" />
+                    <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                      <span className="text-xs font-medium text-[#f5f5f5]">{b.label}</span>
+                    </div>
+                    {bodyType === b.id && (
+                      <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Skin tone <span className="text-red-400">*</span></label>
+              <div className="grid grid-cols-3 gap-2">
+                {SKIN_TONES.map((tone) => (
+                  <button key={tone.id} onClick={() => setSkinTone(skinTone === tone.id ? '' : tone.id)}
+                    className={`h-11 rounded-xl border font-semibold text-sm transition-all ${skinTone === tone.id ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'}`}>
+                    {tone.label}
                   </button>
                 ))}
               </div>
@@ -713,15 +1093,143 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             {addresses.map((addr) => (
               <div key={addr.id} className="p-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-medium text-[#c9a962]">{addr.label}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-[#c9a962]">{addr.label}</p>
+                    {addr.isDefault && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#c9a962]/20 text-[#c9a962] border border-[#c9a962]/35">
+                        Default
+                      </span>
+                    )}
+                  </div>
+                  {editingAddressId === addr.id ? (
+                    <div className="mt-2 flex flex-col gap-2 max-w-[440px]">
+                      <div className="flex gap-2">
+                        {['Home', 'Work', 'Other'].map((label) => (
+                          <button key={label} onClick={() => setEditingAddressLabel(label)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${editingAddressLabel === label ? 'bg-[#c9a962]/15 text-[#c9a962] border border-[#c9a962]/30' : 'bg-[#1a1a1a] text-[#6b6b6b]'}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={handleEditingAddressLocationGet}
+                        disabled={editingAddressLocationLoading}
+                        className="w-full p-3 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#c9a962]/50 transition-all flex items-center justify-center gap-2"
+                      >
+                        <span className="text-xs font-medium text-[#a0a0a0]">
+                          {editingAddressLocationLoading ? 'Fetching location...' : 'Use my current location'}
+                        </span>
+                      </button>
+                      <input
+                        type="text"
+                        value={editingAddressLine1}
+                        onChange={(e) => setEditingAddressLine1(e.target.value)}
+                        placeholder="Flat No., Building Name, Landmark"
+                        className="w-full h-12 px-4 bg-[#121212] border border-[#2a2a2a] rounded-lg text-[#f5f5f5] placeholder-[#505050] focus:outline-none focus:border-[#c9a962] text-sm"
+                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={editingAddress}
+                          onChange={(e) => handleEditingAddressInput(e.target.value)}
+                          onFocus={() => { if (editingAddressSuggestions.length > 0) setShowEditingAddressSuggestions(true); }}
+                          onBlur={() => setTimeout(() => setShowEditingAddressSuggestions(false), 150)}
+                          placeholder="Search address or locality"
+                          className="w-full h-11 px-4 bg-[#121212] border border-[#2a2a2a] rounded-lg text-[#f5f5f5] placeholder-[#505050] focus:outline-none focus:border-[#c9a962] text-sm"
+                        />
+                        {editingAddressSuggestionsLoading && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <svg className="animate-spin h-4 w-4 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          </div>
+                        )}
+                        {showEditingAddressSuggestions && editingAddressSuggestions.length > 0 && (
+                          <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-xl">
+                            {editingAddressSuggestions.map((s) => (
+                              <li key={s.place_id}>
+                                <button
+                                  type="button"
+                                  onMouseDown={() => handleEditingAddressSelectSuggestion(s)}
+                                  className="w-full text-left px-4 py-3 text-sm text-[#d0d0d0] hover:bg-[#252525] transition-colors border-b border-[#1e1e1e] last:border-0"
+                                >
+                                  <span className="leading-snug">{s.description}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveAddressLine1(addr.id)}
+                          disabled={updatingAddressId === addr.id}
+                          className="px-3 h-8 rounded-lg text-[11px] font-medium bg-[#c9a962] text-[#0a0a0a] disabled:opacity-50 transition-all"
+                        >
+                          {updatingAddressId === addr.id ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={handleCancelEditAddressLine1}
+                          disabled={updatingAddressId === addr.id}
+                          className="px-3 h-8 rounded-lg text-[11px] font-medium border border-[#2a2a2a] text-[#a0a0a0] disabled:opacity-50 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {addr.addressLine1 && (
+                        <p className="text-sm text-[#d0d0d0] mt-1">{addr.addressLine1}</p>
+                      )}
+                      {!addr.addressLine1 && (
+                        <button
+                          onClick={() => handleStartEditAddressLine1(addr)}
+                          className="mt-2 h-10 px-4 rounded-xl border border-[#c9a962]/25 bg-[#c9a962]/10 text-sm font-medium text-[#c9a962] hover:border-[#c9a962]/45 transition-all"
+                        >
+                          Add address details
+                        </button>
+                      )}
+                    </>
+                  )}
                   <p className="text-sm text-[#a0a0a0] mt-0.5">{addr.addressLine}</p>
                   {addr.city && <p className="text-xs text-[#6b6b6b] mt-0.5">{addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.pincode || ''}</p>}
+                  {addr.isDefault && (
+                    <p className="text-[11px] text-[#6b6b6b] mt-1">
+                      INFO: You cannot delete your default address.
+                    </p>
+                  )}
                 </div>
-                <button onClick={() => handleDeleteAddress(addr.id)} className="p-1.5 text-[#6b6b6b] hover:text-red-400 transition-colors shrink-0">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" strokeLinecap="round" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {addresses.length > 1 && !addr.isDefault && (
+                    <button
+                      onClick={() => handleSetDefaultAddress(addr.id)}
+                      disabled={settingDefaultAddressId === addr.id}
+                      className="px-2.5 h-7 rounded-lg text-[11px] font-medium text-[#a0a0a0] border border-[#2a2a2a] hover:border-[#c9a962]/40 hover:text-[#c9a962] disabled:opacity-50 transition-all"
+                    >
+                      {settingDefaultAddressId === addr.id ? 'Setting...' : 'Set default'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleStartEditAddressLine1(addr)}
+                    className="p-1.5 text-[#6b6b6b] hover:text-[#c9a962] transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 20h9" strokeLinecap="round" />
+                      <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAddress(addr.id)}
+                    disabled={addr.isDefault}
+                    className="p-1.5 text-[#6b6b6b] hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -735,9 +1243,74 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   </button>
                 ))}
               </div>
-              <input type="text" value={newAddress} onChange={(e) => setNewAddress(e.target.value)} placeholder="Enter address"
-                className="w-full h-11 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm" />
-              <button onClick={handleAddAddress} disabled={!newAddress.trim()}
+              {/* Current location button */}
+              <button
+                onClick={handleNewAddressLocationGet}
+                disabled={newAddressLocationLoading}
+                className="w-full p-3 mb-2 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#c9a962]/50 transition-all flex items-center justify-center gap-2"
+              >
+                {newAddressLocationLoading ? (
+                  <svg className="animate-spin h-4 w-4 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                  </svg>
+                )}
+                <span className="text-xs font-medium text-[#a0a0a0]">
+                  {newAddressLocationLoading ? 'Fetching location...' : 'Use my current location'}
+                </span>
+              </button>
+              <input
+                type="text"
+                value={newAddressLine1}
+                onChange={(e) => setNewAddressLine1(e.target.value)}
+                placeholder="Flat No., Building Name, Landmark"
+                className="w-full h-12 px-4 mb-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm"
+              />
+
+              {/* Autocomplete address input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={newAddress}
+                  onChange={(e) => handleNewAddressInput(e.target.value)}
+                  onFocus={() => { if (newAddressSuggestions.length > 0) setShowNewAddressSuggestions(true); }}
+                  onBlur={() => setTimeout(() => setShowNewAddressSuggestions(false), 150)}
+                  placeholder="Search address or locality"
+                  className="w-full h-11 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] text-sm"
+                />
+                {newAddressSuggestionsLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="animate-spin h-4 w-4 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  </div>
+                )}
+                {showNewAddressSuggestions && newAddressSuggestions.length > 0 && (
+                  <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-xl">
+                    {newAddressSuggestions.map((s) => (
+                      <li key={s.place_id}>
+                        <button
+                          type="button"
+                          onMouseDown={() => handleNewAddressSelectSuggestion(s)}
+                          className="w-full text-left px-4 py-3 text-sm text-[#d0d0d0] hover:bg-[#252525] flex items-start gap-3 transition-colors border-b border-[#1e1e1e] last:border-0"
+                        >
+                          <svg className="w-4 h-4 mt-0.5 shrink-0 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                          </svg>
+                          <span className="leading-snug">{s.description}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <button onClick={handleAddAddress} disabled={!newAddress.trim() || !newAddressLine1.trim()}
                 className="w-full h-10 mt-2 bg-[#1a1a1a] text-[#a0a0a0] text-sm font-medium rounded-xl border border-[#2a2a2a] hover:border-[#c9a962]/30 hover:text-[#f5f5f5] disabled:opacity-40 transition-all">
                 + Add Address
               </button>

@@ -228,7 +228,7 @@ export async function getUserFromRequest(req, res) {
 export async function fetchUserProfile(adminClient, userId) {
   const { data: profile } = await adminClient
     .from('profiles')
-    .select('full_name, phone, age_range, colors, styles, fit, body_type, is_onboarding_complete, account_type, monthly_quota, monthly_used, extra_credits')
+    .select('full_name, phone, age_range, colors, styles, fit, body_type, skin_tone, is_onboarding_complete, account_type, monthly_quota, monthly_used, extra_credits')
     .eq('id', userId)
     .single();
 
@@ -239,12 +239,13 @@ export async function fetchUserProfile(adminClient, userId) {
 
   return {
     name: profile?.full_name || null,
-    phone: profile?.phone || null,
+    phone: normalizeIndiaPhone(profile?.phone),
     ageRange: profile?.age_range || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],
     fit: profile?.fit || null,
     bodyType: profile?.body_type || null,
+    skinTone: profile?.skin_tone || null,
     isOnboardingComplete: profile?.is_onboarding_complete || false,
     accountType: profile?.account_type || 'free',
     monthlyQuota,
@@ -259,17 +260,33 @@ export async function ensureUserProfile(adminClient, supabaseUser) {
 
   const { data: existing } = await adminClient
     .from('profiles')
-    .select('id')
+    .select('id, full_name, phone')
     .eq('id', supabaseUser.id)
     .maybeSingle();
 
-  if (existing) return;
+  const normalizedPhone = normalizeIndiaPhone(supabaseUser.phone);
+  const fullName = supabaseUser.user_metadata?.full_name || null;
+
+  if (existing) {
+    const update = {};
+    const existingPhone = normalizeIndiaPhone(existing.phone);
+    if (normalizedPhone && existingPhone !== normalizedPhone) update.phone = normalizedPhone;
+    if (!existing.full_name && fullName) update.full_name = fullName;
+    if (Object.keys(update).length > 0) {
+      await adminClient
+        .from('profiles')
+        .update(update)
+        .eq('id', supabaseUser.id);
+    }
+    return;
+  }
 
   await adminClient
     .from('profiles')
     .insert({
       id: supabaseUser.id,
-      full_name: supabaseUser.user_metadata?.full_name || null,
+      full_name: fullName,
+      phone: normalizedPhone,
       account_type: 'free',
       monthly_quota: 3,
       monthly_used: 0,
@@ -282,12 +299,13 @@ export function mapUser(supabaseUser, profile) {
     id: supabaseUser.id,
     email: supabaseUser.email,
     name: profile?.name || supabaseUser.user_metadata?.full_name || null,
-    phone: profile?.phone || null,
+    phone: normalizeIndiaPhone(profile?.phone) || normalizeIndiaPhone(supabaseUser.phone),
     ageRange: profile?.ageRange || null,
     colors: profile?.colors || [],
     styles: profile?.styles || [],
     fit: profile?.fit || null,
     bodyType: profile?.bodyType || null,
+    skinTone: profile?.skinTone || null,
     avatarUrl: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture || null,
     isOnboardingComplete: profile?.isOnboardingComplete || false,
     accountType: profile?.accountType || 'free',
@@ -302,6 +320,15 @@ export function mapUser(supabaseUser, profile) {
 
 function base64Url(input) {
   return input.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function normalizeIndiaPhone(value) {
+  if (!value) return null;
+  const digits = String(value).replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
 }
 
 export function generatePkcePair() {

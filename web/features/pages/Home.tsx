@@ -65,7 +65,7 @@ export const Home: React.FC<HomeProps> = ({
     .filter((s): s is Stack => !!s);
 
   return (
-    <div className="w-full h-full overflow-y-auto scrollbar-hide pb-24 bg-[#0a0a0a]">
+    <div data-home-scroll="true" className="w-full h-full overflow-y-auto scrollbar-hide pb-24 bg-[#0a0a0a]">
       {/* Onboarding Progress Banner */}
       {user && onboardingPercent !== undefined && onboardingPercent < 100 && (
         <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-4">
