@@ -59,7 +59,7 @@ export const CONFIG = {
     // Used in App.tsx for logic
     CREATOR_STACKS: [
       "flex", "aesthetics", "sceneries", "clothes", 
-      "monuments", "celebration", "fitit", "animation"
+      "monuments", "celebration", "animation"
     ],
   }
 };
