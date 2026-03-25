@@ -3,7 +3,7 @@ import { createTtlCache } from '../lib/cache.js';
 
 const CACHE_TTL_MS = Number(process.env.SERVER_CACHE_TTL_MS || 60000);
 const GALLERY_CACHE_TTL_MS = Number(process.env.GALLERY_CACHE_TTL_MS || 120000); // 2 min
-const ONBOARDING_TOTAL_STEPS = 5;
+const ONBOARDING_TOTAL_STEPS = 6;
 const profileCache = createTtlCache(CACHE_TTL_MS);
 const addressCache = createTtlCache(CACHE_TTL_MS);
 const galleryCache = createTtlCache(GALLERY_CACHE_TTL_MS);
@@ -113,8 +113,15 @@ export async function updateProfileHandler(req, res) {
     if (body.colors !== undefined) update.colors = body.colors;
     if (body.styles !== undefined) update.styles = body.styles;
     if (body.fit !== undefined) update.fit = body.fit;
+    if (body.bust !== undefined) update.bust = body.bust;
+    if (body.waist !== undefined) update.waist = body.waist;
+    if (body.hip !== undefined) update.hip = body.hip;
+    if (body.measurementUnit !== undefined) update.measurement_unit = body.measurementUnit;
     if (body.bodyType !== undefined) update.body_type = body.bodyType;
     if (body.skinTone !== undefined) update.skin_tone = body.skinTone;
+    if (body.isOnboardingComplete !== undefined) {
+      update.is_onboarding_complete = Boolean(body.isOnboardingComplete);
+    }
 
     const ageRangeCleared = body.ageRange !== undefined && !body.ageRange;
     if (ageRangeCleared && existingProfile?.age_range) {
@@ -639,7 +646,7 @@ function _clearUserGalleryCache(userId) {
 async function syncOnboardingStatus(profile, supabase, steps) {
   const wasComplete = profile.is_onboarding_complete ?? false;
   const isCompleteNow = steps >= ONBOARDING_TOTAL_STEPS;
-  const nextIsComplete = isCompleteNow;
+  const nextIsComplete = wasComplete || isCompleteNow;
   if (wasComplete === nextIsComplete) {
     return;
   }
@@ -678,19 +685,22 @@ async function syncOnboardingCompletionOnRead(profile, supabase, steps) {
 async function computeSteps(profile, supabase, userId) {
   let steps = 0;
 
-  // Step 1: Name
-  if (profile.full_name) steps++;
-
-  // Step 2: Color preferences
+  // Step 1: Color preferences
   if (profile.colors && profile.colors.length > 0) steps++;
 
-  // Step 3: Style preferences
+  // Step 2: Style preferences
   if (profile.styles && profile.styles.length > 0) steps++;
 
-  // Step 4: Fit + Body type + Skin tone
-  if (profile.fit && profile.body_type && profile.skin_tone) steps++;
+  // Step 3: Fit size (size label selected)
+  if (profile.fit) steps++;
 
-  // Step 5: Location — check user_addresses table
+  // Step 4: Body type + Skin tone
+  if (profile.body_type && profile.skin_tone) steps++;
+
+  // Step 5: Name
+  if (profile.full_name) steps++;
+
+  // Step 6: Location — check user_addresses table
   try {
     const { count } = await supabase
       .from('user_addresses')
@@ -716,6 +726,10 @@ function mapProfile(profile, supabaseUser, steps) {
     colors: profile.colors || [],
     styles: profile.styles || [],
     fit: profile.fit,
+    bust: profile.bust != null ? Number(profile.bust) : null,
+    waist: profile.waist != null ? Number(profile.waist) : null,
+    hip: profile.hip != null ? Number(profile.hip) : null,
+    measurementUnit: profile.measurement_unit || 'in',
     bodyType: profile.body_type,
     skinTone: profile.skin_tone,
     avatarUrl: supabaseUser?.user_metadata?.avatar_url || supabaseUser?.user_metadata?.picture || null,

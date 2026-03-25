@@ -82,76 +82,66 @@ export const STACKS: Stack[] = [
 const fititTemplates: Template[] = [
   {
     id: "fitit_template_1",
-    name: "Lower-Wear",
+    name: "Try-On",
     stackId: "fitit",
     imageUrl: "/images/fitit_template_1.webp",
-    prompt:
-      "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. **OBJECTIVE: EXECUTE A TECHNICAL 'VIRTUAL TRY-ON' COMPOSITE.**\n\n**INPUT ANALYSIS:**\n*   **INPUT 1 (The User):** This image contains the definitive person. EVERY aspect of this person (face, hair, skin, body shape, proportions, pose) is the ABSOLUTE SOURCE OF TRUTH. It must be preserved with 100% fidelity.\n*   **INPUT 2 (The Garment):** This image is ONLY a reference for the clothing item. The person, background, and any other elements in this image are IRRELEVANT DATA and MUST BE COMPLETELY DISCARDED.\n\n**CORE MANDATE: ZERO FACIAL MODIFICATION. THIS IS NON-NEGOTIABLE.**\nThe face, head, and hair from INPUT 1 must be transferred to the output image with ZERO changes. This is not a blending operation. It is a strict copy-and-paste of the user's identity. Any influence from the face in INPUT 2 is a critical failure.\n\n**STEP-BY-STEP EXECUTION PROTOCOL:**\n1.  **PRE-PROCESSING:** Mentally isolate the lower-body clothing item (e.g., pants, jeans, skirt) from INPUT 2. Discard every other pixel from INPUT 2, especially the person wearing it. You are now working with the user from INPUT 1 and the isolated garment.\n2.  **IDENTIFY TARGET AREA:** On the user from INPUT 1, identify the area covered by their current clothing. This is the only area that can be modified.\n3.  **COMPOSITE:** Layer the isolated garment from step 1 over the target area on the user from INPUT 1.\n4.  **ADAPT GARMENT:** Warp, resize, and adjust the lighting on the NEW GARMENT ONLY to fit the user's exact body shape, size, and pose from INPUT 1. The user's body CANNOT be changed to fit the garment.\n5.  **FINAL VERIFICATION:** Before outputting, verify that the face, head, hair, and all visible skin in the final image are a 100% pixel-identical match to INPUT 1.\n\n**OUTPUT:**\nGenerate four full-body output images from different fashion-catalog angles: a front view (standing), a side view, a back view, and a semi-profile view. Use a neutral studio background for all outputs.",
-    aspectRatio: "3:4",
-    keywords: [
-      "pants", "jeans", "trousers", "skirt", "lower", "bottom", "pajama", "shorts",
-      "try on", "change clothes", "kapde badlo", "pant", "denim", "leggings",
-      "joggers", "track pant", "chaddi", "nikkar", "bottom wear", "salwar",
-      "change pants", "virtual try on", "nayi pant", "fashion"
-    ]
-  },
-  {
-    id: "fitit_template_2",
-    name: "Upper-Wear",
-    stackId: "fitit",
-    imageUrl: "/images/fitit_template_2.webp",
-    prompt:
-      "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. **OBJECTIVE: EXECUTE A TECHNICAL 'VIRTUAL TRY-ON' COMPOSITE.**\n\n**INPUT ANALYSIS:**\n*   **INPUT 1 (The User):** This image contains the definitive person. EVERY aspect of this person (face, hair, skin, body shape, proportions, pose) is the ABSOLUTE SOURCE OF TRUTH. It must be preserved with 100% fidelity.\n*   **INPUT 2 (The Garment):** This image is ONLY a reference for the clothing item. The person, background, and any other elements in this image are IRRELEVANT DATA and MUST BE COMPLETELY DISCARDED.\n\n**CORE MANDATE: ZERO FACIAL MODIFICATION. THIS IS NON-NEGOTIABLE.**\nThe face, head, and hair from INPUT 1 must be transferred to the output image with ZERO changes. This is not a blending operation. It is a strict copy-and-paste of the user's identity. Any influence from the face in INPUT 2 is a critical failure.\n\n**STEP-BY-STEP EXECUTION PROTOCOL:**\n1.  **PRE-PROCESSING:** Mentally isolate the upper-body garment from INPUT 2. Discard every other pixel from INPUT 2, especially the person wearing it. You are now working with the user from INPUT 1 and the isolated garment.\n2.  **IDENTIFY TARGET AREA:** On the user from INPUT 1, identify the area covered by their current clothing. This is the only area that can be modified.\n3.  **COMPOSITE:** Layer the isolated garment from step 1 over the target area on the user from INPUT 1.\n4.  **ADAPT GARMENT:** Warp, resize, and adjust the lighting on the NEW GARMENT ONLY to fit the user's exact body shape, size, and pose from INPUT 1. The user's body CANNOT be changed to fit the garment.\n5.  **FINAL VERIFICATION:** Before outputting, verify that the face, head, hair, and all visible skin in the final image are a 100% pixel-identical match to INPUT 1.\n\n**OUTPUT:**\nGenerate four output images from different angles: a front view (standing), a 3/4 left view, a right side view (arms crossed), and a seated view. Use a neutral studio background for all outputs.",
-    aspectRatio: "3:4",
-    keywords: [
-      "shirt", "t-shirt", "top", "tee", "hoodie", "jacket", "coat", "blazer",
-      "sweater", "sweatshirt", "upper", "kameez", "kurta", "try on", "change top",
-      "uper ka kapda", "tshirt", "formal shirt", "casual top", "nayi shirt",
-      "badlo", "pehen ke dekho", "virtual trial"
-    ]
-  },
-  {
-    id: "fitit_template_3",
-    name: "Innerwear",
-    stackId: "fitit",
-    imageUrl: "/images/fitit_template_3.webp",
-    prompt:
-      "Ensure the output figure's face and hairstyle matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. **OBJECTIVE: EXECUTE A TECHNICAL 'VIRTUAL TRY-ON' COMPOSITE.**\n\n**INPUT ANALYSIS:**\n*   **INPUT 1 (The User):** This image contains the definitive person. EVERY aspect of this person (face, hair, skin, body shape, proportions, pose) is the ABSOLUTE SOURCE OF TRUTH. It must be preserved with 100% fidelity.\n*   **INPUT 2 (The Garment):** This image is ONLY a reference for the clothing item. The person, background, and any other elements in this image are IRRELEVANT DATA and MUST BE COMPLETELY DISCARDED.\n\n**CORE MANDATE: ZERO FACIAL MODIFICATION. THIS IS NON-NEGOTIABLE.**\nThe face, head, and hair from INPUT 1 must be transferred to the output image with ZERO changes. This is not a blending operation. It is a strict copy-and-paste of the user's identity. Any influence from the face in INPUT 2 is a critical failure.\n\n**STEP-BY-STEP EXECUTION PROTOCOL:**\n1.  **PRE-PROCESSING:** Mentally isolate the innerwear/clothing item from INPUT 2. Discard every other pixel from INPUT 2, especially the person wearing it. You are now working with the user from INPUT 1 and the isolated garment.\n2.  **IDENTIFY TARGET AREA:** On the user from INPUT 1, identify the area covered by their current clothing. This is the only area that can be modified.\n3.  **COMPOSITE:** Layer the isolated garment from step 1 over the target area on the user from INPUT 1.\n4.  **ADAPT GARMENT:** Warp, resize, and adjust the lighting on the NEW GARMENT ONLY to fit the user's exact body shape, size, and pose from INPUT 1. The user's body CANNOT be changed to fit the garment.\n5.  **FINAL VERIFICATION:** Before outputting, verify that the face, head, hair, and all visible skin in the final image are a 100% pixel-identical match to INPUT 1.\n\n**OUTPUT:**\nCreate four output images from different angles: front (standing), 3/4 left (arms relaxed), 3/4 right, and a side view. Use a neutral studio background for all outputs.",
-    aspectRatio: "3:4",
-    keywords: [
-      "underwear", "bra", "panties", "vest", "baniyan", "inner", "lingerie",
-      "swimwear", "bikini", "boxers", "briefs", "undergarment", "kachha",
-      "inner wear", "pool wear", "beach wear", "swim suit", "swimming costume"
-    ]
-  },
-  {
-    id: "fitit_template_4",
-    name: "Watches",
-    stackId: "fitit",
-    imageUrl: "/images/fitit_template_4.webp",
-    prompt:
-      "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Using the selfie (user not wearing a watch) and the uploaded watch photo, generate four photorealistic try-on images of the user, clearly displaying the watch on their left wrist.\nShow: front (wrist in frame, hand relaxed), side (close-up on wrist with face visible), 3/4 left (adjusting the watch), and hand resting on table (focus on watch, face smiling).\nEnsure wrist proportions are natural, the watch is integrated perfectly, and faces remain consistent across all views.\nDo not alter skin tone or add blur.",
-    aspectRatio: "3:4",
-    keywords: [
-      "watch", "wrist watch", "smart watch", "ghadi", "time", "luxury watch",
-      "rolex", "accessory", "hand", "khalai", "timepiece", "analog", "digital",
-      "apple watch", "hath ki ghadi", "time dekhna", "jewellery"
-    ]
-  },
-  {
-    id: "fitit_template_5",
-    name: "Glasses",
-    stackId: "fitit",
-    imageUrl: "/images/fitit_template_5.webp",
-    prompt:
-      "Ensure the output figure's face matches sharply with the input figure's face, preserving the exact chin shape and jawline without rounding. Using the selfie and the uploaded glasses image, generate four crystal-clear studio portraits, each showing the user accurately wearing the glasses.\nShow: front on (head straight), slightly tilted down (natural reading pose), 3/4 left and 3/4 right (both natural smile).\nThe glasses must align precisely with the person’s face and eyes, reflections on the lenses should be natural, and there should be no blending artifacts.\nAll outputs must feature sharp facial likeness and realistic glass refraction.",
-    aspectRatio: "3:4",
-    keywords: [
-      "glasses", "sunglasses", "spectacles", "specs", "chashma", "goggles",
-      "eyewear", "frames", "shades", "dhup ka chashma", "nazar ka chashma",
-      "cool specs", "rayban", "lens", "aankh", "eye", "fashion glasses"
-    ]
-  },
+    prompt: {
+      "task": "virtual_try_on_with_body_completion",
+      "model": "gemini-3.1-flash-image-preview",
+      "inputs": {
+        "person_image": {
+          "type": "image",
+          "description": "Input 1: User image (can be selfie, half-body, or full-body). Identity must be preserved."
+        },
+        "garment_image": {
+          "type": "image",
+          "description": "Input 2: Garment image to be tried on."
+        }
+      },
+      "instructions": {
+        "objective": "Generate a single, full-body, photorealistic try-on image (front view only) of the user wearing the garment, even if the input person image is not full-body.",
+        
+        "identity_preservation": [
+          "Strictly preserve the user's face, hairstyle, skin tone, and identity",
+          "Do not alter facial structure or expression"
+        ],
+
+        "body_completion": [
+          "If the input image is not full-body, intelligently generate the missing body parts",
+          "Ensure the generated body is anatomically correct and proportionate to the visible parts",
+          "Infer natural pose consistent with the upper body",
+          "Maintain realistic human proportions (height, limb ratios)"
+        ],
+
+        "garment_fitting": [
+          "Fit the garment naturally to the generated full body",
+          "Ensure proper scaling, alignment, and draping",
+          "Preserve garment texture, color, stitching, and design details",
+          "Simulate realistic fabric physics (folds, tension, gravity)"
+        ],
+
+        "consistency_rules": [
+          "Match lighting, shadows, and perspective with the original image",
+          "Keep background consistent or extend it naturally if needed",
+          "Ensure no visible artifacts, distortions, or identity drift"
+        ],
+
+        "output_style": {
+          "type": "photorealistic",
+          "framing": "full-body",
+          "view": "front-view-only",
+          "layout": "single-image",
+          "quality": "high-resolution"
+        }
+      },
+
+      "output": {
+        "type": "image",
+        "description": "Full-body try-on image of the user wearing the garment with preserved identity"
+      }
+    },
+    aspectRatio: "3:4"
+  }
 ];
 
 const aestheticsTemplates: Template[] = [

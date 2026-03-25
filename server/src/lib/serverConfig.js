@@ -16,7 +16,7 @@ export const UPLOAD_CONFIG = {
 };
 
 export const GEMINI_CONFIG = {
-  MODEL_NAME: 'gemini-2.5-flash-image',
+  MODEL_NAME: 'gemini-3.1-flash-image-preview',
   MAX_PROMPT_LENGTH: 100000,
 };
 

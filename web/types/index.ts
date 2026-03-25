@@ -25,6 +25,10 @@ export interface User {
   colors: string[];
   styles: string[];
   fit: string | null;
+  bust: number | null;
+  waist: number | null;
+  hip: number | null;
+  measurementUnit: string | null;
   bodyType: string | null;
   skinTone: string | null;
   avatarUrl: string | null;
@@ -47,6 +51,10 @@ export interface UserProfile {
   colors: string[];
   styles: string[];
   fit: string | null;
+  bust: number | null;
+  waist: number | null;
+  hip: number | null;
+  measurementUnit: string | null;
   bodyType: string | null;
   skinTone: string | null;
   avatarUrl: string | null;

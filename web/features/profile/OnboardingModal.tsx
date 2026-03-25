@@ -10,7 +10,7 @@ interface OnboardingModalProps {
   userName?: string;
 }
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5;
+type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 const AGE_RANGES = [
   { id: 'gen_alpha', label: 'Gen Alpha', desc: '2013 - Present', image: '/images/onboarding/gen/gen_alpha.webp' },
@@ -72,10 +72,59 @@ const BODY_TYPES = [
 const STEP_INFO = [
   { title: 'Your color palette', subtitle: 'Pick your favorite colors' },
   { title: 'Style DNA', subtitle: 'What\'s your everyday mood? Select all that resonate' },
-  { title: 'Perfect fit', subtitle: 'Help us recommend the right sizes for you' },
+  { title: 'Your fit size', subtitle: 'Enter your measurements or pick your size' },
+  { title: 'Body profile', subtitle: 'Help us understand your body shape' },
   { title: 'Tell us about yourself', subtitle: 'Let\'s personalize your fashion journey' },
   { title: 'Your location', subtitle: 'For local fashion trends and delivery estimates' },
 ];
+
+// Standard size chart (inches) — bust / waist / hip ranges
+const SIZE_CHART: Record<string, { bust: [number, number]; waist: [number, number]; hip: [number, number] }> = {
+  xs:  { bust: [30, 32], waist: [24, 26], hip: [33, 35] },
+  s:   { bust: [33, 35], waist: [27, 29], hip: [36, 38] },
+  m:   { bust: [36, 38], waist: [30, 32], hip: [39, 41] },
+  l:   { bust: [39, 41], waist: [33, 35], hip: [42, 44] },
+  xl:  { bust: [42, 44], waist: [36, 38], hip: [45, 47] },
+  xxl: { bust: [45, 47], waist: [39, 41], hip: [48, 50] },
+};
+
+function sizeMedian(sizeId: string): { bust: number; waist: number; hip: number } {
+  const s = SIZE_CHART[sizeId];
+  if (!s) return { bust: 0, waist: 0, hip: 0 };
+  return {
+    bust: Math.round(((s.bust[0] + s.bust[1]) / 2) * 10) / 10,
+    waist: Math.round(((s.waist[0] + s.waist[1]) / 2) * 10) / 10,
+    hip: Math.round(((s.hip[0] + s.hip[1]) / 2) * 10) / 10,
+  };
+}
+
+function mapMeasurementsToSize(bust: number, waist: number, hip: number, unit: string): string | null {
+  // Convert cm to inches for comparison
+  const b = unit === 'cm' ? bust / 2.54 : bust;
+  const w = unit === 'cm' ? waist / 2.54 : waist;
+  const h = unit === 'cm' ? hip / 2.54 : hip;
+  if (!b && !w && !h) return null;
+
+  let bestSize: string | null = null;
+  let bestDist = Infinity;
+  for (const [sizeId, ranges] of Object.entries(SIZE_CHART)) {
+    const mid = sizeMedian(sizeId);
+    let dist = 0;
+    let count = 0;
+    if (b > 0) { dist += Math.abs(b - mid.bust); count++; }
+    if (w > 0) { dist += Math.abs(w - mid.waist); count++; }
+    if (h > 0) { dist += Math.abs(h - mid.hip); count++; }
+    if (count === 0) continue;
+    dist /= count;
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestSize = sizeId;
+    }
+  }
+  return bestSize;
+}
+
+
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
@@ -95,6 +144,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     fit: string | null;
     bodyType: string | null;
     skinTone: string | null;
+    bust: number | null;
+    waist: number | null;
+    hip: number | null;
+    measurementUnit: string | null;
   }>(null);
   const [cachedAddress, setCachedAddress] = useState<null | {
     addressLine: string;
@@ -115,8 +168,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   // Step 2
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
 
-  // Step 3
+  // Step 3 – Fit size & measurements
   const [fit, setFit] = useState<string | null>(null);
+  const [bustInput, setBustInput] = useState('');
+  const [waistInput, setWaistInput] = useState('');
+  const [hipInput, setHipInput] = useState('');
+  const [measurementUnit, setMeasurementUnit] = useState<'in' | 'cm'>('in');
+  const [focusedMeasurement, setFocusedMeasurement] = useState<'bust' | 'waist' | 'hip' | null>(null);
+  const fromSizeClickRef = useRef(false);
+
+  // Step 4 – Body profile
   const [bodyType, setBodyType] = useState<string | null>(null);
   const [skinTone, setSkinTone] = useState<string | null>(null);
 
@@ -133,6 +194,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const autocompleteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autocompleteAbortRef = useRef<AbortController | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -156,6 +218,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         setFit(profile?.fit || null);
         setBodyType(profile?.bodyType || null);
         setSkinTone(profile?.skinTone || null);
+        setBustInput(profile?.bust != null ? String(profile.bust) : '');
+        setWaistInput(profile?.waist != null ? String(profile.waist) : '');
+        setHipInput(profile?.hip != null ? String(profile.hip) : '');
+        setMeasurementUnit((profile?.measurementUnit === 'cm' ? 'cm' : 'in') as 'in' | 'cm');
         setAddress(addressLine);
         setCity(defaultAddress?.city ?? null);
         setState(defaultAddress?.state ?? null);
@@ -170,6 +236,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           fit: profile?.fit || null,
           bodyType: profile?.bodyType || null,
           skinTone: profile?.skinTone || null,
+          bust: profile?.bust ?? null,
+          waist: profile?.waist ?? null,
+          hip: profile?.hip ?? null,
+          measurementUnit: profile?.measurementUnit ?? null,
         });
         setCachedAddress(defaultAddress ? {
           addressLine: defaultAddress.addressLine || '',
@@ -182,21 +252,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
         const hasColors = (profile?.colors || []).length > 0;
         const hasStyles = (profile?.styles || []).length > 0;
-        const hasFitProfile = !!profile?.fit && !!profile?.bodyType && !!profile?.skinTone;
+        const hasFit = !!profile?.fit;
+        const hasBodyProfile = !!profile?.bodyType && !!profile?.skinTone;
         const hasName = !!(profile?.name || userName || '').trim();
         const hasLocation = !!addressLine;
 
-        let nextStep: OnboardingStep = 5;
+        let nextStep: OnboardingStep = 6;
         if (!hasColors) {
           nextStep = 1;
         } else if (!hasStyles) {
           nextStep = 2;
-        } else if (!hasFitProfile) {
+        } else if (!hasFit) {
           nextStep = 3;
-        } else if (!hasName) {
+        } else if (!hasBodyProfile) {
           nextStep = 4;
-        } else if (!hasLocation) {
+        } else if (!hasName) {
           nextStep = 5;
+        } else if (!hasLocation) {
+          nextStep = 6;
         }
 
         setStep(nextStep);
@@ -211,6 +284,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           fit: null,
           bodyType: null,
           skinTone: null,
+          bust: null,
+          waist: null,
+          hip: null,
+          measurementUnit: null,
         });
       }
     };
@@ -231,6 +308,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     const timer = setTimeout(() => setSuccess(null), 3000);
     return () => clearTimeout(timer);
   }, [success]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (contentScrollRef.current) {
+      contentScrollRef.current.scrollTop = 0;
+    }
+  }, [isOpen, step]);
 
   const toggleColor = useCallback((colorId: string) => {
     setSelectedColors(prev => {
@@ -373,6 +457,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setFit(profile?.fit || null);
       setBodyType(profile?.bodyType || null);
       setSkinTone(profile?.skinTone || null);
+      setBustInput(profile?.bust != null ? String(profile.bust) : '');
+      setWaistInput(profile?.waist != null ? String(profile.waist) : '');
+      setHipInput(profile?.hip != null ? String(profile.hip) : '');
+      setMeasurementUnit((profile?.measurementUnit === 'cm' ? 'cm' : 'in') as 'in' | 'cm');
       setAddress(addressLine);
       setCity(defaultAddress?.city ?? null);
       setState(defaultAddress?.state ?? null);
@@ -388,6 +476,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         fit: profile?.fit || null,
         bodyType: profile?.bodyType || null,
         skinTone: profile?.skinTone || null,
+        bust: profile?.bust ?? null,
+        waist: profile?.waist ?? null,
+        hip: profile?.hip ?? null,
+        measurementUnit: profile?.measurementUnit ?? null,
       });
       setCachedAddress(defaultAddress ? {
         addressLine: defaultAddress.addressLine || '',
@@ -412,12 +504,55 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     return aSorted.every((val, idx) => val === bSorted[idx]);
   };
 
+  // Auto-map measurements → size when all three are filled
+  useEffect(() => {
+    if (fromSizeClickRef.current) { fromSizeClickRef.current = false; return; }
+    const b = parseFloat(bustInput);
+    const w = parseFloat(waistInput);
+    const h = parseFloat(hipInput);
+    if (b > 0 && w > 0 && h > 0) {
+      const mapped = mapMeasurementsToSize(b, w, h, measurementUnit);
+      if (mapped) setFit(mapped);
+    }
+  }, [bustInput, waistInput, hipInput, measurementUnit]);
+
+  const handleSizeClick = useCallback((sizeId: string) => {
+    if (fit === sizeId) { setFit(null); setBustInput(''); setWaistInput(''); setHipInput(''); return; }
+    setFit(sizeId);
+    fromSizeClickRef.current = true;
+    const med = sizeMedian(sizeId);
+    if (measurementUnit === 'cm') {
+      setBustInput(String(Math.round(med.bust * 2.54)));
+      setWaistInput(String(Math.round(med.waist * 2.54)));
+      setHipInput(String(Math.round(med.hip * 2.54)));
+    } else {
+      setBustInput(String(med.bust));
+      setWaistInput(String(med.waist));
+      setHipInput(String(med.hip));
+    }
+  }, [fit, measurementUnit]);
+
+  const handleUnitToggle = useCallback((newUnit: 'in' | 'cm') => {
+    if (newUnit === measurementUnit) return;
+    const convert = (val: string) => {
+      const n = parseFloat(val);
+      if (!n) return '';
+      return newUnit === 'cm' ? String(Math.round(n * 2.54)) : String(Math.round(n / 2.54 * 10) / 10);
+    };
+    fromSizeClickRef.current = true;
+    setBustInput(convert(bustInput));
+    setWaistInput(convert(waistInput));
+    setHipInput(convert(hipInput));
+    setMeasurementUnit(newUnit);
+  }, [measurementUnit, bustInput, waistInput, hipInput]);
+
   const stepHasRequired = useCallback(() => {
     if (step === 1) return selectedColors.length > 0;
     if (step === 2) return selectedStyles.length > 0;
-    if (step === 3) return !!fit && !!bodyType && !!skinTone;
-    if (step === 4) return !!(name || '').trim();
-    if (step === 5) return !!address.trim();
+    if (step === 3) return !!fit;
+    if (step === 4) return !!bodyType && !!skinTone;
+    if (step === 5) return !!(name || '').trim();
+    if (step === 6) return !!address.trim();
     return true;
   }, [step, selectedColors.length, selectedStyles.length, fit, bodyType, skinTone, name, address]);
 
@@ -441,14 +576,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             hasWork = true;
           }
           break;
-        case 3:
+        case 3: {
           if (!fit) { setError('Select a fit size'); setIsLoading(false); return false; }
-          if (!bodyType) { setError('Select a body type'); setIsLoading(false); return false; }
-          if (!skinTone) { setError('Select a skin tone'); setIsLoading(false); return false; }
           if (!cachedProfile || fit !== cachedProfile.fit) {
             updates.fit = fit;
             hasWork = true;
           }
+          const bustVal = parseFloat(bustInput) || null;
+          const waistVal = parseFloat(waistInput) || null;
+          const hipVal = parseFloat(hipInput) || null;
+          if (bustVal !== (cachedProfile?.bust ?? null)) { updates.bust = bustVal; hasWork = true; }
+          if (waistVal !== (cachedProfile?.waist ?? null)) { updates.waist = waistVal; hasWork = true; }
+          if (hipVal !== (cachedProfile?.hip ?? null)) { updates.hip = hipVal; hasWork = true; }
+          if (measurementUnit !== (cachedProfile?.measurementUnit ?? 'in')) { updates.measurementUnit = measurementUnit; hasWork = true; }
+          break;
+        }
+        case 4:
+          if (!bodyType) { setError('Select a body type'); setIsLoading(false); return false; }
+          if (!skinTone) { setError('Select a skin tone'); setIsLoading(false); return false; }
           if (!cachedProfile || bodyType !== cachedProfile.bodyType) {
             updates.bodyType = bodyType;
             hasWork = true;
@@ -458,7 +603,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             hasWork = true;
           }
           break;
-        case 4: {
+        case 5: {
           const trimmedName = (name || '').trim();
           if (!trimmedName) { setError('Name is required'); setIsLoading(false); return false; }
           if (!cachedProfile || trimmedName !== (cachedProfile.name || '')) {
@@ -471,7 +616,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           }
           break;
         }
-        case 5:
+        case 6:
           if (address.trim()) {
             const sameAddress = cachedAddress
               && cachedAddress.addressLine === address.trim()
@@ -526,6 +671,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           fit: result.profile.fit || null,
           bodyType: result.profile.bodyType || null,
           skinTone: result.profile.skinTone || null,
+          bust: result.profile.bust ?? null,
+          waist: result.profile.waist ?? null,
+          hip: result.profile.hip ?? null,
+          measurementUnit: result.profile.measurementUnit ?? null,
         });
         setSuccess('Saved');
       }
@@ -536,13 +685,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       setIsLoading(false);
       return false;
     }
-  }, [step, name, ageRange, selectedColors, selectedStyles, fit, bodyType, skinTone, address, city, state, pincode, lat, lng]);
+  }, [step, name, ageRange, selectedColors, selectedStyles, fit, bodyType, skinTone, bustInput, waistInput, hipInput, measurementUnit, address, city, state, pincode, lat, lng]);
 
   const handleNext = useCallback(async () => {
     const saved = await saveCurrentStep();
     if (!saved) return;
 
-    if (step < 5) {
+    if (step < 6) {
       setStep((step + 1) as OnboardingStep);
     } else {
       onComplete();
@@ -555,7 +704,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleSkip = useCallback(async () => {
     // Personal details need a name before skipping
-    if (step === 4) {
+    if (step === 5) {
       if (!(name || '').trim()) {
         setError('Name is required before skipping');
         return;
@@ -563,18 +712,27 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       const saved = await saveCurrentStep();
       if (!saved) return;
     }
-    if (step < 5) {
+    if (step < 6) {
       setStep((step + 1) as OnboardingStep);
     } else {
+      setIsLoading(true);
+      try {
+        await profileService.updateProfile({ isOnboardingComplete: true });
+      } catch (err: any) {
+        setError(err?.message || 'Failed to skip onboarding');
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(false);
       onComplete();
     }
   }, [step, name, saveCurrentStep, onComplete]);
 
   if (!isOpen) return null;
 
-  const canSkip = step === 2 || step === 4 || step === 5;
+  const canSkip = step === 2 || step === 3 || step === 5 || step === 6;
 
-  const progress = (step / 5) * 100;
+  const progress = (step / 6) * 100;
   const continueDisabled = isLoading || !stepHasRequired();
 
   return (
@@ -621,7 +779,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {/* Progress */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                {[1, 2, 3, 4, 5].map((s) => (
+                {[1, 2, 3, 4, 5, 6].map((s) => (
                   <div
                     key={s}
                     className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-all ${
@@ -652,7 +810,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           </div>
 
           {/* Content area - scrollable */}
-          <div className="flex-1 overflow-y-auto px-6 pb-2 scrollbar-hide">
+          <div ref={contentScrollRef} className="flex-1 overflow-y-auto px-6 pb-2 scrollbar-hide">
             {error && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
@@ -666,8 +824,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
 
-            {/* Step 4: Personal Info */}
-            {step === 4 && (
+            {/* Step 5: Personal Info */}
+            {step === 5 && (
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1">
@@ -800,16 +958,105 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
 
-            {/* Step 3: Fit & Body Type */}
+            {/* Step 3: Fit Size & Measurements */}
             {step === 3 && (
               <div className="space-y-5">
+                {/* Measurements */}
+                <div className="space-y-3">
+                  {/* Unit toggle */}
+                  <div className="flex items-center gap-1 justify-end">
+                    {(['in', 'cm'] as const).map((u) => (
+                      <button
+                        key={u}
+                        onClick={() => handleUnitToggle(u)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          measurementUnit === u
+                            ? 'bg-[#c9a962]/15 text-[#c9a962] border border-[#c9a962]/40'
+                            : 'bg-[#0a0a0a] text-[#6b6b6b] border border-[#2a2a2a] hover:border-[#3a3a3a]'
+                        }`}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Bust */}
+                  <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                    <img src="/images/onboarding/measurements/bust.webp" alt="Bust measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
+                    <div className="flex-1">
+                      <label className="text-[11px] text-[#6b6b6b]">Bust</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={bustInput}
+                        onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setBustInput(v); }}
+                        onFocus={() => setFocusedMeasurement('bust')}
+                        onBlur={() => setFocusedMeasurement(null)}
+                        placeholder={measurementUnit === 'in' ? 'e.g. 36' : 'e.g. 91'}
+                        className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                      />
+                    </div>
+                    <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+                  </div>
+
+                  {/* Waist */}
+                  <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                    <img src="/images/onboarding/measurements/waist.webp" alt="Waist measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
+                    <div className="flex-1">
+                      <label className="text-[11px] text-[#6b6b6b]">Waist</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={waistInput}
+                        onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setWaistInput(v); }}
+                        onFocus={() => setFocusedMeasurement('waist')}
+                        onBlur={() => setFocusedMeasurement(null)}
+                        placeholder={measurementUnit === 'in' ? 'e.g. 30' : 'e.g. 76'}
+                        className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                      />
+                    </div>
+                    <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+                  </div>
+
+                  {/* Hip */}
+                  <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                    <img src="/images/onboarding/measurements/hip.webp" alt="Hip measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
+                    <div className="flex-1">
+                      <label className="text-[11px] text-[#6b6b6b]">Hip</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={hipInput}
+                        onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setHipInput(v); }}
+                        onFocus={() => setFocusedMeasurement('hip')}
+                        onBlur={() => setFocusedMeasurement(null)}
+                        placeholder={measurementUnit === 'in' ? 'e.g. 40' : 'e.g. 102'}
+                        className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                      />
+                    </div>
+                    <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-[#525252] ml-1">Measurements are optional — you can pick a size and skip them.</p>
+
+                {/* Separator */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#2a2a2a]" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-[#121212] px-3 text-[#525252]">or pick your size</span>
+                  </div>
+                </div>
+
+                {/* Size buttons */}
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">What size fits you best? <span className="text-red-400">*</span></label>
                   <div className="grid grid-cols-3 gap-2">
                     {FIT_SIZES.map((size) => (
                       <button
                         key={size.id}
-                        onClick={() => setFit(fit === size.id ? null : size.id)}
+                        onClick={() => handleSizeClick(size.id)}
                         className={`h-12 rounded-xl border font-semibold text-sm transition-all ${
                           fit === size.id
                             ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
@@ -821,7 +1068,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
 
+            {/* Step 4: Body Type & Skin Tone */}
+            {step === 4 && (
+              <div className="space-y-5">
                 <div>
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
                   <div className="grid grid-cols-3 gap-3">
@@ -873,8 +1125,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
 
-            {/* Step 5: Location */}
-            {step === 5 && (
+            {/* Step 6: Location */}
+            {step === 6 && (
               <div className="space-y-4">
                 <button
                   onClick={handleGetLocation}
@@ -994,7 +1246,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     </svg>
                     Saving
                   </span>
-                ) : step === 5 ? (
+                ) : step === 6 ? (
                   'Complete Setup'
                 ) : (
                   'Continue'
