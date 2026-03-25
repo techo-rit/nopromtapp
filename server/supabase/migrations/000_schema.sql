@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   colors                 text[]      DEFAULT '{}',
   styles                 text[]      DEFAULT '{}',
   fit                    text,
+  bust                   numeric,       -- measurement in inches
+  waist                  numeric,       -- measurement in inches
+  hip                    numeric,       -- measurement in inches
+  measurement_unit       text        DEFAULT 'in' CHECK (measurement_unit IN ('in', 'cm') OR measurement_unit IS NULL),
   body_type              text,
   skin_tone              text        CHECK (skin_tone IN ('fair', 'medium', 'dark') OR skin_tone IS NULL),
   is_onboarding_complete boolean     NOT NULL DEFAULT false,

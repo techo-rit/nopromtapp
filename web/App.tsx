@@ -79,7 +79,7 @@ const App: React.FC = () => {
 
   // --- Onboarding ---
   const [onboardingPercent, setOnboardingPercent] = useState<number>(100);
-  const [onboardingSteps, setOnboardingSteps] = useState<number>(5);
+  const [onboardingSteps, setOnboardingSteps] = useState<number>(6);
 
   // --- Search (debounced to prevent O(n) search on every keystroke) ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -158,13 +158,13 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user) {
       setOnboardingPercent(100);
-      setOnboardingSteps(5);
+      setOnboardingSteps(6);
       return;
     }
     profileService.getProfile().then((data) => {
       if (data) {
         setOnboardingPercent(data.onboardingPercent ?? 100);
-        setOnboardingSteps(data.onboardingSteps ?? 5);
+        setOnboardingSteps(data.onboardingSteps ?? 6);
         // Auto-show onboarding after first login if not complete
         if (data.profile && !data.profile.isOnboardingComplete) {
           openOnboardingModal();

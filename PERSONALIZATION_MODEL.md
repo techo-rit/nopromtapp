@@ -193,7 +193,7 @@ CREATE TABLE public.user_style_vector (
   
   template_affinities jsonb NOT NULL DEFAULT '{}',
     -- Top 20 template IDs with scores
-    -- { "clothes_template_1": 0.95, "fitit_template_2": 0.88, ... }
+    -- { "clothes_template_1": 0.95, "fitit_template_1": 0.88, ... }
   
   -- Category tags extracted from behavioral pattern
   inferred_tags text[] DEFAULT '{}',

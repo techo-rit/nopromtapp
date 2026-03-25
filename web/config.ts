@@ -23,7 +23,7 @@ export const CONFIG = {
     ORDER: { requests: 10, windowSeconds: 60 },
   },
   GEMINI: {
-    MODEL_NAME: "gemini-2.5-flash-image",
+    MODEL_NAME: "gemini-3.1-flash-image-preview",
     MAX_PROMPT_LENGTH: 100000,
   },
   MEDIAPIPE: {

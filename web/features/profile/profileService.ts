@@ -82,6 +82,11 @@ export const profileService = {
     fit: string;
     bodyType: string;
     skinTone: string;
+    bust: number | null;
+    waist: number | null;
+    hip: number | null;
+    measurementUnit: string;
+    isOnboardingComplete: boolean;
   }>): Promise<{ profile: UserProfile; onboardingSteps: number; onboardingPercent: number }> {
     const resp = await fetch(apiUrl('/api/profile'), {
       method: 'PUT',
