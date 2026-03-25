@@ -164,6 +164,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   // Step 1
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [colorSearch, setColorSearch] = useState('');
 
   // Step 2
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
@@ -880,8 +881,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">
                     Favorite colors <span className="text-red-400">*</span> <span className="text-[#525252]">(pick up to 3)</span>
                   </label>
+                  <div className="relative mb-3">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#525252]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" /></svg>
+                    <input
+                      type="text"
+                      value={colorSearch}
+                      onChange={(e) => setColorSearch(e.target.value)}
+                      placeholder="Search colors..."
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] text-sm text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#3a3a3a]"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {PRIMARY_COLORS.map((color) => {
+                    {PRIMARY_COLORS.filter((color) => color.label.toLowerCase().includes(colorSearch.toLowerCase())).map((color) => {
                       const isSelected = selectedColors.includes(color.id);
                       const isDisabled = !isSelected && selectedColors.length >= 3;
                       return (
@@ -1050,23 +1061,29 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   </div>
                 </div>
 
-                {/* Size buttons */}
-                <div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {FIT_SIZES.map((size) => (
+                {/* Size cards */}
+                <div className="grid grid-cols-2 gap-2">
+                  {FIT_SIZES.map((size) => {
+                    const ranges = SIZE_CHART[size.id];
+                    return (
                       <button
                         key={size.id}
                         onClick={() => handleSizeClick(size.id)}
-                        className={`h-12 rounded-xl border font-semibold text-sm transition-all ${
+                        className={`rounded-xl border p-3 text-left transition-all ${
                           fit === size.id
-                            ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'
+                            ? 'border-[#c9a962] bg-[#c9a962]/10'
+                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'
                         }`}
                       >
-                        {size.label}
+                        <span className={`block text-sm font-semibold mb-1 ${fit === size.id ? 'text-[#c9a962]' : 'text-[#e0e0e0]'}`}>{size.label}</span>
+                        <div className={`text-[10px] leading-relaxed ${fit === size.id ? 'text-[#c9a962]/70' : 'text-[#606060]'}`}>
+                          <span>B {ranges.bust[0]}-{ranges.bust[1]}</span>{' · '}
+                          <span>W {ranges.waist[0]}-{ranges.waist[1]}</span>{' · '}
+                          <span>H {ranges.hip[0]}-{ranges.hip[1]}</span>
+                        </div>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

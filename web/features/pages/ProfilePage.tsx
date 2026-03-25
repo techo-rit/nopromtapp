@@ -63,6 +63,46 @@ const BODY_TYPES = [
   { id: 'round', label: 'Round', image: '/images/onboarding/body_types/round.webp' },
 ];
 
+// Standard size chart (inches) — bust / waist / hip ranges
+const SIZE_CHART: Record<string, { bust: [number, number]; waist: [number, number]; hip: [number, number] }> = {
+  xs:  { bust: [30, 32], waist: [24, 26], hip: [33, 35] },
+  s:   { bust: [33, 35], waist: [27, 29], hip: [36, 38] },
+  m:   { bust: [36, 38], waist: [30, 32], hip: [39, 41] },
+  l:   { bust: [39, 41], waist: [33, 35], hip: [42, 44] },
+  xl:  { bust: [42, 44], waist: [36, 38], hip: [45, 47] },
+  xxl: { bust: [45, 47], waist: [39, 41], hip: [48, 50] },
+};
+
+function sizeMedian(sizeId: string): { bust: number; waist: number; hip: number } {
+  const s = SIZE_CHART[sizeId];
+  if (!s) return { bust: 0, waist: 0, hip: 0 };
+  return {
+    bust: Math.round(((s.bust[0] + s.bust[1]) / 2) * 10) / 10,
+    waist: Math.round(((s.waist[0] + s.waist[1]) / 2) * 10) / 10,
+    hip: Math.round(((s.hip[0] + s.hip[1]) / 2) * 10) / 10,
+  };
+}
+
+function mapMeasurementsToSize(bust: number, waist: number, hip: number, unit: string): string | null {
+  const b = unit === 'cm' ? bust / 2.54 : bust;
+  const w = unit === 'cm' ? waist / 2.54 : waist;
+  const h = unit === 'cm' ? hip / 2.54 : hip;
+  if (!b && !w && !h) return null;
+  let bestSize: string | null = null;
+  let bestDist = Infinity;
+  for (const [sizeId] of Object.entries(SIZE_CHART)) {
+    const mid = sizeMedian(sizeId);
+    let dist = 0, count = 0;
+    if (b > 0) { dist += Math.abs(b - mid.bust); count++; }
+    if (w > 0) { dist += Math.abs(w - mid.waist); count++; }
+    if (h > 0) { dist += Math.abs(h - mid.hip); count++; }
+    if (count === 0) continue;
+    dist /= count;
+    if (dist < bestDist) { bestDist = dist; bestSize = sizeId; }
+  }
+  return bestSize;
+}
+
 function formatDate(iso: string): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -97,16 +137,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     fit: string;
     bodyType: string;
     skinTone: string;
+    bust: number | null;
+    waist: number | null;
+    hip: number | null;
+    measurementUnit: string;
   }>(null);
 
   // Form fields
   const [name, setName] = useState(user.name || '');
   const [ageRange, setAgeRange] = useState(user.ageRange || '');
   const [colors, setColors] = useState<string[]>(user.colors || []);
+  const [colorSearch, setColorSearch] = useState('');
   const [styles, setStyles] = useState<string[]>(user.styles || []);
   const [fit, setFit] = useState(user.fit || '');
   const [bodyType, setBodyType] = useState(user.bodyType || '');
   const [skinTone, setSkinTone] = useState(user.skinTone || '');
+  const [bustInput, setBustInput] = useState(user.bust != null ? String(user.bust) : '');
+  const [waistInput, setWaistInput] = useState(user.waist != null ? String(user.waist) : '');
+  const [hipInput, setHipInput] = useState(user.hip != null ? String(user.hip) : '');
+  const [measurementUnit, setMeasurementUnit] = useState<'in' | 'cm'>((user.measurementUnit === 'cm' ? 'cm' : 'in') as 'in' | 'cm');
+  const fromSizeClickRef = useRef(false);
   const accountPhone = stripCountryCode(user.phone || '');
 
   // Addresses
@@ -151,6 +201,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setFit(user.fit || '');
     setBodyType(user.bodyType || '');
     setSkinTone(user.skinTone || '');
+    setBustInput(user.bust != null ? String(user.bust) : '');
+    setWaistInput(user.waist != null ? String(user.waist) : '');
+    setHipInput(user.hip != null ? String(user.hip) : '');
+    setMeasurementUnit((user.measurementUnit === 'cm' ? 'cm' : 'in') as 'in' | 'cm');
     setCachedProfile({
       name: (user.name || '').trim(),
       ageRange: user.ageRange || '',
@@ -159,6 +213,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       fit: user.fit || '',
       bodyType: user.bodyType || '',
       skinTone: user.skinTone || '',
+      bust: user.bust ?? null,
+      waist: user.waist ?? null,
+      hip: user.hip ?? null,
+      measurementUnit: user.measurementUnit || 'in',
     });
     loadAddresses();
     loadGallery();
@@ -180,6 +238,48 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       setIsGalleryLoading(false);
     }
   }, []);
+
+  // Auto-map measurements → size when all three are filled
+  useEffect(() => {
+    if (fromSizeClickRef.current) { fromSizeClickRef.current = false; return; }
+    const b = parseFloat(bustInput);
+    const w = parseFloat(waistInput);
+    const h = parseFloat(hipInput);
+    if (b > 0 && w > 0 && h > 0) {
+      const mapped = mapMeasurementsToSize(b, w, h, measurementUnit);
+      if (mapped) setFit(mapped);
+    }
+  }, [bustInput, waistInput, hipInput, measurementUnit]);
+
+  const handleSizeClick = useCallback((sizeId: string) => {
+    if (fit === sizeId) { setFit(''); setBustInput(''); setWaistInput(''); setHipInput(''); return; }
+    setFit(sizeId);
+    fromSizeClickRef.current = true;
+    const med = sizeMedian(sizeId);
+    if (measurementUnit === 'cm') {
+      setBustInput(String(Math.round(med.bust * 2.54)));
+      setWaistInput(String(Math.round(med.waist * 2.54)));
+      setHipInput(String(Math.round(med.hip * 2.54)));
+    } else {
+      setBustInput(String(med.bust));
+      setWaistInput(String(med.waist));
+      setHipInput(String(med.hip));
+    }
+  }, [fit, measurementUnit]);
+
+  const handleUnitToggle = useCallback((newUnit: 'in' | 'cm') => {
+    if (newUnit === measurementUnit) return;
+    const convert = (val: string) => {
+      const n = parseFloat(val);
+      if (!n) return '';
+      return newUnit === 'cm' ? String(Math.round(n * 2.54)) : String(Math.round(n / 2.54 * 10) / 10);
+    };
+    fromSizeClickRef.current = true;
+    setBustInput(convert(bustInput));
+    setWaistInput(convert(waistInput));
+    setHipInput(convert(hipInput));
+    setMeasurementUnit(newUnit);
+  }, [measurementUnit, bustInput, waistInput, hipInput]);
 
   const handleDeleteGeneration = useCallback(async (id: string) => {
     setDeletingId(id);
@@ -233,6 +333,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       }
 
       const trimmedName = name.trim();
+      const bustVal = parseFloat(bustInput) || null;
+      const waistVal = parseFloat(waistInput) || null;
+      const hipVal = parseFloat(hipInput) || null;
       const hasChanges = !cachedProfile
         || trimmedName !== cachedProfile.name
         || (ageRange || '') !== cachedProfile.ageRange
@@ -240,7 +343,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         || !arraysEqual(styles, cachedProfile.styles)
         || fit !== cachedProfile.fit
         || bodyType !== cachedProfile.bodyType
-        || skinTone !== cachedProfile.skinTone;
+        || skinTone !== cachedProfile.skinTone
+        || bustVal !== (cachedProfile.bust ?? null)
+        || waistVal !== (cachedProfile.waist ?? null)
+        || hipVal !== (cachedProfile.hip ?? null)
+        || measurementUnit !== (cachedProfile.measurementUnit || 'in');
 
       if (!hasChanges) {
       setSuccess('No changes to save');
@@ -259,6 +366,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       updates.fit = fit;
       updates.bodyType = bodyType;
       updates.skinTone = skinTone;
+      updates.bust = bustVal;
+      updates.waist = waistVal;
+      updates.hip = hipVal;
+      updates.measurementUnit = measurementUnit;
 
       await profileService.updateProfile(updates);
       setSuccess('Profile updated successfully');
@@ -270,6 +381,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         fit,
         bodyType,
         skinTone,
+        bust: bustVal,
+        waist: waistVal,
+        hip: hipVal,
+        measurementUnit,
       });
       onProfileUpdate();
       setTimeout(() => setSuccess(null), 3000);
@@ -279,7 +394,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [name, ageRange, colors, styles, fit, bodyType, skinTone, cachedProfile, onProfileUpdate]);
+  }, [name, ageRange, colors, styles, fit, bodyType, skinTone, bustInput, waistInput, hipInput, measurementUnit, cachedProfile, onProfileUpdate]);
 
   const handleNewAddressLocationGet = useCallback(async () => {
     setNewAddressLocationLoading(true);
@@ -984,8 +1099,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             
             <div>
               <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Favorite colors <span className="text-red-400">*</span> (up to 3)</label>
+              <div className="relative mb-3">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#525252]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" /></svg>
+                <input
+                  type="text"
+                  value={colorSearch}
+                  onChange={(e) => setColorSearch(e.target.value)}
+                  placeholder="Search colors..."
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] text-sm text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#3a3a3a]"
+                />
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {PRIMARY_COLORS.map((c) => {
+                {PRIMARY_COLORS.filter((c) => c.label.toLowerCase().includes(colorSearch.toLowerCase())).map((c) => {
                   const sel = colors.includes(c.id);
                   const dis = !sel && colors.length >= 3;
                   return (
@@ -1032,23 +1157,120 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </div>
         </section>
 
-        {/* Section: Fit, Body & Skin Tone */}
+        {/* Section: Fit Size & Measurements */}
         <section className="mb-6">
           <h2 className="text-sm font-semibold text-[#c9a962] mb-3 flex items-center gap-2">
-            <span>📐</span> Fit, Body Type & Skin Tone
+            <span>📐</span> Fit Size
           </h2>
           <div className="space-y-4 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
-            <div>
-              <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Fit size <span className="text-red-400">*</span></label>
-              <div className="grid grid-cols-3 gap-2">
-                {FIT_SIZES.map((s) => (
-                  <button key={s} onClick={() => setFit(fit === s ? '' : s)}
-                    className={`h-11 rounded-xl border font-semibold text-sm transition-all ${fit === s ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'}`}>
-                    {FIT_LABELS[s]}
-                  </button>
-                ))}
+            {/* Measurements */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-[#a0a0a0] ml-1">Measurements <span className="text-[#525252]">(optional)</span></label>
+                <div className="flex items-center gap-1">
+                  {(['in', 'cm'] as const).map((u) => (
+                    <button
+                      key={u}
+                      onClick={() => handleUnitToggle(u)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                        measurementUnit === u
+                          ? 'bg-[#c9a962]/15 text-[#c9a962] border border-[#c9a962]/40'
+                          : 'bg-[#0a0a0a] text-[#6b6b6b] border border-[#2a2a2a] hover:border-[#3a3a3a]'
+                      }`}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bust */}
+              <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                <img src="/images/onboarding/measurements/bust.webp" alt="Bust measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
+                <div className="flex-1">
+                  <label className="text-[11px] text-[#6b6b6b]">Bust</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={bustInput}
+                    onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setBustInput(v); }}
+                    placeholder={measurementUnit === 'in' ? 'e.g. 36' : 'e.g. 91'}
+                    className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                  />
+                </div>
+                <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+              </div>
+
+              {/* Waist */}
+              <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                <img src="/images/onboarding/measurements/waist.webp" alt="Waist measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
+                <div className="flex-1">
+                  <label className="text-[11px] text-[#6b6b6b]">Waist</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={waistInput}
+                    onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setWaistInput(v); }}
+                    placeholder={measurementUnit === 'in' ? 'e.g. 30' : 'e.g. 76'}
+                    className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                  />
+                </div>
+                <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+              </div>
+
+              {/* Hip */}
+              <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                <img src="/images/onboarding/measurements/hip.webp" alt="Hip measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
+                <div className="flex-1">
+                  <label className="text-[11px] text-[#6b6b6b]">Hip</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={hipInput}
+                    onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setHipInput(v); }}
+                    placeholder={measurementUnit === 'in' ? 'e.g. 40' : 'e.g. 102'}
+                    className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                  />
+                </div>
+                <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
               </div>
             </div>
+
+            {/* Separator */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#2a2a2a]" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-[#121212] px-3 text-[#525252]">or pick your size</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {FIT_SIZES.map((s) => {
+                const ranges = SIZE_CHART[s];
+                return (
+                  <button key={s} onClick={() => handleSizeClick(s)}
+                    className={`rounded-xl border p-3 text-left transition-all ${fit === s ? 'border-[#c9a962] bg-[#c9a962]/10' : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'}`}>
+                    <span className={`block text-sm font-semibold mb-1 ${fit === s ? 'text-[#c9a962]' : 'text-[#e0e0e0]'}`}>{FIT_LABELS[s]}</span>
+                    <div className={`text-[10px] leading-relaxed ${fit === s ? 'text-[#c9a962]/70' : 'text-[#606060]'}`}>
+                      <span>B {ranges.bust[0]}-{ranges.bust[1]}</span>{' · '}
+                      <span>W {ranges.waist[0]}-{ranges.waist[1]}</span>{' · '}
+                      <span>H {ranges.hip[0]}-{ranges.hip[1]}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Section: Body Type & Skin Tone */}
+        <section className="mb-6">
+          <h2 className="text-sm font-semibold text-[#c9a962] mb-3 flex items-center gap-2">
+            <span>🧍</span> Body Type & Skin Tone
+          </h2>
+          <div className="space-y-4 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
             <div>
               <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
               <div className="grid grid-cols-3 gap-3">
