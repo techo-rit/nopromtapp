@@ -116,16 +116,16 @@ This project has specialized AI skills and plugins in `.claude/`. Use them when 
 
 **IMPORTANT**: At the start of every new chat session that references this file:
 
-1. **Check memory**: Read `/memories/repo/` for persisted project context from prior sessions.
-2. **Load context**: The architecture, conventions, and pitfalls docs contain the accumulated knowledge.
-3. **Update memory**: After significant changes (new features, schema changes, bug fixes), update `/memories/repo/stiri-project-state.md` with:
+1. **Read project state**: Read [`.claude/project-state.md`](project-state.md) for persisted context from prior sessions.
+2. **Load docs**: The architecture, conventions, and pitfalls docs contain the accumulated knowledge.
+3. **Update project state**: After significant changes (new features, schema changes, bug fixes), update `.claude/project-state.md` with:
    - What was changed
    - Any new pitfalls discovered
    - Current state of in-progress features
 
 This ensures continuity across sessions without re-exploring the entire codebase.
 
-### What to Persist in Memory
+### What to Persist in Project State
 - New anti-patterns discovered during development
 - Schema changes and their rationale
 - Feature completion status for multi-session work
