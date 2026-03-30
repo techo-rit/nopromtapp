@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RemixLogoIcon, ArrowLeftIcon } from "../../shared/ui/Icons";
-import type { User, NavCategory } from "../../types";
+import type { User } from "../../types";
 
 interface HeaderProps {
-    activeNav: NavCategory;
-    onNavClick: (category: NavCategory) => void;
     user: User | null;
     onSignIn: () => void;
     onLogout: () => void;
@@ -15,6 +13,8 @@ interface HeaderProps {
     onBack?: () => void;
     searchQuery: string;
     onSearchChange: (query: string) => void;
+    cartCount?: number;
+    onCartClick?: () => void;
 }
 
 const SearchIcon: React.FC = () => (
@@ -37,8 +37,6 @@ const SearchIcon: React.FC = () => (
 );
 
 export const Header: React.FC<HeaderProps> = ({
-    activeNav,
-    onNavClick,
     user,
     onSignIn,
     onLogout,
@@ -47,8 +45,10 @@ export const Header: React.FC<HeaderProps> = ({
     onBack,
     searchQuery,
     onSearchChange,
+    cartCount = 0,
+    onCartClick,
 }) => {
-    const navItems: NavCategory[] = ["Creators", "Try on"];
+    const navItems: string[] = [];
     const [showUserMenu, setShowUserMenu] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const mobileSearchRef = useRef<HTMLInputElement>(null);
@@ -109,6 +109,34 @@ export const Header: React.FC<HeaderProps> = ({
                             className={`${inputClasses} flex-1 min-w-0 w-auto`}
                         />
                     </div>
+                    {/* Changing Room icon */}
+                    <button
+                        onClick={() => navigate('/changing-room')}
+                        className="p-1.5 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors shrink-0"
+                        aria-label="Changing Room"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 512.026 512.026" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M417.758,108.407c-1.212-3.874-13.918-37.538-93.483-55.543V29.901v-5.41c0-8.124-5.794-14.916-13.901-16.427c-35.567-10.752-73.156-10.752-108.723,0c-8.107,1.51-13.909,8.303-13.909,16.427v5.41v22.963c-79.556,18.005-92.262,51.669-93.474,55.543c-0.657,2.108-0.469,4.386,0.512,6.366l14.242,28.493c12.425,24.841,18.987,52.651,18.987,80.427v262.733c0,14.114,11.486,25.6,25.6,25.6h93.867V68.292c0-0.094,0.051-0.162,0.051-0.247c-16.316-0.862-31.514-4.147-42.718-9.216V43.042c14.532,5.265,32.461,8.183,51.2,8.183c18.748,0,36.676-2.918,51.2-8.183v15.787c-11.196,5.069-26.394,8.354-42.709,9.216c0,0.085,0.043,0.154,0.043,0.247v443.733h93.867c14.123,0,25.6-11.486,25.6-25.6V223.693c0-27.776,6.571-55.586,18.995-80.427l14.242-28.493C418.227,112.794,418.415,110.515,417.758,108.407z M204.117,378.854l-25.6,59.733c-1.382,3.234-4.531,5.18-7.842,5.18c-1.118,0-2.261-0.23-3.354-0.7c-4.335-1.852-6.34-6.869-4.48-11.204l25.6-59.733c1.843-4.335,6.904-6.332,11.196-4.48C203.972,369.502,205.978,374.519,204.117,378.854z M307.209,24.602c-13.286,6.084-31.582,9.557-51.2,9.557c-19.439,0-37.598-3.405-50.859-9.395c0.316-0.06,0.64-0.119,0.947-0.205c32.666-9.984,67.166-9.984,99.831,0c0.085,0.017,0.179,0.026,0.256,0.026c0.341,0,0.683-0.162,1.024-0.094V24.602z M344.704,443.068c-1.092,0.469-2.236,0.7-3.362,0.7c-3.302,0-6.451-1.946-7.834-5.18l-25.6-59.733c-1.86-4.335,0.145-9.353,4.48-11.204c4.292-1.86,9.344,0.145,11.196,4.48l25.6,59.733C351.044,436.198,349.039,441.216,344.704,443.068z" />
+                        </svg>
+                    </button>
+                    {onCartClick && (
+                        <button
+                            onClick={onCartClick}
+                            className="relative p-1.5 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors shrink-0"
+                            aria-label="Open cart"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                                <path d="M16 10a4 4 0 01-8 0" />
+                            </svg>
+                            {cartCount > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    {cartCount > 9 ? '9+' : cartCount}
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -134,21 +162,6 @@ export const Header: React.FC<HeaderProps> = ({
                                 <RemixLogoIcon />
                                 <span>stiri.in</span>
                             </button>
-                            <nav className="flex items-center gap-2">
-                                {navItems.map((item) => (
-                                    <button
-                                        key={item}
-                                        onClick={() => onNavClick(item)}
-                                        className={`min-h-[44px] px-5 py-2.5 cursor-pointer text-base font-medium rounded-full transition-all ${
-                                            activeNav === item
-                                                ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]"
-                                                : "text-[#a0a0a0] hover:text-[#f5f5f5]"
-                                        }`}
-                                    >
-                                        {item}
-                                    </button>
-                                ))}
-                            </nav>
                         </div>
                     </div>
 
@@ -165,6 +178,33 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/changing-room')}
+                            className="p-2 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors"
+                            aria-label="Changing Room"
+                        >
+                            <svg width="22" height="22" viewBox="0 0 512.026 512.026" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M417.758,108.407c-1.212-3.874-13.918-37.538-93.483-55.543V29.901v-5.41c0-8.124-5.794-14.916-13.901-16.427c-35.567-10.752-73.156-10.752-108.723,0c-8.107,1.51-13.909,8.303-13.909,16.427v5.41v22.963c-79.556,18.005-92.262,51.669-93.474,55.543c-0.657,2.108-0.469,4.386,0.512,6.366l14.242,28.493c12.425,24.841,18.987,52.651,18.987,80.427v262.733c0,14.114,11.486,25.6,25.6,25.6h93.867V68.292c0-0.094,0.051-0.162,0.051-0.247c-16.316-0.862-31.514-4.147-42.718-9.216V43.042c14.532,5.265,32.461,8.183,51.2,8.183c18.748,0,36.676-2.918,51.2-8.183v15.787c-11.196,5.069-26.394,8.354-42.709,9.216c0,0.085,0.043,0.154,0.043,0.247v443.733h93.867c14.123,0,25.6-11.486,25.6-25.6V223.693c0-27.776,6.571-55.586,18.995-80.427l14.242-28.493C418.227,112.794,418.415,110.515,417.758,108.407z M204.117,378.854l-25.6,59.733c-1.382,3.234-4.531,5.18-7.842,5.18c-1.118,0-2.261-0.23-3.354-0.7c-4.335-1.852-6.34-6.869-4.48-11.204l25.6-59.733c1.843-4.335,6.904-6.332,11.196-4.48C203.972,369.502,205.978,374.519,204.117,378.854z M307.209,24.602c-13.286,6.084-31.582,9.557-51.2,9.557c-19.439,0-37.598-3.405-50.859-9.395c0.316-0.06,0.64-0.119,0.947-0.205c32.666-9.984,67.166-9.984,99.831,0c0.085,0.017,0.179,0.026,0.256,0.026c0.341,0,0.683-0.162,1.024-0.094V24.602z M344.704,443.068c-1.092,0.469-2.236,0.7-3.362,0.7c-3.302,0-6.451-1.946-7.834-5.18l-25.6-59.733c-1.86-4.335,0.145-9.353,4.48-11.204c4.292-1.86,9.344,0.145,11.196,4.48l25.6,59.733C351.044,436.198,349.039,441.216,344.704,443.068z" />
+                            </svg>
+                        </button>
+                        {onCartClick && (
+                            <button
+                                onClick={onCartClick}
+                                className="relative p-2 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors"
+                                aria-label="Open cart"
+                            >
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                                    <line x1="3" y1="6" x2="21" y2="6" />
+                                    <path d="M16 10a4 4 0 01-8 0" />
+                                </svg>
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold rounded-full flex items-center justify-center">
+                                        {cartCount > 9 ? '9+' : cartCount}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                         {!user ? (
                             <button
                                 onClick={onSignIn}

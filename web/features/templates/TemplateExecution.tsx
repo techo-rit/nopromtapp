@@ -6,6 +6,8 @@ import {
     ArrowLeftIcon,
     DownloadIcon,
     RefreshIcon,
+    HeartIcon,
+    HeartFilledIcon,
 } from "../../shared/ui/Icons";
 import { generateImage } from "./geminiService";
 import { useImagePaste } from "../../shared/hooks/useImagePaste";
@@ -17,6 +19,9 @@ interface TemplateExecutionProps {
     onBack: () => void;
     onLoginRequired?: () => void;
     user?: User | null;
+    onProductDetails?: (handle: string) => void;
+    isWishlisted?: boolean;
+    onToggleWishlist?: () => void;
 }
 
 export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
@@ -25,6 +30,9 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
     onBack,
     onLoginRequired,
     user,
+    onProductDetails,
+    isWishlisted,
+    onToggleWishlist,
 }) => {
     const [selfieImage, setSelfieImage] = useState<File | null>(null);
     const [wearableImage, setWearableImage] = useState<File | null>(null);
@@ -220,7 +228,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                             </div>
                         )}
                     </div>
-                    <div className="text-center">
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
                         <button
                             onClick={handleRemix}
                             disabled={remixButtonDisabled}
@@ -240,7 +248,32 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                             
                             <span className="relative">Transform your soul</span>
                         </button>
+                        {onToggleWishlist && (
+                            <button
+                                onClick={onToggleWishlist}
+                                className="min-h-[56px] inline-flex items-center justify-center px-5 py-5
+                                rounded-2xl border border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-[#141414]
+                                active:scale-95 transition-all duration-300"
+                                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                            >
+                                {isWishlisted ? (
+                                    <HeartFilledIcon width={22} height={22} className="text-white" />
+                                ) : (
+                                    <HeartIcon width={22} height={22} className="text-[#6b6b6b]" />
+                                )}
+                            </button>
+                        )}
                     </div>
+                    {onProductDetails && (
+                        <div className="flex justify-center mt-3">
+                            <button
+                                onClick={() => onProductDetails(template.id)}
+                                className="text-sm text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors underline underline-offset-4 decoration-[#3a3a3a] hover:decoration-[#6b6b6b]"
+                            >
+                                View product details
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
 

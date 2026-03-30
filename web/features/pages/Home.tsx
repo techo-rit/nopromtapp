@@ -1,71 +1,46 @@
 // src/routes/Home.tsx
 import React from "react";
-import { TemplateGrid } from "../templates/TemplateGrid";
 import { TrendingCarousel } from "../templates/TrendingCarousel";
-import { StackGrid } from "../templates/StackGrid";
-import { STACKS, TEMPLATES_BY_STACK } from "../../data/constants";
-import type { Stack, Template, NavCategory, User } from "../../types";
+import { ProductCard } from "../shop/ProductCard";
+import { SkeletonCarousel, SkeletonProductGrid } from "../../shared/ui/Skeleton";
+import { STACKS } from "../../data/constants";
+import type { Stack, Template, User } from "../../types";
 import { CONFIG } from "../../config";
 
 interface HomeProps {
-  activeNav: NavCategory;
-  searchQuery: string;
-  searchResults: Template[];
   trendingTemplates: Template[];
-  onSelectStack: (stack: Stack) => void;
+  templatesByStack: Map<string, Template[]>;
+  isLoading?: boolean;
   onSelectTemplate: (template: Template) => void;
   user?: User | null;
   onboardingPercent?: number;
   onOpenOnboarding?: () => void;
+  wishlistedIds?: Set<string>;
+  onToggleWishlist?: (templateId: string) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
-  activeNav,
-  searchQuery,
-  searchResults,
   trendingTemplates,
-  onSelectStack,
+  templatesByStack,
+  isLoading,
   onSelectTemplate,
   user,
   onboardingPercent,
   onOpenOnboarding,
+  wishlistedIds,
+  onToggleWishlist,
 }) => {
-  // 1. Search Mode
-  if (searchQuery.length > 0) {
-    return (
-      <div className="w-full h-full bg-[#0a0a0a]">
-        {searchResults.length > 0 ? (
-          <TemplateGrid templates={searchResults} onSelectTemplate={onSelectTemplate} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] px-4">
-            <p>No templates found.</p>
-            <p className="text-sm mt-2">Try searching for "wedding", "office", or "party".</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // 2. "Try on" Mode
-  if (activeNav === "Try on") {
-    // O(1) lookup instead of O(n) filter
-    const fititTemplates = TEMPLATES_BY_STACK.get("fitit") ?? [];
-    return (
-      <div className="w-full h-full bg-[#0a0a0a]">
-        <TemplateGrid templates={fititTemplates} onSelectTemplate={onSelectTemplate} />
-      </div>
-    );
-  }
-
-  // 3. Default "Creators" Mode
   const creatorsStackIds = CONFIG.APP.CREATOR_STACKS;
-  
   const stacksToShow = creatorsStackIds
-    .map((id) => STACKS.find((s) => s.id === id))
-    .filter((s): s is Stack => !!s);
+    .map((id: string) => STACKS.find((s: Stack) => s.id === id))
+    .filter((s?: Stack): s is Stack => !!s);
+
+  // Collect "New Arrivals" from trending (first 10)
+  const newArrivals = trendingTemplates.slice(0, 10);
 
   return (
     <div data-home-scroll="true" className="w-full h-full overflow-y-auto scrollbar-hide pb-24 bg-[#0a0a0a]">
+
       {/* Onboarding Progress Banner */}
       {user && onboardingPercent !== undefined && onboardingPercent < 100 && (
         <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-4">
@@ -110,18 +85,69 @@ export const Home: React.FC<HomeProps> = ({
           </button>
         </div>
       )}
-      <div>
+
+      {/* Hero Carousel — Editorial */}
+      {isLoading ? (
+        <SkeletonCarousel />
+      ) : (
         <TrendingCarousel
           templates={trendingTemplates}
           onSelectTemplate={onSelectTemplate}
         />
-      </div>
-      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8 pb-6 md:py-8">
-        <h2 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold text-[#f5f5f5] mb-8 pt-4 border-t border-[#2a2a2a] text-left">
-          Choose your form
+      )}
+
+      {/* New Arrivals Section */}
+      <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-8">
+        <h2 className="text-xl md:text-2xl font-bold text-[#f5f5f5] mb-4" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          New Arrivals
         </h2>
-        <StackGrid stacks={stacksToShow} onSelectStack={onSelectStack} />
+        {isLoading ? (
+          <SkeletonProductGrid count={4} />
+        ) : (
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+            {newArrivals.map((t) => (
+              <ProductCard
+                key={t.id}
+                template={t}
+                isWishlisted={wishlistedIds?.has(t.id)}
+                onToggleWishlist={onToggleWishlist}
+                onClick={() => onSelectTemplate(t)}
+                className="shrink-0 w-[45vw] md:w-[220px]"
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Per-Stack Sections */}
+      {stacksToShow.map((stack) => {
+        const stackTemplates = templatesByStack.get(stack.id) ?? [];
+        if (stackTemplates.length === 0 && !isLoading) return null;
+
+        return (
+          <div key={stack.id} className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-10">
+            <h2 className="text-xl md:text-2xl font-bold text-[#f5f5f5] mb-4" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+              {stack.name}
+            </h2>
+            {isLoading ? (
+              <SkeletonProductGrid count={4} />
+            ) : (
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+                {stackTemplates.map((t) => (
+                  <ProductCard
+                    key={t.id}
+                    template={t}
+                    isWishlisted={wishlistedIds?.has(t.id)}
+                    onToggleWishlist={onToggleWishlist}
+                    onClick={() => onSelectTemplate(t)}
+                    className="shrink-0 w-[45vw] md:w-[220px]"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

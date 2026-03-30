@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   monthly_quota          integer     NOT NULL DEFAULT 3,
   monthly_used           integer     NOT NULL DEFAULT 0,
   extra_credits          integer     NOT NULL DEFAULT 5,
+  shopify_cart_id         text,
   created_at             timestamptz NOT NULL DEFAULT timezone('utc', now()),
   updated_at             timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
@@ -117,6 +118,32 @@ CREATE TABLE IF NOT EXISTS public.generated_images (
   created_at    timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- 7. templates
+CREATE TABLE IF NOT EXISTS public.templates (
+  id               text        PRIMARY KEY,
+  stack_id         text        NOT NULL,
+  title            text        NOT NULL,
+  description      text,
+  image            text        NOT NULL,
+  prompt           text        NOT NULL,
+  aspect_ratio     text        NOT NULL DEFAULT '1:1',
+  tags             text[]      DEFAULT '{}',
+  trending         boolean     NOT NULL DEFAULT false,
+  trending_order   integer,
+  is_active        boolean     NOT NULL DEFAULT true,
+  created_at       timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at       timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 8. user_wishlist
+CREATE TABLE IF NOT EXISTS public.user_wishlist (
+  id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     uuid        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  template_id text        REFERENCES public.templates(id) ON DELETE CASCADE NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE(user_id, template_id)
+);
+
 
 -- ==========================================
 -- INDEXES
@@ -133,6 +160,10 @@ CREATE INDEX IF NOT EXISTS idx_payment_logs_created_at         ON public.payment
 CREATE INDEX IF NOT EXISTS idx_idempotency_keys_key            ON public.idempotency_keys(key);
 CREATE INDEX IF NOT EXISTS idx_idempotency_keys_expires_at     ON public.idempotency_keys(expires_at);
 CREATE INDEX IF NOT EXISTS idx_generated_images_user_created   ON public.generated_images(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_templates_stack_id               ON public.templates(stack_id);
+CREATE INDEX IF NOT EXISTS idx_templates_trending               ON public.templates(trending) WHERE trending = true;
+CREATE INDEX IF NOT EXISTS idx_templates_is_active              ON public.templates(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_user_wishlist_user_id            ON public.user_wishlist(user_id);
 
 
 -- ==========================================
@@ -145,6 +176,8 @@ ALTER TABLE public.subscriptions     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_logs      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.idempotency_keys  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.generated_images  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.templates         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_wishlist     ENABLE ROW LEVEL SECURITY;
 
 -- profiles
 DROP POLICY IF EXISTS "Users can view own profile"   ON public.profiles;
@@ -215,6 +248,28 @@ CREATE POLICY "Users view own generated images"
 DROP POLICY IF EXISTS "Service role inserts generated images" ON public.generated_images;
 CREATE POLICY "Service role inserts generated images"
   ON public.generated_images FOR INSERT TO service_role WITH CHECK (true);
+
+-- templates
+DROP POLICY IF EXISTS "Anyone can read active templates" ON public.templates;
+CREATE POLICY "Anyone can read active templates"
+  ON public.templates FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Service role can manage templates" ON public.templates;
+CREATE POLICY "Service role can manage templates"
+  ON public.templates FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- user_wishlist
+DROP POLICY IF EXISTS "Users can view own wishlist" ON public.user_wishlist;
+CREATE POLICY "Users can view own wishlist"
+  ON public.user_wishlist FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can add to own wishlist" ON public.user_wishlist;
+CREATE POLICY "Users can add to own wishlist"
+  ON public.user_wishlist FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can remove from own wishlist" ON public.user_wishlist;
+CREATE POLICY "Users can remove from own wishlist"
+  ON public.user_wishlist FOR DELETE USING (auth.uid() = user_id);
 
 
 -- ==========================================
@@ -295,6 +350,15 @@ CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = timezone('utc', now());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Auto-update updated_at for templates
+CREATE OR REPLACE FUNCTION public.update_templates_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at := timezone('utc', now());
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -445,6 +509,11 @@ DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON public.subscriptions;
 CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON public.subscriptions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_templates_updated_at ON public.templates;
+CREATE TRIGGER trg_templates_updated_at
+  BEFORE UPDATE ON public.templates
+  FOR EACH ROW EXECUTE FUNCTION public.update_templates_updated_at();
 
 
 -- ==========================================
