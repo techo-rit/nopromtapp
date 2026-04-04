@@ -79,6 +79,7 @@ const App: React.FC = () => {
         bodyType: profile.bodyType,
         skinTone: profile.skinTone,
         avatarUrl: profile.avatarUrl,
+        profilePhotoUrl: profile.profilePhotoUrl,
         isOnboardingComplete: profile.isOnboardingComplete,
         accountType: profile.accountType,
         monthlyQuota: profile.monthlyQuota,
@@ -395,6 +396,7 @@ const App: React.FC = () => {
               <ChangingRoom
                 user={user}
                 onLoginRequired={openAuthModal}
+                onProfilePhotoSaved={handleProfileUpdate}
               />
             }
           />

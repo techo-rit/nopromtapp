@@ -51,6 +51,7 @@ export async function getProfileHandler(req, res) {
           bodyType: null,
           skinTone: null,
           avatarUrl: authResult.user.user_metadata?.avatar_url || authResult.user.user_metadata?.picture || null,
+          profilePhotoUrl: null,
           isOnboardingComplete: false,
           accountType: 'free',
           monthlyQuota: 3,
@@ -175,6 +176,114 @@ export async function updateProfileHandler(req, res) {
   } catch (err) {
     console.error('updateProfile error:', err);
     return res.status(500).json({ success: false, error: 'Failed to update profile' });
+  }
+}
+
+// ---- Profile Photo ----
+
+// POST /api/profile/photo — upload profile photo (selfie) as base64
+export async function uploadProfilePhotoHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const userId = authResult.user.id;
+    const { imageData } = req.body || {};
+
+    if (!imageData || typeof imageData !== 'string') {
+      return res.status(400).json({ success: false, error: 'imageData (base64 data URL) is required' });
+    }
+
+    const match = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/.exec(imageData);
+    if (!match) {
+      return res.status(400).json({ success: false, error: 'Invalid image format. Must be JPEG, PNG, or WebP data URL.' });
+    }
+
+    const mimeType = match[1];
+    const ext = match[2] === 'jpg' ? 'jpeg' : match[2];
+    const base64Data = match[3];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Size limit: 5MB
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'Image must be under 5MB' });
+    }
+
+    const storagePath = `${userId}/selfie.${ext}`;
+
+    // Upload (upsert to overwrite existing)
+    const { error: uploadError } = await supabase.storage
+      .from('profile-photos')
+      .upload(storagePath, buffer, {
+        contentType: mimeType,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Profile photo upload error:', uploadError);
+      return res.status(500).json({ success: false, error: 'Failed to upload photo' });
+    }
+
+    const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(storagePath);
+    const publicUrl = urlData?.publicUrl;
+
+    if (!publicUrl) {
+      return res.status(500).json({ success: false, error: 'Failed to get photo URL' });
+    }
+
+    // Update profile
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ profile_photo_url: publicUrl, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Profile photo URL update error:', updateError);
+      return res.status(500).json({ success: false, error: 'Failed to update profile' });
+    }
+
+    profileCache.del(`profile:${userId}`);
+
+    return res.status(200).json({ success: true, profilePhotoUrl: publicUrl });
+  } catch (err) {
+    console.error('uploadProfilePhoto error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to upload photo' });
+  }
+}
+
+// DELETE /api/profile/photo — remove profile photo
+export async function deleteProfilePhotoHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const userId = authResult.user.id;
+
+    // List files in the user's profile-photos folder and remove them
+    const { data: files } = await supabase.storage.from('profile-photos').list(userId);
+    if (files && files.length > 0) {
+      const paths = files.map(f => `${userId}/${f.name}`);
+      await supabase.storage.from('profile-photos').remove(paths);
+    }
+
+    // Clear the URL in the profile
+    await supabase
+      .from('profiles')
+      .update({ profile_photo_url: null, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    profileCache.del(`profile:${userId}`);
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('deleteProfilePhoto error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to delete photo' });
   }
 }
 
@@ -733,6 +842,7 @@ function mapProfile(profile, supabaseUser, steps) {
     bodyType: profile.body_type,
     skinTone: profile.skin_tone,
     avatarUrl: supabaseUser?.user_metadata?.avatar_url || supabaseUser?.user_metadata?.picture || null,
+    profilePhotoUrl: profile.profile_photo_url || null,
     isOnboardingComplete,
     accountType: profile.account_type || 'free',
     monthlyQuota,

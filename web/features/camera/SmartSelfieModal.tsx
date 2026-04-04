@@ -431,7 +431,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
                     >
                         <button
                             onClick={performCapture}
-                            disabled={status === 'LOADING'}
+                            disabled={status === 'LOADING' || status === 'CAPTURING'}
                             aria-label="Take Photo"
                             className="relative group transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -445,7 +445,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
             </div>
 
             <p className="mt-6 text-gray-400 font-medium text-sm text-center px-6">
-                Auto-capture is active • Press button to capture manually
+                Align your face for best results • Tap button anytime to capture
             </p>
         </div>
     );

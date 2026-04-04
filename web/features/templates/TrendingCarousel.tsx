@@ -121,7 +121,8 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                     {visibleTemplates.map((template) => {
                         const isFocused = focusedCardId === template.id;
 
-                        return (
+
+                    return (
                             <div
                                 key={template.id}
                                 ref={(el) => setCardRef(template.id, el)}

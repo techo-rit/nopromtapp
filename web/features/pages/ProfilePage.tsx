@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { profileService } from '../profile/profileService';
+import { ProfilePhotoUpload } from '../profile/ProfilePhotoUpload';
 import { CONFIG } from '../../config';
 import type { User, UserAddress, GeneratedImage } from '../../types';
 
@@ -775,6 +776,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   const avatarUrl = user.avatarUrl || null;
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(user.profilePhotoUrl || null);
   const accountLabel = user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1);
   const monthlyRemaining = Math.max(user.monthlyQuota - user.monthlyUsed, 0);
 
@@ -865,6 +867,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             Refresh
           </button>
         </div>
+
+        {/* Profile Photo */}
+        <section className="mb-6 bg-[#121212] border border-[#1a1a1a] rounded-2xl p-4">
+          <h2 className="text-sm font-semibold text-[#c9a962] mb-3 flex items-center gap-2">
+            <span>📸</span> Profile Photo
+          </h2>
+          <p className="text-xs text-[#6b6b6b] mb-3">Used for personalized try-on previews across the app</p>
+          <ProfilePhotoUpload
+            currentPhotoUrl={profilePhotoUrl}
+            userName={user.name || 'User'}
+            onPhotoUpdated={(url) => {
+              setProfilePhotoUrl(url);
+              onProfileUpdate();
+            }}
+          />
+        </section>
 
         {/* Notifications (fixed) */}
         {(error || success) && (

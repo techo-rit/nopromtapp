@@ -113,6 +113,7 @@ export interface User {
   bodyType: string | null;
   skinTone: string | null;
   avatarUrl: string | null;
+  profilePhotoUrl: string | null;
   isOnboardingComplete: boolean;
   accountType: 'free' | 'essentials' | 'ultimate';
   monthlyQuota: number;
@@ -139,6 +140,7 @@ export interface UserProfile {
   bodyType: string | null;
   skinTone: string | null;
   avatarUrl: string | null;
+  profilePhotoUrl: string | null;
   isOnboardingComplete: boolean;
   accountType: 'free' | 'essentials' | 'ultimate';
   monthlyQuota: number;
@@ -174,7 +176,7 @@ export interface GeneratedImage {
   templateId: string | null;
   templateName: string | null;
   stackId: string | null;
-  mode: 'remix' | 'tryon';
+  mode: 'remix' | 'tryon' | 'carousel_tryon';
   aspectRatio: string | null;
   createdAt: string;
 }

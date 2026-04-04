@@ -11,17 +11,22 @@ import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
 import { logoutHandler, meHandler, switchAccountHandler } from './routes/auth.js';
-import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, updateAddressHandler, setDefaultAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
+import { getProfileHandler, updateProfileHandler, uploadProfilePhotoHandler, deleteProfilePhotoHandler, getAddressesHandler, addAddressHandler, updateAddressHandler, setDefaultAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
 import { sendOtpHandler, verifyOtpHandler, whatsappWebhookVerify, whatsappWebhookHandler } from './routes/whatsappOtp.js';
 import { geocodeHandler, placesAutocompleteHandler, placeDetailsHandler } from './routes/geocode.js';
 import { getProductsHandler, getProductByHandleHandler, getProductsByHandlesHandler, cartHandler, getCartHandler, addCartLinesHandler, updateCartLinesHandler, removeCartLinesHandler, cachePurgeHandler } from './routes/shopify.js';
 import { listTemplates, listTrendingTemplates, getTemplate, templatesStream, startTemplateRealtime } from './routes/templates.js';
 import { getWishlistHandler, addWishlistHandler, removeWishlistHandler } from './routes/wishlist.js';
+import { carouselTryOnHandler } from './routes/carouselTryon.js';
+import { createShareLinkHandler, shareLinkRedirectHandler } from './routes/shareLinks.js';
 
 export function createApp() {
   const app = express();
   const bodyLimitMb = Number(process.env.BODY_LIMIT_MB || 35);
   const bodyLimit = `${Number.isFinite(bodyLimitMb) && bodyLimitMb > 0 ? bodyLimitMb : 35}mb`;
+
+  // Trust the first proxy hop so req.ip reflects the real client IP from X-Forwarded-For
+  app.set('trust proxy', 1);
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -82,6 +87,8 @@ export function createApp() {
   app.get('/api/places/details', placeDetailsHandler);
   app.get('/api/profile', getProfileHandler);
   app.put('/api/profile', updateProfileHandler);
+  app.post('/api/profile/photo', uploadProfilePhotoHandler);
+  app.delete('/api/profile/photo', deleteProfilePhotoHandler);
   app.get('/api/profile/addresses', getAddressesHandler);
   app.post('/api/profile/addresses', addAddressHandler);
   app.put('/api/profile/addresses/:id', updateAddressHandler);
@@ -112,6 +119,13 @@ export function createApp() {
   app.get('/api/wishlist', getWishlistHandler);
   app.post('/api/wishlist', addWishlistHandler);
   app.delete('/api/wishlist/:templateId', removeWishlistHandler);
+
+  // Carousel try-on route
+  app.post('/api/carousel-tryon', carouselTryOnHandler);
+
+  // Share links
+  app.post('/api/share-links', createShareLinkHandler);
+  app.get('/s/:code', shareLinkRedirectHandler);
 
   // Start Supabase Realtime listener for templates
   startTemplateRealtime();
