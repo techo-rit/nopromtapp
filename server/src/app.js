@@ -11,14 +11,22 @@ import { userSubscriptionHandler } from './routes/userSubscription.js';
 import { webhookHandler } from './routes/webhook.js';
 import { healthHandler } from './routes/health.js';
 import { logoutHandler, meHandler, switchAccountHandler } from './routes/auth.js';
-import { getProfileHandler, updateProfileHandler, getAddressesHandler, addAddressHandler, updateAddressHandler, setDefaultAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler } from './routes/profile.js';
+import { getProfileHandler, updateProfileHandler, uploadProfilePhotoHandler, deleteProfilePhotoHandler, getAddressesHandler, addAddressHandler, updateAddressHandler, setDefaultAddressHandler, deleteAddressHandler, getGenerationsHandler, deleteGenerationHandler, deleteAllGenerationsHandler, getSelfiesHandler, saveSelfieHandler, deleteSelfieHandler, activateSelfieHandler } from './routes/profile.js';
 import { sendOtpHandler, verifyOtpHandler, whatsappWebhookVerify, whatsappWebhookHandler } from './routes/whatsappOtp.js';
 import { geocodeHandler, placesAutocompleteHandler, placeDetailsHandler } from './routes/geocode.js';
+import { getProductsHandler, getProductByHandleHandler, getProductsByHandlesHandler, cartHandler, getCartHandler, addCartLinesHandler, updateCartLinesHandler, removeCartLinesHandler, cachePurgeHandler } from './routes/shopify.js';
+import { listTemplates, listTrendingTemplates, getTemplate, templatesStream, startTemplateRealtime } from './routes/templates.js';
+import { getWishlistHandler, addWishlistHandler, removeWishlistHandler } from './routes/wishlist.js';
+import { carouselTryOnHandler } from './routes/carouselTryon.js';
+import { createShareLinkHandler, shareLinkRedirectHandler } from './routes/shareLinks.js';
 
 export function createApp() {
   const app = express();
   const bodyLimitMb = Number(process.env.BODY_LIMIT_MB || 35);
   const bodyLimit = `${Number.isFinite(bodyLimitMb) && bodyLimitMb > 0 ? bodyLimitMb : 35}mb`;
+
+  // Trust the first proxy hop so req.ip reflects the real client IP from X-Forwarded-For
+  app.set('trust proxy', 1);
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -79,6 +87,12 @@ export function createApp() {
   app.get('/api/places/details', placeDetailsHandler);
   app.get('/api/profile', getProfileHandler);
   app.put('/api/profile', updateProfileHandler);
+  app.post('/api/profile/photo', uploadProfilePhotoHandler);
+  app.delete('/api/profile/photo', deleteProfilePhotoHandler);
+  app.get('/api/profile/selfies', getSelfiesHandler);
+  app.post('/api/profile/selfies', saveSelfieHandler);
+  app.delete('/api/profile/selfies/:id', deleteSelfieHandler);
+  app.patch('/api/profile/selfies/:id/activate', activateSelfieHandler);
   app.get('/api/profile/addresses', getAddressesHandler);
   app.post('/api/profile/addresses', addAddressHandler);
   app.put('/api/profile/addresses/:id', updateAddressHandler);
@@ -87,6 +101,38 @@ export function createApp() {
   app.get('/api/profile/generations', getGenerationsHandler);
   app.delete('/api/profile/generations/:id', deleteGenerationHandler);
   app.delete('/api/profile/generations', deleteAllGenerationsHandler);
+
+  // Shopify routes
+  app.get('/api/shopify/products', getProductsHandler);
+  app.get('/api/shopify/product/:handle', getProductByHandleHandler);
+  app.post('/api/shopify/products/batch', getProductsByHandlesHandler);
+  app.post('/api/shopify/cart', cartHandler);
+  app.get('/api/shopify/cart/:id', getCartHandler);
+  app.post('/api/shopify/cart/lines', addCartLinesHandler);
+  app.put('/api/shopify/cart/lines', updateCartLinesHandler);
+  app.delete('/api/shopify/cart/lines', removeCartLinesHandler);
+  app.post('/api/admin/cache/purge', cachePurgeHandler);
+
+  // Templates routes
+  app.get('/api/templates/stream', templatesStream);
+  app.get('/api/templates', listTemplates);
+  app.get('/api/templates/trending', listTrendingTemplates);
+  app.get('/api/templates/:id', getTemplate);
+
+  // Wishlist routes
+  app.get('/api/wishlist', getWishlistHandler);
+  app.post('/api/wishlist', addWishlistHandler);
+  app.delete('/api/wishlist/:templateId', removeWishlistHandler);
+
+  // Carousel try-on route
+  app.post('/api/carousel-tryon', carouselTryOnHandler);
+
+  // Share links
+  app.post('/api/share-links', createShareLinkHandler);
+  app.get('/s/:code', shareLinkRedirectHandler);
+
+  // Start Supabase Realtime listener for templates
+  startTemplateRealtime();
 
   // Serve built web app from server/public
   const publicDir = path.resolve(__dirname, '..', 'public');

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   monthly_quota          integer     NOT NULL DEFAULT 3,
   monthly_used           integer     NOT NULL DEFAULT 0,
   extra_credits          integer     NOT NULL DEFAULT 5,
+  shopify_cart_id         text,
+  profile_photo_url       text,
   created_at             timestamptz NOT NULL DEFAULT timezone('utc', now()),
   updated_at             timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
@@ -112,9 +114,53 @@ CREATE TABLE IF NOT EXISTS public.generated_images (
   template_id   text,
   template_name text,
   stack_id      text,
-  mode          text        NOT NULL DEFAULT 'remix' CHECK (mode IN ('remix', 'tryon')),
+  mode          text        NOT NULL DEFAULT 'remix' CHECK (mode IN ('remix', 'tryon', 'carousel_tryon')),
   aspect_ratio  text,
   created_at    timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 7. templates
+CREATE TABLE IF NOT EXISTS public.templates (
+  id               text        PRIMARY KEY,
+  stack_id         text        NOT NULL,
+  title            text        NOT NULL,
+  description      text,
+  image            text        NOT NULL,
+  prompt           text        NOT NULL,
+  aspect_ratio     text        NOT NULL DEFAULT '1:1',
+  tags             text[]      DEFAULT '{}',
+  trending         boolean     NOT NULL DEFAULT false,
+  trending_order   integer,
+  is_active        boolean     NOT NULL DEFAULT true,
+  created_at       timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at       timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 8. share_links
+CREATE TABLE IF NOT EXISTS public.share_links (
+  id             uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  code           text        NOT NULL UNIQUE,
+  user_id        uuid        REFERENCES auth.users(id) ON DELETE SET NULL,
+  product_handle text,
+  product_name   text,
+  created_at     timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 9. share_link_clicks
+CREATE TABLE IF NOT EXISTS public.share_link_clicks (
+  id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  link_id     uuid        REFERENCES public.share_links(id) ON DELETE CASCADE NOT NULL,
+  ip_address  text        NOT NULL,
+  clicked_at  timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 10. user_wishlist
+CREATE TABLE IF NOT EXISTS public.user_wishlist (
+  id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     uuid        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  template_id text        REFERENCES public.templates(id) ON DELETE CASCADE NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE(user_id, template_id)
 );
 
 
@@ -133,6 +179,15 @@ CREATE INDEX IF NOT EXISTS idx_payment_logs_created_at         ON public.payment
 CREATE INDEX IF NOT EXISTS idx_idempotency_keys_key            ON public.idempotency_keys(key);
 CREATE INDEX IF NOT EXISTS idx_idempotency_keys_expires_at     ON public.idempotency_keys(expires_at);
 CREATE INDEX IF NOT EXISTS idx_generated_images_user_created   ON public.generated_images(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_generated_images_carousel       ON public.generated_images(user_id, template_id, mode) WHERE mode = 'carousel_tryon';
+CREATE INDEX IF NOT EXISTS idx_templates_stack_id               ON public.templates(stack_id);
+CREATE INDEX IF NOT EXISTS idx_templates_trending               ON public.templates(trending) WHERE trending = true;
+CREATE INDEX IF NOT EXISTS idx_templates_is_active              ON public.templates(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_user_wishlist_user_id            ON public.user_wishlist(user_id);
+CREATE INDEX IF NOT EXISTS idx_share_links_code                ON public.share_links(code);
+CREATE INDEX IF NOT EXISTS idx_share_links_user                ON public.share_links(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_share_link_clicks_unique_ip ON public.share_link_clicks(link_id, ip_address);
+CREATE INDEX IF NOT EXISTS idx_share_link_clicks_link          ON public.share_link_clicks(link_id);
 
 
 -- ==========================================
@@ -145,7 +200,9 @@ ALTER TABLE public.subscriptions     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_logs      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.idempotency_keys  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.generated_images  ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.templates         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_wishlist     ENABLE ROW LEVEL SECURITY;ALTER TABLE public.share_links        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.share_link_clicks  ENABLE ROW LEVEL SECURITY;
 -- profiles
 DROP POLICY IF EXISTS "Users can view own profile"   ON public.profiles;
 CREATE POLICY "Users can view own profile"
@@ -215,6 +272,56 @@ CREATE POLICY "Users view own generated images"
 DROP POLICY IF EXISTS "Service role inserts generated images" ON public.generated_images;
 CREATE POLICY "Service role inserts generated images"
   ON public.generated_images FOR INSERT TO service_role WITH CHECK (true);
+
+-- templates
+DROP POLICY IF EXISTS "Anyone can read active templates" ON public.templates;
+CREATE POLICY "Anyone can read active templates"
+  ON public.templates FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Service role can manage templates" ON public.templates;
+CREATE POLICY "Service role can manage templates"
+  ON public.templates FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- user_wishlist
+DROP POLICY IF EXISTS "Users can view own wishlist" ON public.user_wishlist;
+CREATE POLICY "Users can view own wishlist"
+  ON public.user_wishlist FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can add to own wishlist" ON public.user_wishlist;
+CREATE POLICY "Users can add to own wishlist"
+  ON public.user_wishlist FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can remove from own wishlist" ON public.user_wishlist;
+CREATE POLICY "Users can remove from own wishlist"
+  ON public.user_wishlist FOR DELETE USING (auth.uid() = user_id);
+
+-- share_links
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'share_links' AND policyname = 'share_links_owner_read'
+  ) THEN
+    CREATE POLICY share_links_owner_read
+      ON public.share_links FOR SELECT USING (user_id = auth.uid());
+  END IF;
+END $$;
+
+-- share_link_clicks
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'share_link_clicks' AND policyname = 'share_link_clicks_owner_read'
+  ) THEN
+    CREATE POLICY share_link_clicks_owner_read
+      ON public.share_link_clicks FOR SELECT
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.share_links sl
+          WHERE sl.id = link_id AND sl.user_id = auth.uid()
+        )
+      );
+  END IF;
+END $$;
 
 
 -- ==========================================
@@ -295,6 +402,15 @@ CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = timezone('utc', now());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Auto-update updated_at for templates
+CREATE OR REPLACE FUNCTION public.update_templates_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at := timezone('utc', now());
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -446,6 +562,11 @@ CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON public.subscriptions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_templates_updated_at ON public.templates;
+CREATE TRIGGER trg_templates_updated_at
+  BEFORE UPDATE ON public.templates
+  FOR EACH ROW EXECUTE FUNCTION public.update_templates_updated_at();
+
 
 -- ==========================================
 -- STORAGE
@@ -461,6 +582,16 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'profile-photos',
+  'profile-photos',
+  true,
+  5242880,   -- 5 MB per file
+  ARRAY['image/jpeg', 'image/png', 'image/webp']
+)
+ON CONFLICT (id) DO NOTHING;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -472,6 +603,66 @@ BEGIN
       CREATE POLICY generated_images_public_read
         ON storage.objects FOR SELECT TO public
         USING (bucket_id = 'generated-images')
+    $pol$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname = 'profile_photos_public_read'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY profile_photos_public_read
+        ON storage.objects FOR SELECT TO public
+        USING (bucket_id = 'profile-photos')
+    $pol$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname = 'profile_photos_auth_insert'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY profile_photos_auth_insert
+        ON storage.objects FOR INSERT TO authenticated
+        WITH CHECK (bucket_id = 'profile-photos' AND (storage.foldername(name))[1] = auth.uid()::text)
+    $pol$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname = 'profile_photos_auth_update'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY profile_photos_auth_update
+        ON storage.objects FOR UPDATE TO authenticated
+        USING (bucket_id = 'profile-photos' AND (storage.foldername(name))[1] = auth.uid()::text)
+    $pol$;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname = 'profile_photos_auth_delete'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY profile_photos_auth_delete
+        ON storage.objects FOR DELETE TO authenticated
+        USING (bucket_id = 'profile-photos' AND (storage.foldername(name))[1] = auth.uid()::text)
     $pol$;
   END IF;
 END $$;
@@ -496,3 +687,36 @@ END $$;
 -- ==========================================
 -- DONE
 -- ==========================================
+
+-- ==========================================
+-- SAVED SELFIES
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS saved_selfies (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  url         text NOT NULL,
+  created_at  timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_selfies_user_id ON saved_selfies(user_id, created_at DESC);
+
+ALTER TABLE saved_selfies ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='saved_selfies' AND policyname='saved_selfies_user_select') THEN
+    CREATE POLICY saved_selfies_user_select ON saved_selfies FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='saved_selfies' AND policyname='saved_selfies_user_insert') THEN
+    CREATE POLICY saved_selfies_user_insert ON saved_selfies FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='saved_selfies' AND policyname='saved_selfies_user_delete') THEN
+    CREATE POLICY saved_selfies_user_delete ON saved_selfies FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;

@@ -1,5 +1,3 @@
-export type NavCategory = "Try on" | "Creators";
-
 export interface Stack {
   id: string;
   name: string;
@@ -14,6 +12,89 @@ export interface Template {
   prompt: string | Record<string, any>;
   aspectRatio: string;
   keywords?: string[];
+  // Enriched from server-side Shopify join
+  price?: ShopifyPrice;
+  compareAtPrice?: ShopifyPrice;
+  availableForSale?: boolean;
+  shopifyProduct?: ShopifyProduct;
+}
+
+// ==========================================
+// SHOPIFY TYPES
+// ==========================================
+
+export interface ShopifyImage {
+  url: string;
+  altText: string | null;
+  width: number;
+  height: number;
+}
+
+export interface ShopifyPrice {
+  amount: string;
+  currencyCode: string;
+}
+
+export interface ShopifyVariant {
+  id: string;
+  title: string;
+  availableForSale: boolean;
+  price: ShopifyPrice;
+  compareAtPrice: ShopifyPrice | null;
+  selectedOptions: { name: string; value: string }[];
+  image: ShopifyImage | null;
+}
+
+export interface ShopifyProduct {
+  id: string;
+  handle: string;
+  title: string;
+  description: string;
+  descriptionHtml: string;
+  vendor: string;
+  productType: string;
+  tags: string[];
+  images: ShopifyImage[];
+  variants: ShopifyVariant[];
+  priceRange: {
+    minVariantPrice: ShopifyPrice;
+    maxVariantPrice: ShopifyPrice;
+  };
+  compareAtPriceRange: {
+    minVariantPrice: ShopifyPrice;
+    maxVariantPrice: ShopifyPrice;
+  };
+  availableForSale: boolean;
+}
+
+export interface ShopifyCartLine {
+  id: string;
+  quantity: number;
+  merchandise: {
+    id: string;
+    title: string;
+    product: {
+      title: string;
+      handle: string;
+      featuredImage: ShopifyImage | null;
+    };
+    price: ShopifyPrice;
+    selectedOptions: { name: string; value: string }[];
+  };
+  cost: {
+    totalAmount: ShopifyPrice;
+  };
+}
+
+export interface ShopifyCart {
+  id: string;
+  checkoutUrl: string;
+  totalQuantity: number;
+  cost: {
+    totalAmount: ShopifyPrice;
+    subtotalAmount: ShopifyPrice;
+  };
+  lines: ShopifyCartLine[];
 }
 
 export interface User {
@@ -32,6 +113,7 @@ export interface User {
   bodyType: string | null;
   skinTone: string | null;
   avatarUrl: string | null;
+  profilePhotoUrl: string | null;
   isOnboardingComplete: boolean;
   accountType: 'free' | 'essentials' | 'ultimate';
   monthlyQuota: number;
@@ -58,6 +140,7 @@ export interface UserProfile {
   bodyType: string | null;
   skinTone: string | null;
   avatarUrl: string | null;
+  profilePhotoUrl: string | null;
   isOnboardingComplete: boolean;
   accountType: 'free' | 'essentials' | 'ultimate';
   monthlyQuota: number;
@@ -93,7 +176,7 @@ export interface GeneratedImage {
   templateId: string | null;
   templateName: string | null;
   stackId: string | null;
-  mode: 'remix' | 'tryon';
+  mode: 'remix' | 'tryon' | 'carousel_tryon';
   aspectRatio: string | null;
   createdAt: string;
 }
