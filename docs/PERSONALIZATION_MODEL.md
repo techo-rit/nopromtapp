@@ -47,7 +47,8 @@ The engine eliminates the need for a fashion designer/specialist by acting as a 
 │  │        + w_pop × product_popularity               │     │
 │  │        + new_arrival_boost                        │     │
 │  │        - fatigue_penalty                          │     │
-│  │        + exploration_boost                        │     │
+│  │                                                  │     │
+│  │  12% of slots replaced via exploration injection  │     │
 │  │                                                  │     │
 │  │  Weights: DYNAMIC (data maturity × seasonal      │     │
 │  │           × self-tuning feedback)                 │     │
@@ -164,9 +165,8 @@ What everyone is buying/viewing. Blends:
 Formula: `60% global + 40% regional`
 
 Regional trending enables:
-- Diwali kurta surge in North India
-- Silk saree demand in South India
-- Regional fashion preferences reflected in feed
+- Seasonal fashion surges by region (e.g. ethnic wear spikes during major festivals)
+- Regional fabric and style preferences reflected in feed
 
 ---
 
@@ -656,33 +656,15 @@ When they **disagree** (user said casual + keeps clicking formal): the self-tuni
 
 ```javascript
 function getSeasonalBoost() {
-  const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
-  const day = now.getDate();
-
-  // NOTE: Diwali is a lunar festival — its Gregorian date shifts each year.
-  // Update the diwali entry at the start of each year.
-  // Diwali 2026: Nov 8 → use month 11, days [1, 22] (2-week pre+post window)
-  // Diwali 2027: Oct 29 → month 10, days [22, 31] + month 11, days [1, 5]
-  const FESTIVALS = [
-    { name: 'diwali', month: 11, days: [1, 22], boost: 0.8 },  // 2026 — update annually
-    { name: 'christmas', month: 12, days: [20, 31], boost: 0.5 },
-    { name: 'eid', month: 3, days: [25, 31], boost: 0.6 },    // Approximate; update annually
-    { name: 'holi', month: 3, days: [1, 15], boost: 0.5 },
-    { name: 'new_year_sale', month: 1, days: [1, 15], boost: 0.7 },
-    { name: 'summer_sale', month: 6, days: [1, 30], boost: 0.4 },
-  ];
-
-  for (const f of FESTIVALS) {
-    if (month === f.month && day >= f.days[0] && day <= f.days[1]) {
-      return f.boost; // 0→1
-    }
-  }
+  // Returns 0-1 based on proximity to seasonal events that affect clothing demand.
+  // v1: stub returning 0. Future: load seasonal calendar from DB or config.
+  // Seasonal events (festivals, sales, weather shifts) are NOT hardcoded here —
+  // they will be managed via an admin-configurable seasonal_calendar table.
   return 0;
 }
 ```
 
-During festivals, product-popularity weight increases: `wPop = 0.10 + 0.08 × seasonalBoost`. This lets collective buying trends (everyone buying kurtas for Diwali) break through individual preferences.
+During seasonal events, product-popularity weight increases: `wPop = 0.10 + 0.08 × seasonalBoost`. This lets collective buying trends break through individual preferences.
 
 ### 7.2 Combined Weight Function
 
@@ -1135,9 +1117,9 @@ query ProductWithMetafields($handle: String!) {
 
 **Product B**: Floral Party Kurta — `color_family:[pink,red], style_tags:[party,ethnic], garment_type:kurta, pattern:floral, occasion:[festive,party]`
 
-**Product C**: Diwali Silk Saree — `color_family:[maroon,gold], style_tags:[ethnic], body_type_fit:[hourglass,pear], occasion:[wedding,festive]` — currently trending nationally (Diwali season).
+**Product C**: Festive Silk Saree — `color_family:[maroon,gold], style_tags:[ethnic], body_type_fit:[hourglass,pear], occasion:[wedding,festive]` — currently trending nationally (seasonal spike).
 
-**Weights** (120 clicks, Diwali season with seasonal_boost=0.8):
+**Weights** (120 clicks, seasonal_boost=0.8):
 - data_richness = 120/200 = 0.60
 - wStyle = 0.85 × (1 - 0.55 × 0.60) = 0.85 × 0.67 = 0.57
 - wClicks = 0.05 + 0.38 × 0.60 = 0.278
@@ -1150,9 +1132,9 @@ query ProductWithMetafields($handle: String!) {
 |---|---|---|---|---|---|
 | Product A (Navy Suit) | 0.92 (color+style+body+skin match) | 0.85 (clicks align with formal+suit+navy) | 0.30 (moderate global) | 0 | **0.56×0.92 + 0.28×0.85 + 0.16×0.30 = 0.80** |
 | Product B (Party Kurta) | 0.15 (no color/style overlap) | 0.10 (no click pattern) | 0.20 | 0 | **0.56×0.15 + 0.28×0.10 + 0.16×0.20 = 0.14** |
-| Product C (Diwali Saree) | 0.25 (body_type match only) | 0.05 (minimal click pattern) | 0.90 (Diwali trending!) | 0 | **0.56×0.25 + 0.28×0.05 + 0.16×0.90 = 0.30** |
+| Product C (Festive Saree) | 0.25 (body_type match only) | 0.05 (minimal click pattern) | 0.90 (seasonal trending!) | 0 | **0.56×0.25 + 0.28×0.05 + 0.16×0.90 = 0.30** |
 
-**Result**: Navy Suit ranks #1 (strongly aligned). Diwali Saree ranks #2 (trending lifts it past the kurta despite low style/click match). Party Kurta ranks #3. Even during Diwali, the user's preference still dominates — but the seasonal product doesn't get buried.
+**Result**: Navy Suit ranks #1 (strongly aligned). Festive Saree ranks #2 (trending lifts it past the kurta despite low style/click match). Party Kurta ranks #3. Even during seasonal spikes, the user's preference still dominates — but the trending product doesn't get buried.
 
 ---
 

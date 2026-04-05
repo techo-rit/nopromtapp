@@ -81,12 +81,15 @@ Every meaningful user action (view, try-on, wishlist, cart, purchase) must be re
 - Use `createAdminClient()` for inserts (bypasses RLS)
 - Metadata should include `product_tags` (the product's 30 dimensions at time of click) for future recomputation — fetch from `product_catalog_cache` on insert
 - Batch insert via single Supabase `insert()` call
+- **View event deduplication (#24)**: Before inserting a `view` event, check if the same `user_id` + `product_id` view already exists within the last 5 minutes (`created_at > now() - interval '5 minutes'`). If so, skip the insert for that event. Only applies to `view` — all other event types (`try_on`, `wishlist`, `cart_add`, `cart_remove`, `purchase`) can repeat freely. This prevents rapid back-swipe from inflating view counts and distorting affinity signals.
 
 ### Testing
 - Batch insert of 5 events succeeds, returns 202
 - Invalid event_type rejected with 400
 - Unauthenticated request rejected with 401
 - Rate limit triggers on excessive events
+- Duplicate `view` event for same user+product within 5 min is silently dropped (no error, event just skipped)
+- Non-view duplicate events (e.g. two `cart_add` in 1 min) both inserted normally
 
 ### Dependencies
 None — can parallel with #1.
@@ -272,17 +275,17 @@ The three ranking weights (style DNA, user clicks, product popularity) shift bas
 - [ ] `ranking_weights` table created in `000_schema.sql` with columns: `id`, `w_style`, `w_user_clicks`, `w_product_pop`, `engagement_ratio`, `last_delta` (jsonb), `is_active`, `created_at`
 - [ ] `last_delta` stores the direction of each weight's last change, e.g. `{ "w_style": -0.02, "w_user_clicks": 0.02, "w_product_pop": 0 }` — required by self-tuning cron (#15) to know which way to nudge next cycle
 - [ ] Initial seed row inserted: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, last_delta: {}, is_active: true }`
-- [ ] `getSeasonalBoost()` helper — returns 0-1 based on proximity to configured festival dates (simple calendar lookup, can be hardcoded initially)
+- [ ] `getSeasonalBoost()` helper — returns 0-1 based on seasonal context. v1: returns 0 (stub). Future: reads from an admin-configurable seasonal calendar (festivals, sales, weather shifts)
 
 ### Implementation Notes
 - Files: `server/src/lib/ranking.js`, `server/supabase/migrations/000_schema.sql`
-- Seasonal boost: start with a simple lookup table — Diwali entry must use the correct Gregorian month each year (Diwali 2026: Nov 8 → `month: 11`; update annually at start of year)
+- Seasonal boost: v1 returns 0 (stub). The seasonal calendar will be configurable in a future issue — do not hardcode specific festivals or dates
 - Weight adjustment from `ranking_weights` is additive (delta from base), clamped to ±0.03
 
 ### Testing
 - New user (0 clicks) → wStyle ≈ 0.85
 - Mature user (200 clicks) → wStyle ≈ 0.38, wClicks ≈ 0.43
-- During Diwali mock date → wPop increases
+- During seasonal boost (mock value) → wPop increases
 
 ### Dependencies
 Issues #6, #7, #8 (scoring functions must exist)
@@ -341,6 +344,7 @@ The API endpoint that serves the personalized feed. Reads user profile, click pr
 - Loads all available products from `product_catalog_cache` (should be manageable — likely <1000 products)
 - For anonymous users: detect region from request IP or default to "all-india"
 - Consider pre-computing the ranked feed and caching it, invalidating on new click events
+- **Feed cache invalidation on profile update (#22)**: On `PATCH /api/profile` success, delete that user's feed cache keys. Without this, a user who updates style preferences sees a stale feed for up to 60s. The profile route handler should call `cache.delete(`feed:${userId}`)` (or equivalent pattern) after a successful profile write.
 
 ### Testing
 - Authed user gets personalized order (different from anonymous)
@@ -578,6 +582,47 @@ Issue #4 (aggregation tables), Issue #15 (cron infrastructure)
 
 ---
 
+## Issue #18b: Metrics computation cron (#23)
+
+### Context
+MODEL §17 defines 8 health metrics (feed engagement rate, try-on→cart rate, feed diversity, cold start quality, self-tuning stability, exploration slot CTR, boost effectiveness, feed freshness) with targets. Without code to compute them, there is no way to know if the engine is working. This adds a nightly metrics computation task alongside the existing Issue #18 decay cron.
+
+### Acceptance Criteria
+- [ ] `metrics_log` table created in `000_schema.sql`: `id` (uuid, PK), `metric_name` (text), `metric_value` (numeric), `target_value` (numeric), `passed` (boolean), `computed_at` (timestamptz, default now())
+- [ ] Index on `(metric_name, computed_at DESC)` for dashboard queries
+- [ ] RLS: service role writes, admin reads
+- [ ] Nightly cron (run as part of Issue #18 `rankingCron.js`) computes all 8 MODEL §17 metrics:
+  - Feed engagement rate: `(try_ons + wishlists + carts) / views` — target > 12%
+  - Try-on → Cart rate: `cart_adds from users who tried on / total try_ons` — target > 8%
+  - Feed diversity: `unique garment_types in top 10 / total garment types` — target > 0.4
+  - Cold start quality: `engagement rate for users with < 10 clicks` — target > 6%
+  - Self-tuning stability: `weight variance over 30 days` — target < 0.15
+  - Exploration slot CTR: `clicks on exploration slots / exploration impressions` — target > 3%
+  - Boost effectiveness: `engagement on boosted products vs. baseline` — target > 1.5×
+  - Feed freshness: `% of top-10 products unchanged vs. yesterday` — target < 70%
+- [ ] Each metric inserted as a row in `metrics_log` with `passed = (value meets target)`
+- [ ] If any metric fails its target for 3 consecutive days, log a warning via `server/src/lib/logger.js` (future: webhook/email alert)
+- [ ] `GET /api/admin/metrics?days=7` endpoint — admin only, returns last N days of metric rows grouped by metric_name
+
+### Implementation Notes
+- File: extend `server/src/lib/rankingCron.js` (from #18) with a `computeMetrics()` function called after decay recomputation
+- Metrics queries run against `click_events`, `product_catalog_cache`, `product_click_stats`, `ranking_weights`, `admin_boost_queue`
+- Feed diversity and feed freshness require storing yesterday's top-10 product list — use a simple `metrics_snapshot` jsonb column or a separate key in the cache
+- Admin endpoint: `server/src/routes/adminMetrics.js` (new), register in `app.js`
+
+### Testing
+- After cron run, `metrics_log` contains 8 rows with current date
+- Each metric value is a valid number (not NaN, not null)
+- `passed` is true when value meets target, false otherwise
+- 3 consecutive days of failure triggers warning log
+- `GET /api/admin/metrics` returns grouped metric history
+- Non-admin auth → 403
+
+### Dependencies
+Issue #18 (cron infrastructure), Issue #4 (aggregation tables), Issue #14 (impression tracking for exploration CTR)
+
+---
+
 ## Issue #19: Admin weight management endpoints
 
 ### Context
@@ -676,9 +721,14 @@ Phase 5 — API + UI:
   #16 Cold start regional              ←── (needs #8)
   #17 Swipe feed UI                    ←── (needs #11, #5)
 
-Phase 6 — Self-Tuning:
+Phase 6 — Self-Tuning & Ops:
   #15 Self-tuning feedback loop        ←── (needs #4, #9)
   #18 Time decay recomputation         ←── (needs #4, #15)
+  #18b Metrics computation cron (#23)  ←── (needs #18, #14)
   #19 Admin weight management          ←── (needs #9, #15)
   #21 Shopify product deletion webhook ←── (needs #1)
+
+Cross-cutting (folded into existing issues):
+  #22 Feed cache invalidation          ←── folded into #11 implementation notes
+  #24 View event deduplication          ←── folded into #3 implementation notes
 ```

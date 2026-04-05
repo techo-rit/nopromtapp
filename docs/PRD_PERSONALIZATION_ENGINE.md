@@ -18,10 +18,8 @@ A **three-signal weighted-blend ranking engine** that scores every product for e
 final_score = w_style × style_dna_match
             + w_user_clicks × user_click_affinity
             + w_product_pop × product_popularity
-            + boost_new_arrival
-            + boost_suits_them
-            + boost_exploration
-            - penalty_fatigue
+            + new_arrival_boost
+            - fatigue_penalty
 ```
 
 Where:
@@ -29,9 +27,8 @@ Where:
 - **User click affinity** — aggregated from per-user behavioral events (views, try-ons, wishlists, carts, purchases), with dual time decay
 - **Product popularity** — aggregated from per-product click counts across all users, with seasonal/regional signals
 - **New arrival boost** — additive +0.15 on day 0, fading linearly to 0 over 14 days; breaks the discovery death spiral for freshly-added products
-- **Suits-them boost** — gentle score bump when product meta-tags match user's body type, skin tone, size (third-party / prescriptive)
-- **Exploration boost** — 10-15% of feed slots reserved for admin-boosted clearance items + random discovery
 - **Fatigue penalty** — 1-3% per ignored impression, prevents stale feed
+- **Exploration** — 12% of feed slots replaced via injection (admin-boosted items + random discovery); not a score term
 
 **Weights are dynamic**, shifting on three axes:
 1. **Data maturity** — as a user accumulates clicks + wardrobe data, click weight rises, style DNA weight falls
@@ -77,7 +74,7 @@ Where:
 
 **Choice**: All products are scored and ranked. No hard filtering by style DNA.
 
-**Reason**: Filtering kills serendipity. During Diwali, a suits-lover should still see the trending floral kurta — it just won't be #1 in their feed. The blend ensures relevance without creating a filter bubble.
+**Reason**: Filtering kills serendipity. During seasonal spikes, a suits-lover should still see the trending floral kurta — it just won't be #1 in their feed. The blend ensures relevance without creating a filter bubble.
 
 ### Decision 2: Two-layer click storage (event log + pre-aggregated)
 
@@ -119,7 +116,7 @@ Where:
 
 **Choice**: Daily feedback loop measuring `(try_ons + wishlists + carts + 2×buys) / views`. Adjust weights ±0.03/cycle toward better engagement. No ML.
 
-**Reason**: Simple, transparent, auditable. Naturally adapts to seasonal shifts (Diwali = more collective purchasing = product-popularity weight rises). Bounded adjustments prevent wild swings.
+**Reason**: Simple, transparent, auditable. Naturally adapts to seasonal shifts (seasonal events = more collective purchasing = product-popularity weight rises). Bounded adjustments prevent wild swings.
 
 ### Decision 9: Cold start strategy
 
