@@ -45,6 +45,7 @@ The engine eliminates the need for a fashion designer/specialist by acting as a 
 │  │  score = w_style × style_dna_match               │     │
 │  │        + w_clicks × user_click_affinity           │     │
 │  │        + w_pop × product_popularity               │     │
+│  │        + new_arrival_boost                        │     │
 │  │        - fatigue_penalty                          │     │
 │  │        + exploration_boost                        │     │
 │  │                                                  │     │
@@ -271,7 +272,7 @@ CREATE TABLE user_click_profile (
   total_cart_adds     integer DEFAULT 0,
   total_purchases     integer DEFAULT 0,
   engagement_ratio    decimal(5,4) DEFAULT 0,
-  recent_impressions  jsonb DEFAULT '[]',
+  recent_impressions  jsonb DEFAULT '[]',   -- [{ product_id, shown_at, position, interacted }]
   last_computed_at    timestamptz DEFAULT now(),
   events_since_compute integer DEFAULT 0,
   updated_at          timestamptz DEFAULT now()
@@ -362,6 +363,7 @@ CREATE TABLE product_catalog_cache (
   sustainability      text[] DEFAULT '{}',
   versatility         text,
   is_new_arrival      boolean DEFAULT false,
+  shopify_published_at timestamptz,        -- From Shopify publishedAt; drives newArrivalBoost()
   min_price           integer,
   max_price           integer,
   available_for_sale  boolean DEFAULT true,
@@ -399,12 +401,16 @@ CREATE TABLE ranking_weights (
   w_user_clicks       decimal(4,3) NOT NULL,
   w_product_pop       decimal(4,3) NOT NULL,
   engagement_ratio    decimal(5,4),
+  -- last_delta records the direction of each weight's last change,
+  -- required by the self-tuning loop to know which way to nudge next cycle.
+  -- e.g. { "w_style": -0.02, "w_user_clicks": +0.02, "w_product_pop": 0 }
+  last_delta          jsonb DEFAULT '{}'::jsonb,
   is_active           boolean DEFAULT false,
   created_at          timestamptz DEFAULT now()
 );
 ```
 
-Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, is_active: true }`.
+Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, last_delta: {}, is_active: true }`.
 
 ---
 
@@ -416,10 +422,11 @@ Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, is_active:
 final_score = w_style × style_dna_match(user, product)
             + w_clicks × user_click_affinity(user_click_profile, product)
             + w_pop   × product_popularity(product_stats, region)
+            + new_arrival_boost(product)
             - fatigue_penalty(product, impressions)
 ```
 
-Where `w_style + w_clicks + w_pop = 1.0`, always.
+Where `w_style + w_clicks + w_pop = 1.0`, always. `new_arrival_boost` is additive and outside the normalised weight system — it does not steal from the three signals.
 
 ### 6.2 Style DNA Match (0-1)
 
@@ -463,9 +470,9 @@ function styleDnaMatch(userProfile, productTags) {
 }
 ```
 
-### 6.3 User Click Affinity (0-1)
+### 6.3 User Click Affinity (-1 to 1)
 
-Measures how well a product matches the user's behavioral taste across all 30 dimensions. Uses pre-aggregated tag affinities from `user_click_profile`.
+Measures how well a product matches the user's behavioral taste across all 30 dimensions. Uses pre-aggregated tag affinities from `user_click_profile`. Negative affinities (from `cart_remove` events) actively penalise products the user has rejected.
 
 ```javascript
 function userClickAffinity(userClickProfile, productTags) {
@@ -477,11 +484,16 @@ function userClickAffinity(userClickProfile, productTags) {
     if (!productValue) continue;
 
     const values = Array.isArray(productValue) ? productValue : [productValue];
-    let bestMatch = 0;
+    // Initialise to null so we can distinguish "no match" from "explicit 0"
+    let bestMatch: number | null = null;
     for (const v of values) {
-      bestMatch = Math.max(bestMatch, userAffinityMap[v] || 0);
+      const val = userAffinityMap[v];
+      if (val !== undefined) {
+        bestMatch = bestMatch === null ? val : Math.max(bestMatch, val);
+      }
     }
-    if (bestMatch > 0) {
+    // Include negative affinities (cart_remove produces negative scores)
+    if (bestMatch !== null) {
       totalScore += bestMatch;
       matchedDims++;
     }
@@ -515,13 +527,40 @@ function computePopularityScore(stats) {
   // Weighted recent activity (last 7 days)
   const raw = stats.recent_views * 1
             + stats.recent_try_ons * 3
+            + stats.recent_wishlists * 4
             + stats.recent_carts * 6
             + stats.recent_purchases * 10;
   return raw; // Normalized across all products later (divide each by max)
 }
 ```
 
-### 6.5 Fatigue Penalty
+### 6.5 New Arrival Boost
+
+A newly-added product has `popularity_score = 0`, `view_count = 0`, and zero click history. Without intervention it ranks near the bottom permanently — users who would have loved it never see it, it never accumulates clicks, and the low rank is self-reinforcing. The new-arrival boost breaks this death spiral by injecting a temporary score bump for the first 14 days.
+
+```javascript
+function newArrivalBoost(product) {
+  if (!product.is_new_arrival) return 0;
+
+  // shopify_published_at is stored in product_catalog_cache at sync time
+  const daysOld = (Date.now() - new Date(product.shopify_published_at).getTime())
+                  / (1000 * 60 * 60 * 24);
+
+  if (daysOld > 14) return 0;
+
+  // Linear fade: +0.15 on day 0, down to 0 on day 14
+  return 0.15 * (1 - daysOld / 14);
+}
+```
+
+**Properties:**
+- **+0.15 on day 0** — strong enough to surface a new arrival in the top third of a typical ranked feed
+- **Linear fade over 14 days** — by day 7 it's +0.075; by day 14 it's 0. The product earns its rank organically from that point
+- **Not style-gated** — applies regardless of profile match. A new kurta surfaces for everyone briefly so it can gather the initial clicks needed to build its own signal
+- **Stackable** — a new arrival that also matches the user's style DNA will score even higher, which is the correct outcome
+- **Auto-expiry** — once `shopify_published_at` is more than 14 days ago the function returns 0 with no database writes needed. `is_new_arrival` can be set to `false` by the nightly cron as a housekeeping step (see §9)
+
+### 6.6 Fatigue Penalty
 
 Products shown repeatedly without interaction get a mild penalty to keep the feed fresh.
 
@@ -535,7 +574,7 @@ function fatiguePenalty(productId, recentImpressions) {
 }
 ```
 
-### 6.6 Putting It Together
+### 6.7 Putting It Together
 
 ```javascript
 function rankProducts(products, userProfile, userClickProfile, statsMap, region, boostQueue) {
@@ -544,18 +583,22 @@ function rankProducts(products, userProfile, userClickProfile, statsMap, region,
   const scored = products
     .filter(p => p.available_for_sale)
     .map(product => {
-      const stats = statsMap[product.product_id] || {};
+      const stats   = statsMap[product.product_id] || {};
       const style   = styleDnaMatch(userProfile, product);
       const clicks  = userClickAffinity(userClickProfile, product);
       const pop     = productPopularity(stats, region);
+      const arrival = newArrivalBoost(product);                              // §6.5
       const fatigue = fatiguePenalty(product.product_id, userClickProfile.recent_impressions || []);
 
       const score = weights.wStyle * style
                   + weights.wClicks * clicks
                   + weights.wPop * pop
+                  + arrival
                   - fatigue;
 
-      return { product, score, isExploration: false };
+      // Clamp to 0 — negative scores (from strong cart_remove affinity) just
+      // push the product to the bottom; they should not invert sort order.
+      return { product, score: Math.max(0, score), isExploration: false };
     });
 
   scored.sort((a, b) => b.score - a.score);
@@ -617,10 +660,14 @@ function getSeasonalBoost() {
   const month = now.getMonth() + 1; // 1-12
   const day = now.getDate();
 
+  // NOTE: Diwali is a lunar festival — its Gregorian date shifts each year.
+  // Update the diwali entry at the start of each year.
+  // Diwali 2026: Nov 8 → use month 11, days [1, 22] (2-week pre+post window)
+  // Diwali 2027: Oct 29 → month 10, days [22, 31] + month 11, days [1, 5]
   const FESTIVALS = [
-    { name: 'diwali', month: 10, days: [15, 31], boost: 0.8 },
+    { name: 'diwali', month: 11, days: [1, 22], boost: 0.8 },  // 2026 — update annually
     { name: 'christmas', month: 12, days: [20, 31], boost: 0.5 },
-    { name: 'eid', month: 3, days: [25, 31], boost: 0.6 },    // Approximate
+    { name: 'eid', month: 3, days: [25, 31], boost: 0.6 },    // Approximate; update annually
     { name: 'holi', month: 3, days: [1, 15], boost: 0.5 },
     { name: 'new_year_sale', month: 1, days: [1, 15], boost: 0.7 },
     { name: 'summer_sale', month: 6, days: [1, 30], boost: 0.4 },
@@ -817,11 +864,12 @@ function recomputeTagAffinities(userId) {
     }
   }
 
-  // Normalize each dimension to 0-1
+  // Normalize each dimension to [-1, 1] using absolute max.
+  // This preserves negative signals from cart_remove events.
   for (const dim of Object.keys(affinities)) {
-    const max = Math.max(...Object.values(affinities[dim]), 0.001);
+    const absMax = Math.max(...Object.values(affinities[dim]).map(Math.abs), 0.001);
     for (const key of Object.keys(affinities[dim])) {
-      affinities[dim][key] = Math.round((affinities[dim][key] / max) * 1000) / 1000;
+      affinities[dim][key] = Math.round((affinities[dim][key] / absMax) * 1000) / 1000;
     }
   }
 
@@ -926,6 +974,10 @@ POST /api/admin/product-sync
 POST /api/shopify/webhook/product-update
   Auth: Shopify HMAC verification
   Syncs single product on create/update
+
+POST /api/shopify/webhook/product-delete
+  Auth: Shopify HMAC verification
+  Deletes product from product_catalog_cache + product_click_stats + admin_boost_queue
 ```
 
 ### Weight Management

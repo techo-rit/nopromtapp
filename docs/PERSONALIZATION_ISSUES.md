@@ -12,9 +12,11 @@ The personalization engine needs a local mirror of Shopify products with all 30 
 
 ### Acceptance Criteria
 - [ ] `product_catalog_cache` table created in `000_schema.sql` with all 30 tag columns, pricing, availability, GIN indexes on array columns
+- [ ] `shopify_published_at timestamptz` column included — populated at sync time from Shopify's `publishedAt` field; required by the new-arrival boost
 - [ ] RLS enabled (public read, service-role write)
 - [ ] `POST /api/admin/product-sync` endpoint — fetches all products from Shopify Storefront API, upserts into `product_catalog_cache`
 - [ ] `POST /api/shopify/webhook/product-update` endpoint — Shopify webhook handler, syncs single product on create/update
+- [ ] Webhook registration should include `products/delete` topic (handler built in Issue #21)
 - [ ] Metafield extraction: reads `stiri.*` namespace metafields from Shopify and maps to the 30 columns
 - [ ] Products without metafields get null/empty for untagged dimensions (graceful degradation)
 - [ ] Types updated in `web/types/index.ts`
@@ -159,10 +161,10 @@ Issue #3 (endpoint must exist)
 
 ---
 
-## Issue #6: [AFK] Style DNA scoring function
+## Issue #6: [AFK] Style DNA scoring function + new arrival boost
 
 ### Context
-Computes how well a product matches a user's explicit profile (colors, styles, fit, body type, skin tone, age range). Returns a normalized 0-1 score.
+Computes how well a product matches a user's explicit profile (colors, styles, fit, body type, skin tone, age range). Also implements the new-arrival boost to prevent freshly-added products from dying in obscurity before they accumulate click data.
 
 ### Acceptance Criteria
 - [ ] `server/src/lib/ranking.js` created (new module)
@@ -171,19 +173,30 @@ Computes how well a product matches a user's explicit profile (colors, styles, f
 - [ ] Normalized to 0-1
 - [ ] Handles missing profile fields gracefully (skip dimension if null/empty)
 - [ ] Handles missing product tags gracefully (skip dimension if null/empty)
+- [ ] `newArrivalBoost(product)` function exported
+  - Returns `0` if `product.is_new_arrival` is false
+  - Computes `daysOld` from `product.shopify_published_at`
+  - Returns `0.15 × (1 - daysOld / 14)` for products ≤ 14 days old, else `0`
+  - Pure function, no DB access
 
 ### Implementation Notes
 - File: `server/src/lib/ranking.js` (new)
-- Pure function, no DB access — takes objects as input
-- Used by the ranking endpoint (#11) and boost queue filtering (#13)
+- Both functions are pure — take objects as input, no DB access
+- `styleDnaMatch` is used by the ranking endpoint (#11) and boost queue filtering (#13)
+- `newArrivalBoost` is called in `rankProducts` (#10) alongside the three weighted scores
+- The boost is additive and sits outside the normalised weight system — it does not reduce w_style/w_clicks/w_pop
 
 ### Testing
 - User with `colors: [navy, black]`, product with `color_family: [navy, white]` → color overlap = 1/2
 - User with `bodyType: hourglass`, product with `body_type_fit: [hourglass, pear]` → 0.5 boost
 - Missing user colors → color dimension skipped, maxScore adjusted
+- Product with `is_new_arrival: true`, published today → boost ≈ 0.15
+- Product with `is_new_arrival: true`, published 7 days ago → boost ≈ 0.075
+- Product with `is_new_arrival: true`, published 14 days ago → boost = 0
+- Product with `is_new_arrival: false` → boost = 0 regardless of age
 
 ### Dependencies
-Issue #1 (product tags must exist in cache)
+Issue #1 (product tags + `shopify_published_at` must exist in cache)
 
 ---
 
@@ -195,19 +208,23 @@ Computes how well a product matches a user's *behavioral* preferences (what they
 ### Acceptance Criteria
 - [ ] `userClickAffinity(userClickProfile, productTags)` function added to `ranking.js`
 - [ ] Matches across all 30 tag dimensions — whatever dimensions exist in `tag_affinities`
-- [ ] Per-dimension: takes max affinity value across product's tag values
-- [ ] Averages across matched dimensions, normalized 0-1
+- [ ] Per-dimension: takes max affinity value across product's tag values (including negative values from `cart_remove`)
+- [ ] Averages across matched dimensions; output range is **-1 to 1** (not 0-1)
 - [ ] Returns 0 for users with empty tag_affinities (cold start)
+- [ ] Negative affinities propagate correctly — a product whose only matched tags carry negative affinity returns a negative score
 
 ### Implementation Notes
 - File: `server/src/lib/ranking.js`
 - Pure function, no DB access
 - `tag_affinities` structure: `{ "color_family": { "navy": 0.82, "black": 0.65 }, "style_tags": { "formal": 0.90 }, ... }`
+- Per-dimension best-match uses `null` initialisation (not `0`) so we distinguish "no match" from "affinity is 0"
 
 ### Testing
 - User affinities `{ color_family: { navy: 0.8 } }`, product `color_family: [navy]` → high score
 - User affinities empty → returns 0
 - Product missing dimensions → those dimensions skipped
+- User affinities `{ color_family: { red: -0.5 } }`, product `color_family: [red]` → returns **-0.5** (negative propagates)
+- User affinities `{ color_family: { red: -0.5, navy: 0.8 } }`, product `color_family: [red, navy]` → best-match is **0.8** (max, not sum)
 
 ### Dependencies
 Issue #4 (user click profile must be populated)
@@ -252,13 +269,14 @@ The three ranking weights (style DNA, user clicks, product popularity) shift bas
 - [ ] Weight curves: `wStyle: 0.85→0.38`, `wClicks: 0.05→0.43`, `wPop: 0.10 + seasonal`
 - [ ] Loads active self-tuned delta from `ranking_weights` table and applies bounded adjustment
 - [ ] Normalizes weights to sum = 1.0
-- [ ] `ranking_weights` table created in `000_schema.sql` with columns: `id`, `w_style`, `w_user_clicks`, `w_product_pop`, `engagement_ratio`, `is_active`, `created_at`
-- [ ] Initial seed row inserted: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, is_active: true }`
+- [ ] `ranking_weights` table created in `000_schema.sql` with columns: `id`, `w_style`, `w_user_clicks`, `w_product_pop`, `engagement_ratio`, `last_delta` (jsonb), `is_active`, `created_at`
+- [ ] `last_delta` stores the direction of each weight's last change, e.g. `{ "w_style": -0.02, "w_user_clicks": 0.02, "w_product_pop": 0 }` — required by self-tuning cron (#15) to know which way to nudge next cycle
+- [ ] Initial seed row inserted: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, last_delta: {}, is_active: true }`
 - [ ] `getSeasonalBoost()` helper — returns 0-1 based on proximity to configured festival dates (simple calendar lookup, can be hardcoded initially)
 
 ### Implementation Notes
 - Files: `server/src/lib/ranking.js`, `server/supabase/migrations/000_schema.sql`
-- Seasonal boost: start with a simple lookup table `{ "diwali": { month: 10, day_range: [15, 31], boost: 0.8 }, "christmas": { month: 12, ... } }`
+- Seasonal boost: start with a simple lookup table — Diwali entry must use the correct Gregorian month each year (Diwali 2026: Nov 8 → `month: 11`; update annually at start of year)
 - Weight adjustment from `ranking_weights` is additive (delta from base), clamped to ±0.03
 
 ### Testing
@@ -271,15 +289,17 @@ Issues #6, #7, #8 (scoring functions must exist)
 
 ---
 
-## Issue #10: [AFK] Ranking engine (blend scores + fatigue penalty)
+## Issue #10: [AFK] Ranking engine (blend scores + new arrival boost + fatigue penalty)
 
 ### Context
-The core ranking function that combines all three scores with dynamic weights, applies fatigue penalty, and produces a sorted product list.
+The core ranking function that combines all signals with dynamic weights, applies the new-arrival boost and fatigue penalty, and produces a sorted product list.
 
 ### Acceptance Criteria
 - [ ] `rankProducts(products, userProfile, userClickProfile, productStatsMap, userRegion, boostQueue)` function in `ranking.js`
-- [ ] For each product: `score = w_style × styleDna + w_clicks × clickAffinity + w_pop × popularity - fatigue`
+- [ ] For each product: `score = w_style × styleDna + w_clicks × clickAffinity + w_pop × popularity + newArrivalBoost - fatigue`
+- [ ] Final score clamped to `Math.max(0, score)` — negative scores (from strong `cart_remove` affinity) push to bottom but never below zero
 - [ ] `fatiguePenalty(productId, recentImpressions)`: 2% per ignored impression, capped at 30%
+- [ ] `newArrivalBoost` called per product (from #6); additive, outside the normalised weight sum
 - [ ] Returns sorted array of `{ product, score, isExploration }` objects
 - [ ] Exploration slot injection delegated to #13 (this function returns the raw ranked list)
 
@@ -292,6 +312,9 @@ The core ranking function that combines all three scores with dynamic weights, a
 - Product matching both style DNA and click history ranks higher than one matching only popularity
 - Product ignored 5 times gets 10% penalty
 - Products with no data score based on popularity only
+- Brand-new product (day 0, no clicks) scores ~0.15 higher than an identical zero-click product older than 14 days
+- Same new product re-checked on day 14 → arrival boost = 0
+- Product where user's only signal is `cart_remove` → click affinity is negative → final score clamped to 0 (ranks last, never negative)
 
 ### Dependencies
 Issue #9 (dynamic weights)
@@ -373,6 +396,7 @@ Issue #10 (ranking engine references boosts)
 - [ ] Remaining exploration slots filled with random products from bottom 50% of rankings (products that wouldn't normally be seen)
 - [ ] Exploration products marked with `isExploration: true` in response
 - [ ] Boosted products marked with `boostReason: 'clearance'` or similar for UI badge
+- [ ] No product appears in both the organic ranked list and an exploration slot (dedup required: `explorationPool` must exclude any product already in `mainFeed`)
 
 ### Implementation Notes
 - File: `server/src/routes/feed.js` (extend #11)
@@ -428,12 +452,12 @@ The system adjusts ranking weights daily based on whether engagement improved. N
 - [ ] Scheduled job runs daily at 3 AM IST
 - [ ] Computes engagement ratio: `(try_ons + wishlists + carts + 2×purchases) / views` across all users, last 7 days
 - [ ] Compares to previous 7-day period
-- [ ] If improved: nudge weights +0.02 in same direction as last change
-- [ ] If declined: nudge weights -0.01 toward previous config
+- [ ] If improved: nudge weights +0.02 in same direction as `last_delta` from the active `ranking_weights` row
+- [ ] If declined: nudge weights -0.01 toward previous config (reverse direction of `last_delta`)
 - [ ] If flat (±0.001): no change
 - [ ] All adjustments clamped to ±0.03 per cycle
 - [ ] Weights normalized to sum = 1
-- [ ] New `ranking_weights` row inserted with `is_active = true`, previous row set `is_active = false`
+- [ ] New `ranking_weights` row inserted with `is_active = true`, `last_delta` set to the delta applied this cycle; previous row set `is_active = false`
 - [ ] Change logged for audit (the row itself is the log)
 
 ### Implementation Notes
@@ -524,10 +548,12 @@ Nightly batch job that recomputes all time-decayed aggregates: user tag affiniti
 ### Acceptance Criteria
 - [ ] Runs nightly (alongside self-tuning cron from #15, or as part of same job)
 - [ ] **User tag affinities**: For each user with `events_since_compute > 0`, recompute `tag_affinities` from `click_events` with dual time decay (30-day preference, 45-day transactional). Reset `events_since_compute = 0`.
-- [ ] **Product recent counts**: Recompute `recent_views`, `recent_try_ons`, `recent_carts`, `recent_purchases` as counts from last 7 days only
+  - Normalization uses **absolute max** per dimension (`Math.max(...values.map(Math.abs), 0.001)`) so negative `cart_remove` affinities stay in [-1, 1] range instead of exploding
+- [ ] **Product recent counts**: Recompute `recent_views`, `recent_try_ons`, `recent_wishlists`, `recent_carts`, `recent_purchases` as counts from last 7 days only
 - [ ] **Product popularity score**: Recompute `popularity_score` using weighted recent counts, normalized 0-1 across all products
 - [ ] **Engagement ratio**: Recompute per-user `engagement_ratio` in `user_click_profile`
 - [ ] **Housekeeping**: Prune `recent_impressions` older than 7 days, delete expired `admin_boost_queue` entries, archive `click_events` older than 180 days (optional — move to archive table or just delete)
+- [ ] **New arrival expiry**: Set `is_new_arrival = false` on any `product_catalog_cache` row where `shopify_published_at < now() - interval '14 days'` and `is_new_arrival = true`
 - [ ] **Performance**: Process in batches of 100 users to avoid long-running transactions
 
 ### Implementation Notes
@@ -543,9 +569,81 @@ Nightly batch job that recomputes all time-decayed aggregates: user tag affiniti
 - After decay recomputation, 45-day-old purchase carries ~50% weight
 - Product with recent spike in purchases gets higher popularity_score
 - Expired boosts removed from queue
+- User with only `cart_remove` events for `color_family: red` → affinity for red is **negative** (not 0, not -3000)
+- User with mix of `cart_add` (weight 8) and `cart_remove` (weight -3) for same tag → net positive affinity, proportional to weighted ratio
+- Products older than 14 days have `is_new_arrival` set to `false`
 
 ### Dependencies
 Issue #4 (aggregation tables), Issue #15 (cron infrastructure)
+
+---
+
+## Issue #19: Admin weight management endpoints
+
+### Context
+MODEL §12 defines two weight management endpoints (`GET /api/admin/weights`, `POST /api/admin/weights/tune`). Without these, there is no visibility into what weights the system is running, no way to manually trigger recalibration, and no recovery path if self-tuning drifts badly. This is the admin's control surface for the ranking system.
+
+### Acceptance Criteria
+- [ ] `GET /api/admin/weights` — auth: admin only
+  - Returns `{ active: <active ranking_weights row>, history: <last 30 rows ordered by created_at desc> }`
+  - Each row includes `id`, `w_style`, `w_user_clicks`, `w_product_pop`, `engagement_ratio`, `last_delta`, `is_active`, `created_at`
+- [ ] `POST /api/admin/weights/tune` — auth: admin only
+  - Runs the same recalibration logic as Issue #15's daily cron (compute engagement ratio, compare, nudge, insert new row)
+  - Returns `{ previous: <old active row>, current: <new active row>, action: 'nudged_positive' | 'nudged_negative' | 'no_change' }`
+  - Rate-limited: max 1 manual tune per hour (prevent rapid oscillation)
+- [ ] Both endpoints use `getUserFromRequest()` + admin role check
+- [ ] Both endpoints registered in `server/src/app.js`
+- [ ] Endpoints documented in `docs/API_CONTRACTS.md`
+
+### Implementation Notes
+- File: `server/src/routes/adminWeights.js` (new)
+- The tune endpoint reuses the recalibration function from #15 — extract it as a shared `recalibrateWeights()` in `server/src/lib/ranking.js` so both the cron and the endpoint call the same logic
+- Admin check: verify user role from Supabase `profiles` table or a simple env-based allowlist for v1
+- The `GET` endpoint is read-only and safe to call frequently (useful for a dashboard)
+
+### Testing
+- `GET /api/admin/weights` returns active row + up to 30 history rows
+- `GET /api/admin/weights` with non-admin auth → 403
+- `POST /api/admin/weights/tune` triggers recalibration and returns before/after
+- `POST /api/admin/weights/tune` called twice within 1 hour → 429 (rate limited)
+- Unauthenticated request → 401
+
+### Dependencies
+Issue #9 (ranking_weights table), Issue #15 (recalibration logic to reuse)
+
+---
+
+## Issue #21: Shopify product deletion webhook
+
+### Context
+Issue #1 registers `products/create` and `products/update` webhooks. Shopify also fires `products/delete` when a product is permanently deleted from the store. Without a handler, the deleted product's row stays in `product_catalog_cache` indefinitely — it continues being scored and ranked. If it has decent click history it could rank well and appear in feeds, leading users to a 404 or "product not found."
+
+### Acceptance Criteria
+- [ ] `POST /api/shopify/webhook/product-delete` endpoint added
+- [ ] Auth: Shopify HMAC signature verification (same pattern as `product-update`)
+- [ ] On valid payload: `DELETE FROM product_catalog_cache WHERE shopify_gid = payload.admin_graphql_api_id`
+- [ ] Also delete corresponding `product_click_stats` row (cascade cleanup)
+- [ ] If product not found in cache, respond 200 (idempotent — don't fail on double-delivery)
+- [ ] Webhook registered in Shopify admin: topic `products/delete`, URL `https://<host>/api/shopify/webhook/product-delete`
+- [ ] Route registered in `server/src/app.js`
+- [ ] Logged: product_id + deletion timestamp for audit trail
+
+### Implementation Notes
+- File: `server/src/routes/shopify.js` (extend, alongside existing `product-update` handler)
+- Shopify delete payload contains `{ id, admin_graphql_api_id }` — use `admin_graphql_api_id` to match `shopify_gid`
+- The product's `click_events` rows can be kept for analytics (they reference `product_id` not a FK), but `product_click_stats` should be deleted since it would be stale
+- Consider also removing from `admin_boost_queue` if the product had an active boost
+
+### Testing
+- Delete webhook removes product from `product_catalog_cache`
+- Corresponding `product_click_stats` row also deleted
+- Active boost for deleted product is removed from `admin_boost_queue`
+- Duplicate delivery (same product already deleted) → 200, no error
+- Invalid HMAC → 401
+- Deleted product no longer appears in `GET /api/feed/for-you` results
+
+### Dependencies
+Issue #1 (product_catalog_cache + webhook infrastructure must exist)
 
 ---
 
@@ -581,4 +679,6 @@ Phase 5 — API + UI:
 Phase 6 — Self-Tuning:
   #15 Self-tuning feedback loop        ←── (needs #4, #9)
   #18 Time decay recomputation         ←── (needs #4, #15)
+  #19 Admin weight management          ←── (needs #9, #15)
+  #21 Shopify product deletion webhook ←── (needs #1)
 ```
