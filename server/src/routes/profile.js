@@ -977,3 +977,196 @@ function mapAddress(address) {
     createdAt: address.created_at,
   };
 }
+
+// ---- Saved Selfies ----
+
+// GET /api/profile/selfies
+export async function getSelfiesHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const { data, error } = await supabase
+      .from('saved_selfies')
+      .select('id, url, created_at')
+      .eq('user_id', authResult.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ success: false, error: 'Failed to fetch selfies' });
+
+    return res.status(200).json({ success: true, selfies: data || [] });
+  } catch (err) {
+    console.error('getSelfies error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch selfies' });
+  }
+}
+
+// POST /api/profile/selfies — save a new selfie to the collection
+export async function saveSelfieHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const userId = authResult.user.id;
+    const { imageData } = req.body || {};
+
+    if (!imageData || typeof imageData !== 'string') {
+      return res.status(400).json({ success: false, error: 'imageData (base64 data URL) is required' });
+    }
+
+    const match = /^data:(image\/(jpeg|jpg|png|webp));base64,(.+)$/.exec(imageData);
+    if (!match) {
+      return res.status(400).json({ success: false, error: 'Invalid image format. Must be JPEG, PNG, or WebP data URL.' });
+    }
+
+    const mimeType = match[1];
+    const ext = match[2] === 'jpg' ? 'jpeg' : match[2];
+    const buffer = Buffer.from(match[3], 'base64');
+
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'Image must be under 5MB' });
+    }
+
+    const storagePath = `${userId}/selfies/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('profile-photos')
+      .upload(storagePath, buffer, { contentType: mimeType });
+
+    if (uploadError) {
+      console.error('Selfie upload error:', uploadError);
+      return res.status(500).json({ success: false, error: 'Failed to upload selfie' });
+    }
+
+    const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(storagePath);
+    const publicUrl = urlData?.publicUrl;
+    if (!publicUrl) return res.status(500).json({ success: false, error: 'Failed to get selfie URL' });
+
+    const { data: selfie, error: insertError } = await supabase
+      .from('saved_selfies')
+      .insert({ user_id: userId, url: publicUrl })
+      .select('id, url, created_at')
+      .single();
+
+    if (insertError) {
+      console.error('Selfie insert error:', insertError);
+      return res.status(500).json({ success: false, error: 'Failed to save selfie record' });
+    }
+
+    // Make this the active profile photo for try-on
+    await supabase
+      .from('profiles')
+      .update({ profile_photo_url: publicUrl, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    profileCache.del(`profile:${userId}`);
+
+    return res.status(200).json({ success: true, selfie, profilePhotoUrl: publicUrl });
+  } catch (err) {
+    console.error('saveSelfie error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to save selfie' });
+  }
+}
+
+// DELETE /api/profile/selfies/:id
+export async function deleteSelfieHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const userId = authResult.user.id;
+    const { id } = req.params;
+
+    const { data: selfie, error: fetchError } = await supabase
+      .from('saved_selfies')
+      .select('id, url')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !selfie) {
+      return res.status(404).json({ success: false, error: 'Selfie not found' });
+    }
+
+    // Remove from storage
+    const storageSuffix = selfie.url.split('/profile-photos/')[1];
+    if (storageSuffix) {
+      await supabase.storage.from('profile-photos').remove([storageSuffix]);
+    }
+
+    await supabase.from('saved_selfies').delete().eq('id', id).eq('user_id', userId);
+
+    // If this was the active profile photo, switch to most recent remaining
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('profile_photo_url')
+      .eq('id', userId)
+      .single();
+
+    if (profile?.profile_photo_url === selfie.url) {
+      const { data: remaining } = await supabase
+        .from('saved_selfies')
+        .select('url')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      await supabase
+        .from('profiles')
+        .update({ profile_photo_url: remaining?.url || null, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+    }
+
+    profileCache.del(`profile:${userId}`);
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('deleteSelfie error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to delete selfie' });
+  }
+}
+
+// PATCH /api/profile/selfies/:id/activate — set as active profile photo for try-on
+export async function activateSelfieHandler(req, res) {
+  try {
+    const supabase = createAdminClient();
+    if (!supabase) return res.status(500).json({ success: false, error: 'Database not configured' });
+
+    const authResult = await getUserFromRequest(req, res);
+    if ('error' in authResult) return res.status(authResult.status).json({ success: false, error: authResult.error });
+
+    const userId = authResult.user.id;
+    const { id } = req.params;
+
+    const { data: selfie, error } = await supabase
+      .from('saved_selfies')
+      .select('url')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !selfie) return res.status(404).json({ success: false, error: 'Selfie not found' });
+
+    await supabase
+      .from('profiles')
+      .update({ profile_photo_url: selfie.url, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    profileCache.del(`profile:${userId}`);
+
+    return res.status(200).json({ success: true, profilePhotoUrl: selfie.url });
+  } catch (err) {
+    console.error('activateSelfie error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to activate selfie' });
+  }
+}

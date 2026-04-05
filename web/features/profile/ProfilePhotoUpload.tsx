@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { uploadProfilePhoto, deleteProfilePhoto } from './profilePhotoService';
+import { SmartSelfieModal } from '../camera/SmartSelfieModal';
 
 interface ProfilePhotoUploadProps {
   currentPhotoUrl: string | null;
@@ -15,10 +16,30 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleCameraCapture = async (file: File) => {
+    setShowCamera(false);
+    setError(null);
+    setIsUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      const newUrl = await uploadProfilePhoto(dataUrl);
+      onPhotoUpdated(newUrl);
+    } catch (err: any) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {    const file = e.target.files?.[0];
     if (!file) return;
     if (fileInputRef.current) fileInputRef.current.value = '';
 
@@ -88,13 +109,27 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
         )}
       </div>
       <div className="flex flex-col gap-2">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading || isDeleting}
-          className="text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
-        >
-          {currentPhotoUrl ? 'Change Photo' : 'Add Profile Photo'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || isDeleting}
+            className="text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
+          >
+            {currentPhotoUrl ? 'Change Photo' : 'Add Photo'}
+          </button>
+          <span className="text-[#2a2a2a]">|</span>
+          <button
+            onClick={() => setShowCamera(true)}
+            disabled={isUploading || isDeleting}
+            className="flex items-center gap-1.5 text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            Take Selfie
+          </button>
+        </div>
         {currentPhotoUrl && (
           <button
             onClick={handleDelete}
@@ -112,6 +147,11 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={handleFileSelect}
+      />
+      <SmartSelfieModal
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        onCapture={handleCameraCapture}
       />
     </div>
   );

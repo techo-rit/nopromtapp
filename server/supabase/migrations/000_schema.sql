@@ -687,3 +687,36 @@ END $$;
 -- ==========================================
 -- DONE
 -- ==========================================
+
+-- ==========================================
+-- SAVED SELFIES
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS saved_selfies (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  url         text NOT NULL,
+  created_at  timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_selfies_user_id ON saved_selfies(user_id, created_at DESC);
+
+ALTER TABLE saved_selfies ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='saved_selfies' AND policyname='saved_selfies_user_select') THEN
+    CREATE POLICY saved_selfies_user_select ON saved_selfies FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='saved_selfies' AND policyname='saved_selfies_user_insert') THEN
+    CREATE POLICY saved_selfies_user_insert ON saved_selfies FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='saved_selfies' AND policyname='saved_selfies_user_delete') THEN
+    CREATE POLICY saved_selfies_user_delete ON saved_selfies FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;

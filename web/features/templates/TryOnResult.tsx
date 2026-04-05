@@ -80,8 +80,8 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
   // Cache the share link so we don't create a new one per click
   const [cachedShareLink, setCachedShareLink] = useState<{ url: string } | null>(null);
 
-  // Show profile photo prompt after first render if user has no profile photo and has a selfie
-  const shouldShowPrompt = !promptDismissed && !user.profilePhotoUrl && selfieFile;
+  // Show selfie save prompt after a brief delay whenever a new selfie was taken
+  const shouldShowPrompt = !promptDismissed && !!selfieFile;
 
   // Trigger prompt after a brief delay
   React.useEffect(() => {
@@ -217,11 +217,11 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
         </button>
       </div>
 
-      {/* Profile Photo Prompt */}
+      {/* Save Selfie Prompt */}
       {showPhotoPrompt && selfieFile && (
         <ProfilePhotoPrompt
           selfieFile={selfieFile}
-          onSaved={() => {
+          onSaved={(profilePhotoUrl) => {
             setShowPhotoPrompt(false);
             setPromptDismissed(true);
             onProfilePhotoSaved?.();
