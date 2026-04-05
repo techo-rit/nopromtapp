@@ -37,19 +37,21 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
 
         const observer = new IntersectionObserver(
             (entries) => {
-                let best: { id: string; ratio: number } | null = null;
+                let bestId: string | null = null;
+                let bestRatio = 0;
                 entries.forEach((entry) => {
                     const cardId = entry.target.getAttribute("data-card-id");
                     if (!cardId) return;
                     if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-                        if (!best || entry.intersectionRatio > best.ratio) {
-                            best = { id: cardId, ratio: entry.intersectionRatio };
+                        if (bestId === null || entry.intersectionRatio > bestRatio) {
+                            bestId = cardId;
+                            bestRatio = entry.intersectionRatio;
                         }
                     }
                 });
-                if (best) {
-                    setFocusedCardId(best.id);
-                    const idx = visibleTemplates.findIndex(t => t.id === best!.id);
+                if (bestId) {
+                    setFocusedCardId(bestId);
+                    const idx = visibleTemplates.findIndex(t => t.id === bestId);
                     if (idx !== -1) setFocusedIndex(idx);
                 }
             },

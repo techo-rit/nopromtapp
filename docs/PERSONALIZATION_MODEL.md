@@ -1,1014 +1,1118 @@
-# Stiri.in — End-to-End Personalization Model
+# Stiri — Personalization Engine: Complete Technical Model
 
-## The Core Thesis
-
-Every user who completes onboarding hands you 5 explicit taste signals (colors, styles, fit, body type, skin tone). Every tap after that — template viewed, image generated, product wishlisted, item carted, purchase completed — is an **implicit** signal that's 10x more valuable than what they told you. The personalization engine fuses both into a living **Style DNA** vector that makes every surface of stiri.in feel hand-curated.
-
----
-
-## 1. SIGNAL TAXONOMY — What Data Feeds the Engine
-
-### 1.1 Explicit Signals (Already Collected)
-
-| Signal | Source | Weight | Update Frequency |
-|--------|--------|--------|------------------|
-| Favorite colors (1-3) | Onboarding step 1 | High | User-editable |
-| Style tags (casual, ethnic, etc.) | Onboarding step 2 | High | User-editable |
-| Fit size (XS → XXL) | Onboarding step 3 | Medium | User-editable |
-| Body type (hourglass, pear, etc.) | Onboarding step 3 | Medium | User-editable |
-| Skin tone (fair/medium/dark) | Onboarding step 3 | Medium | User-editable |
-| Age range (gen_z, millennial, etc.) | Onboarding step 4 | Low | User-editable |
-| Location (city/state/pincode) | Onboarding step 5 | Medium | User-editable |
-
-### 1.2 Behavioral Signals (NEW — Click Tracking)
-
-These are the **highest-value signals** because they reflect real intent, not self-reported preference.
-
-| Event | Object | Intent Strength | Weight |
-|-------|--------|-----------------|--------|
-| `template_view` | Template card on Home/Stack page | Curiosity (weak) | 1x |
-| `template_dwell` | Template card viewed > 3 seconds | Interest (moderate) | 2x |
-| `template_generate` | User actually generated with template | Strong intent | 5x |
-| `template_save` | User saved/favorited a generated image | Satisfaction/approval | 7x |
-| `template_share` | User shared generated image | Advocacy | 8x |
-| `template_regenerate` | Used same template again | Strong repeat preference | 6x |
-| `product_view` | Tapped Shopify product card | Curiosity | 1x |
-| `product_wishlist` | **Add to Wishlist** button | Strong desire, not yet ready to buy | 6x |
-| `product_add_to_cart` | **Add to Cart** button | Purchase intent (high) | 8x |
-| `product_buy_now` | **Buy Now** button | Immediate purchase intent | 10x |
-| `product_remove_from_cart` | Removed from cart | Negative signal | -3x |
-| `product_checkout_complete` | Completed Shopify checkout | **Strongest signal** | 15x |
-| `product_checkout_abandon` | Started checkout, didn't complete | Conflicted | 2x |
-| `stack_view` | Opened a stack (Fitit, Animation, etc.) | Category interest | 2x |
-| `search_query` | Used search bar | Active intent | 3x |
-| `search_result_click` | Clicked a search result | Validated interest | 4x |
-
-### 1.3 Transactional Signals (Shopify + Razorpay)
-
-| Signal | Source | Weight |
-|--------|--------|--------|
-| Purchase history | Shopify order webhook | 15x |
-| Purchase amount (₹) | Shopify order | Price-tier indicator |
-| Product category purchased | Shopify product tags | Category affinity |
-| Subscription tier | Razorpay payment | Engagement tier |
-| Generation quota usage rate | `monthly_used / monthly_quota` | Engagement intensity |
-
-### 1.4 Contextual Signals (Ambient)
-
-| Signal | Source | Purpose |
-|--------|--------|---------|
-| Time of day | Request timestamp | Morning = professional, evening = aspirational |
-| Day of week | Request timestamp | Weekend = casual, weekday = work |
-| Season/month | Server clock | Winter coats in Dec, summer linen in May |
-| Festival proximity | Holiday calendar | Diwali templates boost in Oct-Nov |
-| City/region | User's default address | Regional fashion trends |
-| Device type | User-Agent header | Mobile-first layout tuning |
+> **Status**: Approved design — replaces all prior drafts.
+> **PRD**: See [PRD_PERSONALIZATION_ENGINE.md](PRD_PERSONALIZATION_ENGINE.md) for decisions and rationale.
+> **Issues**: See [PERSONALIZATION_ISSUES.md](PERSONALIZATION_ISSUES.md) for implementation breakdown.
 
 ---
 
-## 2. DATA MODEL — New Tables & Migrations
+## 1. Core Thesis
 
-### 2.1 `user_events` — The Behavioral Event Stream
+Every Stiri user should feel like the platform was built for them. The personalization engine ranks the entire product catalog for each user individually, using three signal sources blended with dynamic weights:
 
-This is the **backbone of personalization**. Every meaningful user action is an event.
+1. **Style DNA** — explicit profile preferences (current: 6 dimensions, extensible to 30+)
+2. **Click behavior** — implicit signals from product interactions (views, try-ons, wishlists, carts, purchases)
+3. **Product popularity** — collective demand signals (global trending + regional trends)
+
+The engine eliminates the need for a fashion designer/specialist by acting as a **personal style advisor** — surfacing what the user likes AND gently boosting what would objectively suit them.
+
+---
+
+## 2. Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     USER DEVICE                           │
+│              Swipe-style "For You" Feed                   │
+│         (one product card per screen, snap scroll)        │
+└───────────────────┬──────────────────────────────────────┘
+                    │
+        ┌───────────┼───────────┐
+        │           │           │
+   Style DNA    Click Events   Feed Request
+   (Profile)    (Batched)      (GET /api/feed/for-you)
+        │           │           │
+        ▼           ▼           ▼
+┌──────────────────────────────────────────────────────────┐
+│                   EXPRESS.JS API                          │
+│                                                          │
+│  POST /api/events/track     GET /api/feed/for-you        │
+│  POST /api/admin/boost      POST /api/admin/product-sync │
+│                                                          │
+│  ┌─────────────────────────────────────────────────┐     │
+│  │              RANKING ENGINE                      │     │
+│  │                                                  │     │
+│  │  score = w_style × style_dna_match               │     │
+│  │        + w_clicks × user_click_affinity           │     │
+│  │        + w_pop × product_popularity               │     │
+│  │        - fatigue_penalty                          │     │
+│  │        + exploration_boost                        │     │
+│  │                                                  │     │
+│  │  Weights: DYNAMIC (data maturity × seasonal      │     │
+│  │           × self-tuning feedback)                 │     │
+│  └─────────────────────────────────────────────────┘     │
+└───────────────────┬──────────────────────────────────────┘
+                    │
+┌───────────────────┼──────────────────────────────────────┐
+│               SUPABASE (Postgres)                        │
+│                                                          │
+│  ┌─────────────────┐  ┌────────────────────┐             │
+│  │   profiles       │  │ product_catalog_   │             │
+│  │   (6 style dims) │  │ cache (30 tags)    │             │
+│  └─────────────────┘  └────────────────────┘             │
+│                                                          │
+│  ┌─────────────────┐  ┌────────────────────┐             │
+│  │  click_events    │  │ user_click_profile │             │
+│  │  (raw event log) │  │ (pre-aggregated)   │             │
+│  └─────────────────┘  └────────────────────┘             │
+│                                                          │
+│  ┌─────────────────┐  ┌────────────────────┐             │
+│  │ product_click_   │  │ ranking_weights    │             │
+│  │ stats            │  │ (self-tuning)      │             │
+│  └─────────────────┘  └────────────────────┘             │
+│                                                          │
+│  ┌─────────────────┐                                     │
+│  │ admin_boost_     │  ← Nightly cron:                   │
+│  │ queue            │    - Time decay recomputation       │
+│  └─────────────────┘    - Popularity score refresh        │
+│                          - Self-tuning weight adjustment   │
+│                          - Housekeeping                    │
+└──────────────────────────────────────────────────────────┘
+                    │
+┌───────────────────┼──────────────────────────────────────┐
+│              SHOPIFY STOREFRONT API                       │
+│  Products + Metafields (stiri.* namespace)               │
+│  Synced to product_catalog_cache via webhook + full sync │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Signal Taxonomy
+
+### 3.1 Style DNA — Explicit Profile (Source 1)
+
+What the user tells us during onboarding. Currently 6 dimensions:
+
+| Dimension | DB Column | Type | Values | Ranking Role |
+|-----------|-----------|------|--------|-------------|
+| **Colors** | `profiles.colors` | text[] | 12 options (red, blue, yellow, green, orange, purple, pink, black, white, brown, navy, teal) | First-party preference match |
+| **Styles** | `profiles.styles` | text[] | 8 options (casual, formal, party, beachwear, streetwear, ethnic, sporty, minimalist) | First-party preference match |
+| **Fit size** | `profiles.fit` | text | xs, s, m, l, xl, xxl | First-party + third-party (size availability) |
+| **Body type** | `profiles.body_type` | text | hourglass, pear, inverted_triangle, rectangle, round | Third-party "suits them" boost |
+| **Skin tone** | `profiles.skin_tone` | text | fair, medium, dark | Third-party "suits them" boost |
+| **Age range** | `profiles.age_range` | text | gen_alpha, gen_z, millennial, gen_x, boomer | Weak preference signal |
+
+**First-party** = "what they like" (score matches their preference).
+**Third-party** = "what suits them" (gentle boost for flattering choices, never overrides preference).
+
+#### Extensibility
+
+When onboarding is redesigned to collect more dimensions (recommended priorities):
+
+| Priority | New Dimension | Recommended UX |
+|----------|---------------|---------------|
+| 1 | Garment type preferences | Visual multi-select: shirts, kurtas, t-shirts, sarees, trousers, dresses, jackets |
+| 2 | Pattern preference | Visual multi-select: solid, stripes, floral, checks, abstract, graphic |
+| 3 | Occasion profile | Visual multi-select: daily, office, festive, party, date night, wedding |
+| 4 | Fit silhouette | Single-select: slim, regular, relaxed, oversized |
+| 5 | Price comfort range | Slider: ₹500 – ₹50,000 |
+| 6 | Fabric preference | Visual multi-select: cotton, silk, linen, denim, wool |
+| 7 | Origin aesthetic | Single-select: Indian traditional, Indo-western, Korean, Bohemian, European classic |
+
+Each new dimension simply adds another comparison in `styleDnaMatch()`. No algorithm rewrite needed.
+
+#### Wardrobe Feature (Future)
+
+When the wardrobe feature launches (users upload/catalog their closet), wardrobe data supplements the Style DNA:
+- **Cloth types owned** → garment_type affinity
+- **Colors in closet** → color_family affinity (reinforces/corrects onboarding picks)
+- **Prints/patterns** → pattern affinity
+- **Brands** → brand_tier affinity
+- **Size distribution** → fit confirmation
+
+Wardrobe data folds into the style DNA score — it doesn't replace it. The algorithm weights wardrobe-derived dimensions the same as profile-derived ones. Not all users will upload their wardrobe, so the system must always work without it.
+
+### 3.2 Click Behavior — Implicit Signals (Source 2)
+
+What users do is more revealing than what they say. Two axes:
+
+**User-wise** (per-user preference): "This user keeps clicking formal navy items" → their click-derived vector has high affinity for `style_tags.formal` and `color_family.navy`.
+
+**Product-wise** (per-product popularity): "This product was viewed 500 times, carted 80 times, purchased 20 times" → high popularity score.
+
+#### Event Types & Weights
+
+| Event Type | Weight | Decay Half-Life | Product Stat? | User Affinity? | Description |
+|------------|--------|-----------------|--------------|----------------|-------------|
+| `view` | 1 | 30 days | ✅ view_count | ✅ | Product card in viewport > 2 seconds |
+| `try_on` | 5 | 30 days | ✅ try_on_count | ✅ | User tapped "Try On" |
+| `wishlist` | 6 | 30 days | ✅ wishlist_count | ✅ | Added to wishlist |
+| `cart_add` | 8 | 45 days | ✅ cart_add_count | ✅ | Added to cart |
+| `cart_remove` | -3 | 30 days | ❌ | ✅ (negative) | Removed from cart |
+| `purchase` | 15 | 45 days | ✅ purchase_count | ✅ | Completed purchase |
+
+**Key design**: `try_on` is weighted 5× a view. This is Stiri's unique signal — no other fashion platform knows "this user literally put this garment on their face." A try-on is a stronger intent signal than a view or even a wishlist.
+
+### 3.3 Product Popularity — Collective Signal (Source 3)
+
+What everyone is buying/viewing. Blends:
+- **Global popularity**: weighted sum of recent (7-day) counts across all users
+- **Regional popularity**: same counts but filtered by user's state/region
+
+Formula: `60% global + 40% regional`
+
+Regional trending enables:
+- Diwali kurta surge in North India
+- Silk saree demand in South India
+- Regional fashion preferences reflected in feed
+
+---
+
+## 4. Product Meta-Tag Taxonomy (30 Dimensions)
+
+Every product must be tagged on the Shopify side (metafield namespace `stiri.*`) and synced to `product_catalog_cache`.
+
+### Tier 1 — Currently matchable to user profile (6)
+
+| Meta-Tag Key | Matches Against | Type | Examples |
+|-------------|----------------|------|---------|
+| `color_family` | `profiles.colors` | text[] | navy, black, maroon, white, teal |
+| `style_tags` | `profiles.styles` | text[] | formal, casual, ethnic, streetwear |
+| `size_range` | `profiles.fit` | text[] | xs, s, m, l, xl, xxl |
+| `body_type_fit` | `profiles.body_type` | text[] | hourglass, pear, rectangle |
+| `skin_tone_complement` | `profiles.skin_tone` | text[] | fair, medium, dark |
+| `age_group` | `profiles.age_range` | text[] | gen_z, millennial, gen_x |
+
+### Tier 2 — Click-inferred now, profile-matchable after onboarding redesign (11)
+
+| Meta-Tag Key | Type | Examples |
+|-------------|------|---------|
+| `garment_type` | text | shirt, kurta, saree, t-shirt, trousers, jacket |
+| `garment_category` | text | upperwear, lowerwear, fullbody, accessory |
+| `fit_silhouette` | text | slim, regular, relaxed, oversized |
+| `pattern` | text | solid, stripes, floral, checks, abstract, graphic |
+| `fabric` | text | cotton, silk, linen, denim, wool, polyester |
+| `occasion` | text[] | daily, office, wedding, festive, party, date-night |
+| `season` | text[] | summer, winter, monsoon, all-season |
+| `price_tier` | text | budget, mid, premium, luxury |
+| `neckline` | text | v-neck, round, collar, mandarin, off-shoulder |
+| `sleeve_length` | text | sleeveless, short, three-quarter, full |
+| `length` | text | crop, regular, long, ankle, floor |
+
+### Tier 3 — Click-inferred only, enrichment dimensions (13)
+
+| Meta-Tag Key | Type | Examples |
+|-------------|------|---------|
+| `embellishment` | text | plain, embroidered, sequin, lace, mirror-work |
+| `brand_tier` | text | in-house, indie, designer, luxury-collab |
+| `color_intensity` | text | pastel, muted, vibrant, neon, earth-tone |
+| `layering` | text | standalone, layerable, set-piece |
+| `care_level` | text | machine-wash, hand-wash, dry-clean |
+| `origin_aesthetic` | text | indian-trad, indo-western, korean, boho, european-classic |
+| `trend_tag` | text[] | quiet-luxury, old-money, cottagecore, mob-wife |
+| `weight` | text | lightweight, midweight, heavyweight |
+| `transparency` | text | opaque, semi-sheer, sheer |
+| `sustainability` | text[] | organic, recycled, fair-trade |
+| `versatility` | text | single-occasion, multi-occasion, everyday |
+| `gender` | text | men, women, unisex |
+| `is_new_arrival` | boolean | true, false |
+
+**Total: 30 dimensions.** Even with only 6 matchable to profile today, all 30 are extractable from click behavior: if a user keeps clicking products tagged `pattern: floral`, their click-derived vector builds a high `pattern.floral` affinity — matching products with that tag without ever asking the user about prints.
+
+---
+
+## 5. Data Storage Schema
+
+### 5.1 `click_events` — Raw Event Log
+
+Append-only. Source of truth for all behavioral data.
 
 ```sql
-CREATE TABLE public.user_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  
-  -- Event classification
-  event_type text NOT NULL,              -- 'template_view', 'product_wishlist', 'product_add_to_cart', 'product_buy_now', etc.
-  event_category text NOT NULL,          -- 'template', 'product', 'stack', 'search', 'generation'
-  
-  -- Object reference (what was acted on)
-  object_type text NOT NULL,             -- 'template', 'product', 'stack', 'generated_image'
-  object_id text NOT NULL,               -- template_id, shopify_product_id, stack_id
-  object_name text,                      -- Human-readable: "Classic Tailored Suit"
-  
-  -- Rich context
-  metadata jsonb DEFAULT '{}',           -- Flexible context per event type
-  -- Examples:
-  --   template_generate: { "mode": "tryon", "aspect_ratio": "3:4", "stack_id": "fitit" }
-  --   product_wishlist:  { "price": 8000, "currency": "INR", "variant_id": "...", "tags": ["formal","suit"] }
-  --   product_buy_now:   { "price": 15000, "variant_id": "...", "size": "L", "color": "navy" }
-  --   search_query:      { "query": "silk saree under 10000", "results_count": 12 }
-  
-  -- Contextual
-  session_id text,                       -- Groups events within one browsing session
-  source_page text,                      -- 'home', 'stack_view', 'product_detail', 'search'
-  device_type text,                      -- 'mobile', 'desktop', 'tablet'
-  
-  created_at timestamptz NOT NULL DEFAULT now()
+CREATE TABLE click_events (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  product_id    text NOT NULL,
+  event_type    text NOT NULL CHECK (event_type IN ('view','try_on','wishlist','cart_add','cart_remove','purchase')),
+  metadata      jsonb DEFAULT '{}',
+  created_at    timestamptz NOT NULL DEFAULT now()
 );
 
--- Indexes for fast personalization queries
-CREATE INDEX idx_user_events_user_time ON user_events(user_id, created_at DESC);
-CREATE INDEX idx_user_events_type ON user_events(event_type, created_at DESC);
-CREATE INDEX idx_user_events_object ON user_events(object_type, object_id);
-CREATE INDEX idx_user_events_session ON user_events(session_id);
-
--- RLS: users can only read their own events
-ALTER TABLE public.user_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can read own events" ON public.user_events
-  FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Service role inserts events" ON public.user_events
-  FOR INSERT WITH CHECK (true);  -- Server-side insert only (via service role)
+CREATE INDEX idx_click_events_user_time ON click_events(user_id, created_at DESC);
+CREATE INDEX idx_click_events_product ON click_events(product_id, created_at DESC);
+CREATE INDEX idx_click_events_type ON click_events(event_type);
 ```
 
-### 2.2 `user_wishlist` — Persistent Wishlist
-
-```sql
-CREATE TABLE public.user_wishlist (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  
-  item_type text NOT NULL,               -- 'product' | 'template'
-  item_id text NOT NULL,                 -- Shopify product ID or template ID
-  item_name text,                        -- "Silk Saree"
-  item_image_url text,                   -- Thumbnail for fast rendering
-  item_metadata jsonb DEFAULT '{}',      -- Price, tags, stack_id, etc.
-  
-  created_at timestamptz NOT NULL DEFAULT now(),
-  
-  UNIQUE(user_id, item_type, item_id)    -- No duplicate wishlist entries
-);
-
-CREATE INDEX idx_user_wishlist_user ON user_wishlist(user_id, created_at DESC);
-
-ALTER TABLE public.user_wishlist ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own wishlist" ON public.user_wishlist
-  FOR ALL USING (auth.uid() = user_id);
-```
-
-### 2.3 `user_cart` — Server-Synced Cart
-
-```sql
-CREATE TABLE public.user_cart (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  
-  product_id text NOT NULL,              -- Shopify product ID
-  variant_id text NOT NULL,              -- Shopify variant ID (size/color combo)
-  product_name text,  
-  variant_name text,                     -- "Navy / L"
-  image_url text,
-  price integer NOT NULL,                -- In paise
-  currency text DEFAULT 'INR',
-  quantity integer DEFAULT 1 CHECK (quantity > 0),
-  
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  
-  UNIQUE(user_id, variant_id)            -- One row per variant per user
-);
-
-CREATE INDEX idx_user_cart_user ON user_cart(user_id);
-
-ALTER TABLE public.user_cart ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own cart" ON public.user_cart
-  FOR ALL USING (auth.uid() = user_id);
-```
-
-### 2.4 `user_style_vector` — Computed Style DNA
-
-This stores the **pre-computed personalization vector** for each user, updated periodically (or on-demand after significant events).
-
-```sql
-CREATE TABLE public.user_style_vector (
-  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  
-  -- Affinity scores (0.0 → 1.0, computed from weighted events)
-  color_affinities jsonb NOT NULL DEFAULT '{}',
-    -- { "red": 0.85, "blue": 0.72, "black": 0.65, "white": 0.40, ... }
-  
-  style_affinities jsonb NOT NULL DEFAULT '{}',
-    -- { "formal": 0.90, "ethnic": 0.75, "casual": 0.60, "streetwear": 0.20, ... }
-  
-  stack_affinities jsonb NOT NULL DEFAULT '{}',
-    -- { "fitit": 0.80, "clothes": 0.70, "aesthetics": 0.60, "flex": 0.15, ... }
-  
-  price_affinity jsonb NOT NULL DEFAULT '{}',
-    -- { "tier": "mid-premium", "avg_price": 8500, "max_price": 20000, "currency": "INR" }
-  
-  template_affinities jsonb NOT NULL DEFAULT '{}',
-    -- Top 20 template IDs with scores
-    -- { "clothes_template_1": 0.95, "fitit_template_1": 0.88, ... }
-  
-  -- Category tags extracted from behavioral pattern
-  inferred_tags text[] DEFAULT '{}',
-    -- ['luxury-seeker', 'ethnic-core', 'try-on-heavy', 'price-sensitive', 'aspirational']
-  
-  -- Temporal patterns
-  active_hours jsonb DEFAULT '{}',
-    -- { "peak_hour": 20, "peak_day": "saturday", "avg_sessions_per_week": 4.2 }
-  
-  -- Engagement level
-  engagement_score decimal(5,2) DEFAULT 0.0,
-    -- 0-100 scale based on recency, frequency, monetary value
-  
-  -- Versioning
-  version integer DEFAULT 1,
-  computed_at timestamptz NOT NULL DEFAULT now(),
-  events_processed_until timestamptz,    -- Watermark for incremental recomputation
-  
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-```
-
-### 2.5 `product_catalog_cache` — Shopify Product Mirror
-
-```sql
-CREATE TABLE public.product_catalog_cache (
-  shopify_product_id text PRIMARY KEY,
-  handle text UNIQUE NOT NULL,
-  title text NOT NULL,
-  description text,
-  product_type text,                     -- "Kurta", "Saree", "Suit"
-  vendor text,
-  tags text[] DEFAULT '{}',              -- ["formal", "silk", "wedding", "premium"]
-  
-  -- Pricing
-  min_price integer,                     -- In paise
-  max_price integer,
-  currency text DEFAULT 'INR',
-  
-  -- Images
-  featured_image_url text,
-  image_urls text[] DEFAULT '{}',
-  
-  -- Variant summary
-  available_sizes text[] DEFAULT '{}',   -- ["S", "M", "L", "XL"]
-  available_colors text[] DEFAULT '{}',  -- ["navy", "black", "maroon"]
-  
-  -- Metafields for personalization (synced from Shopify)
-  style_tags text[] DEFAULT '{}',        -- ["formal", "ethnic", "party"]
-  color_family text[] DEFAULT '{}',      -- ["blue", "dark"]
-  season text[] DEFAULT '{}',            -- ["winter", "all-season"]
-  occasion text[] DEFAULT '{}',          -- ["wedding", "office", "festive"]
-  body_type_fit text[] DEFAULT '{}',     -- ["hourglass", "rectangle"] — which body types it suits
-  skin_tone_complement text[] DEFAULT '{}', -- ["fair", "medium"] — which skin tones it complements
-  age_group text[] DEFAULT '{}',         -- ["gen_z", "millennial"]
-  
-  -- Inventory
-  available_for_sale boolean DEFAULT true,
-  
-  -- Sync metadata
-  synced_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_product_tags ON product_catalog_cache USING GIN(tags);
-CREATE INDEX idx_product_style_tags ON product_catalog_cache USING GIN(style_tags);
-```
-
----
-
-## 3. EVENT PIPELINE — How Clicks Flow Into the Engine
-
-### 3.1 Frontend Event Tracker
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React)                          │
-│                                                              │
-│  User taps "Add to Wishlist" on Silk Saree                  │
-│       ↓                                                      │
-│  trackEvent({                                                │
-│    eventType: 'product_wishlist',                            │
-│    eventCategory: 'product',                                 │
-│    objectType: 'product',                                    │
-│    objectId: 'gid://shopify/Product/123456',                │
-│    objectName: 'Silk Saree',                                │
-│    metadata: {                                               │
-│      price: 1500000,    // paise                             │
-│      tags: ['ethnic', 'silk', 'wedding'],                   │
-│      color: 'maroon',                                        │
-│      sourcePage: 'home_trending',                           │
-│      position: 3         // 3rd item in carousel            │
-│    }                                                         │
-│  })                                                          │
-│       ↓                                                      │
-│  Batches events in memory (max 10 or flush every 5s)        │
-│       ↓                                                      │
-│  POST /api/events/track (batch)                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 3.2 Backend Event Processor
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    BACKEND (Express)                         │
-│                                                              │
-│  POST /api/events/track                                      │
-│       ↓                                                      │
-│  1. Auth: Verify JWT, extract user_id                        │
-│  2. Validate: Check event_type ∈ allowed set                │
-│  3. Enrich: Add session_id, device_type, timestamp          │
-│  4. Insert → user_events table (batch insert)               │
-│  5. IF event is high-intent (wishlist/cart/buy):             │
-│     → Also upsert user_wishlist or user_cart                │
-│  6. IF event count since last recompute > threshold (50):    │
-│     → Trigger async style vector recomputation              │
-│  7. Return 202 Accepted                                      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 3.3 Style Vector Recomputation (Batch Job)
-
-Runs either:
-- **On-demand**: After 50+ new events since last computation
-- **Scheduled**: Nightly cron at 3 AM IST via Supabase Edge Function or `pg_cron`
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              STYLE VECTOR RECOMPUTATION                       │
-│                                                              │
-│  For each user with stale vector:                            │
-│                                                              │
-│  1. LOAD explicit profile:                                   │
-│     colors, styles, fit, body_type, skin_tone, age_range    │
-│                                                              │
-│  2. LOAD behavioral events (last 90 days, decayed):          │
-│     SELECT event_type, object_id, metadata, created_at      │
-│       FROM user_events                                       │
-│      WHERE user_id = $1                                      │
-│        AND created_at > now() - interval '90 days'           │
-│      ORDER BY created_at DESC                                │
-│                                                              │
-│  3. COMPUTE weighted affinity scores:                        │
-│                                                              │
-│     For each event, apply:                                   │
-│       weight = BASE_WEIGHT[event_type]                       │
-│               × TIME_DECAY(days_ago)                         │
-│               × POSITION_BOOST(if position <= 3)             │
-│                                                              │
-│     Time decay formula:                                      │
-│       decay = exp(-0.03 × days_since_event)                  │
-│       (Half-life ≈ 23 days: recent actions count 2x          │
-│        more than 3-week-old actions)                         │
-│                                                              │
-│  4. MERGE explicit + behavioral:                             │
-│     final_score = 0.3 × explicit + 0.7 × behavioral        │
-│     (behavioral weighted higher because it's action-based)  │
-│                                                              │
-│  5. NORMALIZE to 0.0–1.0 per category                       │
-│                                                              │
-│  6. EXTRACT inferred tags:                                   │
-│     - If avg cart price > ₹10,000 → 'luxury-seeker'        │
-│     - If 60%+ templates from fitit → 'try-on-heavy'        │
-│     - If 70%+ styles are ethnic → 'ethnic-core'            │
-│     - If wishlist > 10 items, cart = 0 → 'browser'         │
-│     - If buy_now events > 3/month → 'impulse-buyer'        │
-│                                                              │
-│  7. COMPUTE engagement score (RFM):                          │
-│     R = days since last event (lower = better)               │
-│     F = events per week (higher = better)                    │
-│     M = total spend (higher = better)                        │
-│     engagement = normalize(0.4R + 0.35F + 0.25M)           │
-│                                                              │
-│  8. UPSERT → user_style_vector                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. PERSONALIZATION SURFACES — Where It Shows Up
-
-### 4.1 Home Page — Personalized Template Feed
-
-**Current**: Static "Trending Templates" (8 hardcoded).  
-**After**: Dynamic, per-user ranked feed.
-
-```
-┌───────────────────────────────────────────────────────┐
-│                    HOME FEED RANKING                    │
-│                                                        │
-│  Input: All available templates (100+)                 │
-│  User: user_style_vector for this user                 │
-│                                                        │
-│  Score each template:                                  │
-│                                                        │
-│  template_score =                                      │
-│    0.30 × style_match(template.tags, user.styles)      │
-│  + 0.20 × color_match(template.colors, user.colors)   │
-│  + 0.15 × stack_affinity(template.stack_id)            │
-│  + 0.15 × template_affinity(template.id)  ← direct    │
-│  + 0.10 × seasonal_boost(template, current_month)      │
-│  + 0.05 × trending_score(template, all_users)          │
-│  + 0.05 × novelty_bonus(not_seen_before)               │
-│                                                        │
-│  Apply diversity filter:                               │
-│    Max 2 templates per stack in top 10                  │
-│    At least 1 template from an unexplored stack        │
-│                                                        │
-│  Output: Ordered list, top 20                          │
-│                                                        │
-│  Section Layout:                                       │
-│  ┌─ "Made for You" (top 5 personalized) ──────────┐   │
-│  ├─ "Trending Now" (top 5 by all-user popularity) ┤   │
-│  ├─ "Try Something New" (high-novelty picks) ─────┤   │
-│  └─ "Because you liked X" (similarity-based) ─────┘   │
-└───────────────────────────────────────────────────────┘
-```
-
-### 4.2 Product Recommendations — Shopify Integration
-
-When the user browses Shopify products, rank them using their style vector:
-
-```
-┌───────────────────────────────────────────────────────┐
-│              PRODUCT RANKING PIPELINE                   │
-│                                                        │
-│  1. Fetch products from product_catalog_cache           │
-│     (pre-synced from Shopify, with metafield tags)     │
-│                                                        │
-│  2. Score each product:                                │
-│                                                        │
-│  product_score =                                       │
-│    0.25 × style_overlap(product.style_tags,            │
-│                          user.style_affinities)        │
-│  + 0.20 × color_overlap(product.color_family,          │
-│                          user.color_affinities)        │
-│  + 0.15 × body_fit_match(product.body_type_fit,        │
-│                           user.profile.body_type)      │
-│  + 0.10 × skin_complement(product.skin_tone_complement,│
-│                             user.profile.skin_tone)    │
-│  + 0.10 × price_fit(product.price,                     │
-│                      user.price_affinity.tier)         │
-│  + 0.10 × occasion_relevance(product.occasion,         │
-│                                current_context)        │
-│  + 0.05 × age_match(product.age_group,                 │
-│                      user.profile.age_range)           │
-│  + 0.05 × wishlist_cart_boost(if wishlisted: +0.3)     │
-│                                                        │
-│  3. Return top-N ranked products                       │
-└───────────────────────────────────────────────────────┘
-```
-
-### 4.3 "Complete the Look" — Post-Generation Recommendations
-
-After a user generates an image with a template, surface related products:
-
-```
-User generates "Classic Tailored Suit" try-on
-  ↓
-System detects: formal, suit, office, navy
-  ↓
-Recommend from Shopify:
-  1. Classic Tailored Suit (exact product if available)
-  2. Business Casual (related style tag)
-  3. Watches (accessory complement, from Fitit stack)
-  ↓
-CTA: "Love the look? Get it delivered"
-  → Add to Wishlist | Add to Cart | Buy Now
-  → Each click → user_events → feeds back into vector
-```
-
-### 4.4 AI Search — Semantic Query Understanding
-
-When a user searches "something elegant for a wedding under 15000":
-
-```
-┌───────────────────────────────────────────────────────┐
-│              SEMANTIC SEARCH PIPELINE                   │
-│                                                        │
-│  Query: "something elegant for a wedding under 15000"  │
-│                                                        │
-│  Step 1 — Intent Extraction (LLM call):                │
-│    {                                                    │
-│      "style": ["ethnic", "formal"],                    │
-│      "occasion": ["wedding"],                          │
-│      "price_max": 1500000, // paise                    │
-│      "sentiment": "elegant"                            │
-│    }                                                    │
-│                                                        │
-│  Step 2 — Search both catalogs:                        │
-│    Templates: Match by style/occasion keywords          │
-│    Products: Filter price ≤ 15000, match tags          │
-│                                                        │
-│  Step 3 — Re-rank by user's style vector:              │
-│    Boost templates/products that align with user DNA   │
-│                                                        │
-│  Step 4 — Return blended results:                      │
-│    "Try this look" (templates to generate with)        │
-│    "Shop this look" (products to buy)                  │
-└───────────────────────────────────────────────────────┘
-```
-
-### 4.5 Push/Nudge Triggers — Re-engagement
-
-Based on behavioral patterns, trigger nudges:
-
-| Trigger Pattern | Nudge | Channel |
-|-----------------|-------|---------|
-| Wishlisted item now on sale | "Your Silk Saree just dropped to ₹8,000" | WhatsApp / In-app |
-| Cart abandoned > 2 hours | "Still thinking about the Tailored Suit?" | WhatsApp |
-| Haven't generated in 7 days | "New templates drop: Summer Linen collection" | WhatsApp |
-| Festival approaching + style match | "Diwali looks for you — see your Festive Kurta" | In-app banner |
-| High engagement score + never purchased | "First order? Here's ₹500 off" | WhatsApp |
-| Used try-on template for product that exists in shop | "You tried it on — now own it" | In-app CTA |
-
----
-
-## 5. ARCHITECTURE DIAGRAM
-
-```
-                         ┌──────────────────────┐
-                         │      USER DEVICE      │
-                         │  (React PWA / Mobile) │
-                         └─────────┬────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                     │
-         Explicit Data       Behavioral Events     Search Queries
-       (Profile, Prefs)    (Views, Clicks, Cart)    (Free text)
-              │                    │                     │
-              ▼                    ▼                     ▼
-┌──────────────────────────────────────────────────────────────┐
-│                     EXPRESS.JS API LAYER                       │
-│                                                               │
-│  /api/profile/*     /api/events/track    /api/search          │
-│  /api/wishlist/*    /api/cart/*           /api/products/*      │
-│                                                               │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐   │
-│  │ Auth + RLS   │  │ Event Batcher│  │ Search Coordinator│   │
-│  └─────────────┘  └──────┬───────┘  └────────┬──────────┘   │
-└──────────────────────────┼───────────────────┼───────────────┘
-                           │                   │
-              ┌────────────┼───────────────────┼────────┐
-              │            ▼                   ▼        │
-              │  ┌─────────────────┐  ┌──────────────┐  │
-              │  │  SUPABASE (PG)  │  │  GEMINI LLM  │  │
-              │  │                 │  │  (Intent +    │  │
-              │  │ • profiles      │  │   Re-ranking) │  │
-              │  │ • user_events   │  └──────────────┘  │
-              │  │ • user_wishlist │                     │
-              │  │ • user_cart     │  ┌──────────────┐  │
-              │  │ • user_style_   │  │   SHOPIFY    │  │
-              │  │   vector        │  │  Storefront  │  │
-              │  │ • product_      │  │    API       │  │
-              │  │   catalog_cache │  └──────────────┘  │
-              │  │ • generated_    │                     │
-              │  │   images        │                     │
-              │  └────────┬────────┘                     │
-              │           │                              │
-              │           ▼                              │
-              │  ┌─────────────────┐                     │
-              │  │  STYLE VECTOR   │ ← Nightly cron OR  │
-              │  │  RECOMPUTATION  │   on-demand after   │
-              │  │  (SQL function) │   50+ new events    │
-              │  └─────────────────┘                     │
-              │                                          │
-              │  ┌─────────────────┐                     │
-              │  │  SHOPIFY SYNC   │ ← Webhook on        │
-              │  │  (Product cache │   product update     │
-              │  │   refresh)      │   OR hourly poll     │
-              │  └─────────────────┘                     │
-              └──────────────────────────────────────────┘
-```
-
----
-
-## 6. STYLE DNA COMPUTATION — The Math
-
-### 6.1 Event Weight Table
-
-```javascript
-const EVENT_WEIGHTS = {
-  // Template interactions
-  template_view:        1,
-  template_dwell:       2,
-  template_generate:    5,
-  template_save:        7,
-  template_share:       8,
-  template_regenerate:  6,
-  
-  // Product interactions
-  product_view:              1,
-  product_wishlist:          6,    // "Add to Wishlist"
-  product_add_to_cart:       8,    // "Add to Cart"  
-  product_buy_now:          10,    // "Buy Now"
-  product_remove_from_cart: -3,    // Negative signal
-  product_checkout_complete: 15,   // Strongest positive
-  product_checkout_abandon:  2,    // Weak positive (showed interest)
-  
-  // Navigation
-  stack_view:           2,
-  search_query:         3,
-  search_result_click:  4,
-};
-```
-
-### 6.2 Time Decay Function
-
-```javascript
-function timeDecay(eventDate) {
-  const daysSince = (Date.now() - eventDate.getTime()) / (1000 * 60 * 60 * 24);
-  // Exponential decay with ~23 day half-life
-  return Math.exp(-0.03 * daysSince);
-}
-```
-
-### 6.3 Affinity Computation (per dimension)
-
-```javascript
-function computeAffinities(events, dimension, extractFn) {
-  // dimension: 'color', 'style', 'stack', 'template', 'price_tier'
-  // extractFn: event → array of dimension values
-  
-  const scores = {};  // { "formal": 12.5, "ethnic": 8.3, ... }
-  
-  for (const event of events) {
-    const values = extractFn(event);       // e.g., ["formal", "ethnic"]
-    const weight = EVENT_WEIGHTS[event.event_type] || 1;
-    const decay = timeDecay(event.created_at);
-    const adjustedWeight = weight * decay;
-    
-    for (const val of values) {
-      scores[val] = (scores[val] || 0) + adjustedWeight;
-    }
-  }
-  
-  // Normalize to 0.0–1.0
-  const maxScore = Math.max(...Object.values(scores), 1);
-  for (const key in scores) {
-    scores[key] = Math.round((scores[key] / maxScore) * 100) / 100;
-  }
-  
-  return scores;
-}
-```
-
-### 6.4 Merge Explicit + Behavioral
-
-```javascript
-function mergeSignals(explicitProfile, behavioralAffinities) {
-  const EXPLICIT_WEIGHT = 0.3;
-  const BEHAVIORAL_WEIGHT = 0.7;
-  
-  const merged = {};
-  
-  // Explicit: user said they like "red", "blue" → these get 1.0 base score
-  for (const color of explicitProfile.colors) {
-    merged[color] = (merged[color] || 0) + EXPLICIT_WEIGHT * 1.0;
-  }
-  
-  // Behavioral: user's actions showed affinity for "black": 0.8, "red": 0.6
-  for (const [color, score] of Object.entries(behavioralAffinities)) {
-    merged[color] = (merged[color] || 0) + BEHAVIORAL_WEIGHT * score;
-  }
-  
-  // If user said "red" (explicit=0.3) and also clicked red products a lot (behavioral=0.7×0.6=0.42)
-  // Final red score = 0.72 ← strong signal from both sides
-  
-  // If user said "blue" (explicit=0.3) but never interacted with blue items (behavioral=0)
-  // Final blue score = 0.30 ← weaker, profile-only signal → may drift down over time
-  
-  return merged;
-}
-```
-
-### 6.5 Inferred Tags (Behavioral Archetypes)
-
-```javascript
-function inferTags(styleVector, events, profile) {
-  const tags = [];
-  
-  // Price sensitivity
-  const avgCartPrice = avgPrice(events.filter(e => e.event_type === 'product_add_to_cart'));
-  if (avgCartPrice > 1000000) tags.push('luxury-seeker');      // > ₹10,000 avg
-  else if (avgCartPrice > 500000) tags.push('mid-premium');
-  else if (avgCartPrice > 0) tags.push('value-conscious');
-  
-  // Engagement pattern
-  const buyNowCount = events.filter(e => e.event_type === 'product_buy_now').length;
-  if (buyNowCount > 3) tags.push('impulse-buyer');
-  
-  const wishlistCount = events.filter(e => e.event_type === 'product_wishlist').length;
-  const cartCount = events.filter(e => e.event_type === 'product_add_to_cart').length;
-  if (wishlistCount > 10 && cartCount === 0) tags.push('window-shopper');
-  
-  // Category dominance
-  const stackEvents = groupBy(events, e => e.metadata?.stack_id);
-  const totalStackEvents = events.filter(e => e.metadata?.stack_id).length;
-  for (const [stackId, stackEvts] of Object.entries(stackEvents)) {
-    if (stackEvts.length / totalStackEvents > 0.5) {
-      tags.push(`${stackId}-heavy`);  // 'fitit-heavy', 'flex-heavy'
-    }
-  }
-  
-  // Style dominance  
-  const topStyle = Object.entries(styleVector.style_affinities)
-    .sort((a, b) => b[1] - a[1])[0];
-  if (topStyle && topStyle[1] > 0.7) tags.push(`${topStyle[0]}-core`); // 'ethnic-core'
-  
-  // Try-on to purchase pipeline
-  const tryOnEvents = events.filter(e => e.event_type === 'template_generate' && e.metadata?.mode === 'tryon');
-  const purchaseEvents = events.filter(e => e.event_type === 'product_checkout_complete');
-  if (tryOnEvents.length > 5 && purchaseEvents.length > 0) tags.push('try-then-buy');
-  
-  return tags;
-}
-```
-
----
-
-## 7. SHOPIFY METAFIELD TAGGING STRATEGY
-
-For the personalization engine to match products to users, every Shopify product needs rich metadata. Use **Shopify metafields** (custom namespace: `stiri`) to tag products.
-
-### 7.1 Required Metafields per Product
-
-| Metafield Key | Type | Example | Purpose |
-|--------------|------|---------|---------|
-| `stiri.style_tags` | list.single_line_text | `["formal", "ethnic"]` | Match user style affinities |
-| `stiri.color_family` | list.single_line_text | `["navy", "blue"]` | Match user color affinities |
-| `stiri.occasion` | list.single_line_text | `["wedding", "festive"]` | Contextual ranking |
-| `stiri.season` | list.single_line_text | `["winter", "all-season"]` | Seasonal boost/suppress |
-| `stiri.body_type_fit` | list.single_line_text | `["hourglass", "rectangle"]` | Body-appropriate suggestions |
-| `stiri.skin_tone_complement` | list.single_line_text | `["fair", "medium"]` | Skin-tone aware suggestions |
-| `stiri.age_group` | list.single_line_text | `["gen_z", "millennial"]` | Age relevance |
-| `stiri.template_link` | single_line_text | `"clothes_template_1"` | Links product to a try-on template |
-| `stiri.price_tier` | single_line_text | `"premium"` | `budget` / `mid` / `premium` / `luxury` |
-
-### 7.2 Example: Fully Tagged Product
-
-**Classic Tailored Suit** (₹8,000–₹20,000)
-
-```json
+**metadata** includes at minimum:
+```jsonc
 {
-  "title": "Classic Tailored Suit",
-  "tags": ["formal", "suit", "office", "wedding", "premium"],
-  "metafields": {
-    "stiri.style_tags": ["formal", "minimalist"],
-    "stiri.color_family": ["navy", "charcoal", "black"],
-    "stiri.occasion": ["office", "wedding", "interview"],
-    "stiri.season": ["all-season"],
-    "stiri.body_type_fit": ["rectangle", "inverted_triangle"],
-    "stiri.skin_tone_complement": ["fair", "medium", "dark"],
-    "stiri.age_group": ["millennial", "gen_x"],
-    "stiri.template_link": "clothes_template_2",
-    "stiri.price_tier": "premium"
+  "source_page": "for_you",       // Where the user was when they clicked
+  "position": 3,                  // Position in feed (for impression analysis)
+  "product_tags": {               // Snapshot of product's 30 dimensions at time of click
+    "color_family": ["navy"],
+    "style_tags": ["formal"],
+    "garment_type": "suit",
+    // ... all applicable tags
   }
 }
 ```
 
-### 7.3 Sync Pipeline
+### 5.2 `user_click_profile` — Pre-Aggregated User Taste
 
+One row per user. Updated incrementally on every click event. Full recomputation nightly.
+
+```sql
+CREATE TABLE user_click_profile (
+  user_id             uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  tag_affinities      jsonb NOT NULL DEFAULT '{}',
+  total_views         integer DEFAULT 0,
+  total_try_ons       integer DEFAULT 0,
+  total_wishlists     integer DEFAULT 0,
+  total_cart_adds     integer DEFAULT 0,
+  total_purchases     integer DEFAULT 0,
+  engagement_ratio    decimal(5,4) DEFAULT 0,
+  recent_impressions  jsonb DEFAULT '[]',
+  last_computed_at    timestamptz DEFAULT now(),
+  events_since_compute integer DEFAULT 0,
+  updated_at          timestamptz DEFAULT now()
+);
 ```
-Shopify Product Create/Update Webhook
-  ↓
-POST /api/shopify/product-sync (server endpoint)
-  ↓
-Parse product + all metafields
-  ↓
-UPSERT → product_catalog_cache table
-  ↓
-Invalidate product cache (TTL cache)
+
+**tag_affinities** structure (time-decayed, normalized 0-1 per dimension):
+```jsonc
+{
+  "color_family": { "navy": 0.82, "black": 0.65, "white": 0.30 },
+  "style_tags": { "formal": 0.90, "casual": 0.45 },
+  "garment_type": { "suit": 0.78, "shirt": 0.55 },
+  "pattern": { "solid": 0.70, "stripes": 0.40 },
+  "fabric": { "cotton": 0.60 },
+  // ... any dimension the user has interacted with
+}
 ```
+
+**recent_impressions** (rolling window, last 100, pruned at 7 days):
+```jsonc
+[
+  { "product_id": "classic-suit", "shown_at": "2026-04-05T10:00:00Z", "position": 1, "interacted": false },
+  { "product_id": "silk-saree", "shown_at": "2026-04-05T10:00:00Z", "position": 2, "interacted": true }
+]
+```
+
+### 5.3 `product_click_stats` — Pre-Aggregated Product Popularity
+
+One row per product. Updated incrementally on every click event. Recent counts and popularity_score recomputed nightly.
+
+```sql
+CREATE TABLE product_click_stats (
+  product_id      text PRIMARY KEY,
+  view_count      integer DEFAULT 0,
+  try_on_count    integer DEFAULT 0,
+  wishlist_count  integer DEFAULT 0,
+  cart_add_count  integer DEFAULT 0,
+  purchase_count  integer DEFAULT 0,
+  recent_views    integer DEFAULT 0,
+  recent_try_ons  integer DEFAULT 0,
+  recent_carts    integer DEFAULT 0,
+  recent_purchases integer DEFAULT 0,
+  regional_counts jsonb DEFAULT '{}',
+  popularity_score decimal(5,4) DEFAULT 0,
+  updated_at      timestamptz DEFAULT now()
+);
+```
+
+**regional_counts**:
+```jsonc
+{ "maharashtra": 45, "delhi": 32, "karnataka": 28, "tamil_nadu": 15 }
+```
+
+### 5.4 `product_catalog_cache` — Shopify Mirror with 30 Meta-Tags
+
+```sql
+CREATE TABLE product_catalog_cache (
+  product_id          text PRIMARY KEY,   -- Shopify handle = template.id
+  shopify_gid         text,
+  title               text NOT NULL,
+  color_family        text[] DEFAULT '{}',
+  style_tags          text[] DEFAULT '{}',
+  size_range          text[] DEFAULT '{}',
+  body_type_fit       text[] DEFAULT '{}',
+  skin_tone_complement text[] DEFAULT '{}',
+  age_group           text[] DEFAULT '{}',
+  garment_type        text,
+  garment_category    text,
+  fit_silhouette      text,
+  pattern             text,
+  fabric              text,
+  occasion            text[] DEFAULT '{}',
+  season              text[] DEFAULT '{}',
+  price_tier          text,
+  gender              text DEFAULT 'unisex',
+  neckline            text,
+  sleeve_length       text,
+  length              text,
+  embellishment       text,
+  brand_tier          text,
+  color_intensity     text,
+  layering            text,
+  care_level          text,
+  origin_aesthetic    text,
+  trend_tag           text[] DEFAULT '{}',
+  weight              text,
+  transparency        text,
+  sustainability      text[] DEFAULT '{}',
+  versatility         text,
+  is_new_arrival      boolean DEFAULT false,
+  min_price           integer,
+  max_price           integer,
+  available_for_sale  boolean DEFAULT true,
+  synced_at           timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_product_cache_style ON product_catalog_cache USING GIN(style_tags);
+CREATE INDEX idx_product_cache_color ON product_catalog_cache USING GIN(color_family);
+CREATE INDEX idx_product_cache_occasion ON product_catalog_cache USING GIN(occasion);
+```
+
+### 5.5 `admin_boost_queue` — Manual Clearance/Promotion Boosts
+
+```sql
+CREATE TABLE admin_boost_queue (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id      text NOT NULL,
+  priority        integer DEFAULT 1,
+  min_style_match decimal(3,2) DEFAULT 0.20,
+  expires_at      timestamptz NOT NULL,
+  created_at      timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_boost_queue_active ON admin_boost_queue(expires_at) WHERE expires_at > now();
+```
+
+Constraints: Max 10 active (non-expired) rows at any time.
+
+### 5.6 `ranking_weights` — Self-Tuning Weight History
+
+```sql
+CREATE TABLE ranking_weights (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  w_style             decimal(4,3) NOT NULL,
+  w_user_clicks       decimal(4,3) NOT NULL,
+  w_product_pop       decimal(4,3) NOT NULL,
+  engagement_ratio    decimal(5,4),
+  is_active           boolean DEFAULT false,
+  created_at          timestamptz DEFAULT now()
+);
+```
+
+Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, is_active: true }`.
 
 ---
 
-## 8. RANKING ALGORITHM — Full Pseudocode
+## 6. Ranking Algorithm
 
-### 8.1 Template Ranking (Home Feed)
+### 6.1 The Formula
+
+```
+final_score = w_style × style_dna_match(user, product)
+            + w_clicks × user_click_affinity(user_click_profile, product)
+            + w_pop   × product_popularity(product_stats, region)
+            - fatigue_penalty(product, impressions)
+```
+
+Where `w_style + w_clicks + w_pop = 1.0`, always.
+
+### 6.2 Style DNA Match (0-1)
+
+Measures overlap between user profile and product tags. First-party dimensions contribute full points; third-party dimensions (body_type_fit, skin_tone_complement) contribute half (gentle boost, not override).
 
 ```javascript
-function rankTemplatesForUser(allTemplates, userVector, userProfile) {
-  const scored = allTemplates.map(template => {
-    let score = 0;
-    
-    // 1. Style match (30%)
-    const styleOverlap = cosineSimilarity(
-      template.keywords?.filter(k => STYLE_TAGS.includes(k)) || [],
-      userVector.style_affinities
-    );
-    score += 0.30 * styleOverlap;
-    
-    // 2. Color match (20%)
-    const colorOverlap = cosineSimilarity(
-      template.colorHints || [],
-      userVector.color_affinities
-    );
-    score += 0.20 * colorOverlap;
-    
-    // 3. Stack affinity (15%)
-    const stackScore = userVector.stack_affinities[template.stackId] || 0;
-    score += 0.15 * stackScore;
-    
-    // 4. Direct template affinity (15%)
-    const templateScore = userVector.template_affinities[template.id] || 0;
-    score += 0.15 * templateScore;
-    
-    // 5. Seasonal boost (10%)
-    const seasonScore = getSeasonalRelevance(template, new Date());
-    score += 0.10 * seasonScore;
-    
-    // 6. Global trending (5%)
-    const trendScore = getGlobalTrendScore(template.id);
-    score += 0.05 * trendScore;
-    
-    // 7. Novelty bonus (5%) — boost templates user hasn't seen
-    const seen = userVector.template_affinities[template.id] != null;
-    score += seen ? 0 : 0.05;
-    
-    return { template, score };
-  });
-  
-  // Sort by score descending
+function styleDnaMatch(userProfile, productTags) {
+  let score = 0, maxScore = 0;
+
+  // Color overlap (multi-value)
+  const colorHits = intersect(userProfile.colors, productTags.color_family).length;
+  score += colorHits;
+  maxScore += Math.min(userProfile.colors.length, 3);
+
+  // Style overlap (multi-value)
+  const styleHits = intersect(userProfile.styles, productTags.style_tags).length;
+  score += styleHits;
+  maxScore += userProfile.styles.length;
+
+  // Size match (exact)
+  if (productTags.size_range.includes(userProfile.fit)) score += 1;
+  maxScore += 1;
+
+  // Body type fit — THIRD PARTY (half weight: gentle boost)
+  if (productTags.body_type_fit.includes(userProfile.bodyType)) score += 0.5;
+  maxScore += 0.5;
+
+  // Skin tone complement — THIRD PARTY (half weight)
+  if (productTags.skin_tone_complement.includes(userProfile.skinTone)) score += 0.5;
+  maxScore += 0.5;
+
+  // Age group (weak signal, half weight)
+  if (productTags.age_group.includes(userProfile.ageRange)) score += 0.5;
+  maxScore += 0.5;
+
+  // Future dimensions slot in here identically:
+  // if (userProfile.garmentTypes) { ... }
+  // if (userProfile.patterns) { ... }
+
+  return maxScore > 0 ? score / maxScore : 0;
+}
+```
+
+### 6.3 User Click Affinity (0-1)
+
+Measures how well a product matches the user's behavioral taste across all 30 dimensions. Uses pre-aggregated tag affinities from `user_click_profile`.
+
+```javascript
+function userClickAffinity(userClickProfile, productTags) {
+  const affinities = userClickProfile.tag_affinities; // { dim: { val: score } }
+  let totalScore = 0, matchedDims = 0;
+
+  for (const [dimension, userAffinityMap] of Object.entries(affinities)) {
+    const productValue = productTags[dimension];
+    if (!productValue) continue;
+
+    const values = Array.isArray(productValue) ? productValue : [productValue];
+    let bestMatch = 0;
+    for (const v of values) {
+      bestMatch = Math.max(bestMatch, userAffinityMap[v] || 0);
+    }
+    if (bestMatch > 0) {
+      totalScore += bestMatch;
+      matchedDims++;
+    }
+  }
+
+  return matchedDims > 0 ? totalScore / matchedDims : 0;
+}
+```
+
+This naturally covers all 30 dimensions — even ones the user never explicitly stated a preference for. If they've clicked 10 products tagged `embellishment: embroidered`, their affinity for that value is high, and embroidered products rank higher.
+
+### 6.4 Product Popularity (0-1)
+
+Blends global demand with regional trends.
+
+```javascript
+function productPopularity(productStats, userRegion) {
+  const globalScore = productStats.popularity_score; // Pre-computed nightly, 0-1
+
+  const regionalCount = productStats.regional_counts[userRegion] || 0;
+  const maxRegional = Math.max(...Object.values(productStats.regional_counts), 1);
+  const regionalScore = regionalCount / maxRegional;
+
+  return 0.6 * globalScore + 0.4 * regionalScore;
+}
+```
+
+**popularity_score computation** (during nightly batch):
+```javascript
+function computePopularityScore(stats) {
+  // Weighted recent activity (last 7 days)
+  const raw = stats.recent_views * 1
+            + stats.recent_try_ons * 3
+            + stats.recent_carts * 6
+            + stats.recent_purchases * 10;
+  return raw; // Normalized across all products later (divide each by max)
+}
+```
+
+### 6.5 Fatigue Penalty
+
+Products shown repeatedly without interaction get a mild penalty to keep the feed fresh.
+
+```javascript
+function fatiguePenalty(productId, recentImpressions) {
+  const ignoredCount = recentImpressions.filter(
+    imp => imp.product_id === productId && !imp.interacted
+  ).length;
+
+  return Math.min(0.30, ignoredCount * 0.02); // 2% per skip, max 30%
+}
+```
+
+### 6.6 Putting It Together
+
+```javascript
+function rankProducts(products, userProfile, userClickProfile, statsMap, region, boostQueue) {
+  const weights = computeWeights(userClickProfile, getSeasonalBoost());
+
+  const scored = products
+    .filter(p => p.available_for_sale)
+    .map(product => {
+      const stats = statsMap[product.product_id] || {};
+      const style   = styleDnaMatch(userProfile, product);
+      const clicks  = userClickAffinity(userClickProfile, product);
+      const pop     = productPopularity(stats, region);
+      const fatigue = fatiguePenalty(product.product_id, userClickProfile.recent_impressions || []);
+
+      const score = weights.wStyle * style
+                  + weights.wClicks * clicks
+                  + weights.wPop * pop
+                  - fatigue;
+
+      return { product, score, isExploration: false };
+    });
+
   scored.sort((a, b) => b.score - a.score);
-  
-  // Apply diversity: max 2 per stack in top 10
-  return applyDiversityFilter(scored, { maxPerStack: 2, topN: 10 });
+
+  // Inject exploration slots (see §8)
+  return injectExplorationSlots(scored, userProfile, boostQueue);
 }
 ```
 
-### 8.2 Product Ranking (Shopify Feed)
+---
+
+## 7. Dynamic Weight System
+
+### 7.1 Three Axes of Adaptation
+
+Weights shift based on three independent factors:
+
+#### Axis 1 — Data Maturity (per user)
 
 ```javascript
-function rankProductsForUser(products, userVector, userProfile) {
-  return products.map(product => {
-    let score = 0;
-    
-    // Style overlap
-    score += 0.25 * overlapScore(product.style_tags, userVector.style_affinities);
-    
-    // Color overlap
-    score += 0.20 * overlapScore(product.color_family, userVector.color_affinities);
-    
-    // Body type fit
-    const bodyMatch = product.body_type_fit.includes(userProfile.bodyType) ? 1 : 0;
-    score += 0.15 * bodyMatch;
-    
-    // Skin tone complement
-    const skinMatch = product.skin_tone_complement.includes(userProfile.skinTone) ? 1 : 0;
-    score += 0.10 * skinMatch;
-    
-    // Price tier alignment
-    const priceMatch = product.price_tier === userVector.price_affinity?.tier ? 1 : 0.3;
-    score += 0.10 * priceMatch;
-    
-    // Occasion relevance (contextual)
-    score += 0.10 * occasionRelevance(product.occasion);
-    
-    // Age group match
-    const ageMatch = product.age_group.includes(userProfile.ageRange) ? 1 : 0.5;
-    score += 0.05 * ageMatch;
-    
-    // Wishlist/cart boost (direct interest signal)
-    if (isInWishlist(product.shopify_product_id)) score += 0.30;
-    if (isInCart(product.shopify_product_id)) score += 0.50;
-    
-    return { product, score };
-  }).sort((a, b) => b.score - a.score);
+function dataMaturityWeights(userClickProfile) {
+  const totalClicks = userClickProfile.total_views
+    + userClickProfile.total_try_ons
+    + userClickProfile.total_wishlists
+    + userClickProfile.total_cart_adds
+    + userClickProfile.total_purchases;
+
+  // 0→1, saturates at ~200 clicks
+  const richness = Math.min(1.0, totalClicks / 200);
+
+  return {
+    wStyle:  0.85 * (1 - 0.55 * richness),  // 0.85 → 0.38
+    wClicks: 0.05 + 0.38 * richness,         // 0.05 → 0.43
+    wPop:    0.10                              // Base, adjusted by seasonal
+  };
+}
+```
+
+| Phase | Total Clicks | wStyle | wClicks | wPop |
+|-------|-------------|--------|---------|------|
+| Cold start | 0 | 0.85 | 0.05 | 0.10 |
+| Early learning | ~50 | 0.62 | 0.15 | 0.10 (+ seasonal) |
+| Warm | ~100 | 0.50 | 0.24 | 0.10 (+ seasonal) |
+| Mature | 200+ | 0.38 | 0.43 | 0.10 (+ seasonal) |
+
+After normalization to sum = 1.0.
+
+#### Axis 2 — Confidence/Agreement
+
+When style DNA and clicks **agree** (user said casual + keeps clicking casual): weights stay as computed above.
+
+When they **disagree** (user said casual + keeps clicking formal): the self-tuning loop (§7.3) naturally shifts weight toward clicks because engagement improves when the system trusts behavioral data. No special logic needed — the feedback loop handles it.
+
+#### Axis 3 — Temporal/Seasonal
+
+```javascript
+function getSeasonalBoost() {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  const day = now.getDate();
+
+  const FESTIVALS = [
+    { name: 'diwali', month: 10, days: [15, 31], boost: 0.8 },
+    { name: 'christmas', month: 12, days: [20, 31], boost: 0.5 },
+    { name: 'eid', month: 3, days: [25, 31], boost: 0.6 },    // Approximate
+    { name: 'holi', month: 3, days: [1, 15], boost: 0.5 },
+    { name: 'new_year_sale', month: 1, days: [1, 15], boost: 0.7 },
+    { name: 'summer_sale', month: 6, days: [1, 30], boost: 0.4 },
+  ];
+
+  for (const f of FESTIVALS) {
+    if (month === f.month && day >= f.days[0] && day <= f.days[1]) {
+      return f.boost; // 0→1
+    }
+  }
+  return 0;
+}
+```
+
+During festivals, product-popularity weight increases: `wPop = 0.10 + 0.08 × seasonalBoost`. This lets collective buying trends (everyone buying kurtas for Diwali) break through individual preferences.
+
+### 7.2 Combined Weight Function
+
+```javascript
+function computeWeights(userClickProfile, seasonalBoost = 0) {
+  const base = dataMaturityWeights(userClickProfile);
+  let wStyle = base.wStyle;
+  let wClicks = base.wClicks;
+  let wPop = base.wPop + 0.08 * seasonalBoost;
+
+  // Apply self-tuned adjustment (from ranking_weights table)
+  const tuned = loadActiveWeights(); // { w_style, w_user_clicks, w_product_pop }
+  if (tuned) {
+    const baseTuned = { w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15 }; // Seed values
+    wStyle  += (tuned.w_style - baseTuned.w_style);       // Apply delta
+    wClicks += (tuned.w_user_clicks - baseTuned.w_user_clicks);
+    wPop    += (tuned.w_product_pop - baseTuned.w_product_pop);
+  }
+
+  // Clamp: no weight below 0.05
+  wStyle  = Math.max(0.05, wStyle);
+  wClicks = Math.max(0.05, wClicks);
+  wPop    = Math.max(0.05, wPop);
+
+  // Normalize to sum = 1
+  const sum = wStyle + wClicks + wPop;
+  return {
+    wStyle: wStyle / sum,
+    wClicks: wClicks / sum,
+    wPop: wPop / sum
+  };
+}
+```
+
+### 7.3 Self-Tuning Feedback Loop
+
+Runs daily at 3 AM IST. Adjusts the global weight bias based on engagement outcomes.
+
+```
+1. Compute engagement_ratio for last 7 days (all users):
+   ratio = (total_try_ons + total_wishlists + total_cart_adds + 2 × total_purchases)
+           / total_views
+
+2. Load previous period's ratio (from ranking_weights history, 7 days ago)
+
+3. delta = current_ratio - previous_ratio
+
+4. Load active ranking_weights row
+
+5. IF delta > +0.001 (engagement improved):
+     Nudge each weight +0.02 in the direction of last change
+     (If last change increased wClicks, increase it another 0.02)
+
+   IF delta < -0.001 (engagement dropped):
+     Revert: nudge -0.01 toward previous config
+
+   IF |delta| <= 0.001 (flat):
+     No change
+
+6. Clamp all adjustments to ±0.03 per cycle per weight
+7. Normalize weights to sum = 1.0
+8. INSERT new ranking_weights row (is_active = true)
+9. Set previous row is_active = false
+```
+
+**Safety**: Max ±0.03 per cycle means it takes ~10 days of consistent improvement to shift a weight by 0.30. No wild swings.
+
+---
+
+## 8. Exploration & Admin Boost System
+
+### 8.1 Exploration Slots
+
+12% of feed positions are reserved for non-algorithmic products:
+
+```javascript
+function injectExplorationSlots(rankedProducts, userProfile, boostQueue) {
+  const totalSlots = rankedProducts.length;
+  const explorationBudget = Math.ceil(totalSlots * 0.12);
+  const explorationInterval = 8; // Every 8th slot
+
+  // Prepare boosted products (style-match filtered)
+  const activeBoosted = boostQueue
+    .filter(b => new Date(b.expires_at) > new Date())
+    .filter(b => styleDnaMatch(userProfile, getProductTags(b.product_id)) >= b.min_style_match)
+    .sort((a, b) => b.priority - a.priority);
+
+  // Prepare random products (from bottom 50% of rankings)
+  const bottomHalf = rankedProducts.slice(Math.floor(rankedProducts.length / 2));
+
+  const feed = [];
+  let mainIdx = 0, explorationUsed = 0;
+
+  for (let pos = 0; pos < totalSlots; pos++) {
+    if (pos > 0 && pos % explorationInterval === 0 && explorationUsed < explorationBudget) {
+      if (activeBoosted.length > 0) {
+        const boost = activeBoosted.shift();
+        feed.push({ ...getProduct(boost.product_id), isExploration: true, boostReason: 'promoted' });
+      } else {
+        const rand = bottomHalf[Math.floor(Math.random() * bottomHalf.length)];
+        feed.push({ ...rand, isExploration: true, boostReason: 'discovery' });
+      }
+      explorationUsed++;
+    } else {
+      feed.push(rankedProducts[mainIdx++]);
+    }
+  }
+
+  return feed;
+}
+```
+
+### 8.2 Admin Boost Queue Rules
+
+| Rule | Value |
+|------|-------|
+| Max concurrent boosts | 10 |
+| Default expiry | 14 days |
+| Min style match threshold | 0.20 (configurable per boost) |
+| Priority | Integer, higher = shown first |
+| Auto-cleanup | Nightly cron deletes expired entries |
+
+Boosted products are still **style-match filtered** — a user with zero overlap (match < 0.20) won't see the boosted product. This prevents irrelevant clearance spam.
+
+---
+
+## 9. Time Decay
+
+### 9.1 Two Decay Rates
+
+| Click Category | Events | Half-Life | Decay Constant |
+|---------------|--------|-----------|----------------|
+| Preference | view, try_on, wishlist, cart_remove | 30 days | λ = ln(2)/30 ≈ 0.0231 |
+| Transactional | cart_add, purchase | 45 days | λ = ln(2)/45 ≈ 0.0154 |
+
+```javascript
+function timeDecay(daysAgo, isTransactional) {
+  const lambda = isTransactional ? 0.0154 : 0.0231;
+  return Math.exp(-lambda * daysAgo);
+}
+```
+
+**Effect over time:**
+
+| Age | Preference retained | Transactional retained |
+|-----|----|----|
+| 1 week | 85% | 90% |
+| 2 weeks | 72% | 81% |
+| 1 month | 50% | 65% |
+| 6 weeks | 35% | 50% |
+| 2 months | 25% | 40% |
+| 3 months | 13% | 25% |
+
+### 9.2 Tag Affinity Recomputation (Nightly)
+
+For each user with `events_since_compute > 0`:
+
+```javascript
+function recomputeTagAffinities(userId) {
+  // Load click_events from last 90 days
+  const events = loadEvents(userId, 90);
+
+  const affinities = {};
+
+  for (const event of events) {
+    const isTransactional = ['cart_add', 'purchase'].includes(event.event_type);
+    const daysAgo = daysSince(event.created_at);
+    const decay = timeDecay(daysAgo, isTransactional);
+    const eventWeight = EVENT_WEIGHTS[event.event_type]; // 1, 5, 6, 8, -3, 15
+    const weight = eventWeight * decay;
+
+    const tags = event.metadata.product_tags || {};
+    for (const [dim, vals] of Object.entries(tags)) {
+      if (!affinities[dim]) affinities[dim] = {};
+      const values = Array.isArray(vals) ? vals : [vals];
+      for (const v of values) {
+        affinities[dim][v] = (affinities[dim][v] || 0) + weight;
+      }
+    }
+  }
+
+  // Normalize each dimension to 0-1
+  for (const dim of Object.keys(affinities)) {
+    const max = Math.max(...Object.values(affinities[dim]), 0.001);
+    for (const key of Object.keys(affinities[dim])) {
+      affinities[dim][key] = Math.round((affinities[dim][key] / max) * 1000) / 1000;
+    }
+  }
+
+  return affinities; // Upsert into user_click_profile.tag_affinities
 }
 ```
 
 ---
 
-## 9. FEEDBACK LOOPS — How the System Gets Smarter
+## 10. Cold Start Strategy
+
+| Phase | Data Available | Ranking | Weight Distribution |
+|-------|---------------|---------|-------------------|
+| **Anonymous** | IP location only | Regional trending (product popularity filtered by region) | 0/0/100 (pop only) |
+| **Pre-onboarding** | User exists, no profile | Global trending | 0/0/100 |
+| **Post-onboarding** | 6 profile dimensions, 0 clicks | Style DNA + global popularity | ~85/5/10 |
+| **Early learning** | Profile + 1-50 clicks | Style DNA dominant, clicks emerging | ~62/25/13 |
+| **Warm** | Profile + 50-200 clicks | Balanced blend | ~48/35/17 |
+| **Mature** | Profile + 200+ clicks | Click-led ranking | ~38/43/19 |
+| **With wardrobe** | Profile + clicks + wardrobe | Style DNA enriched by wardrobe data | Wardrobe expands style dimensions, same weight system |
+
+The transition is **smooth** (sigmoid-like via the `min(1, totalClicks/200)` formula), not step-based.
+
+---
+
+## 11. Impression Tracking & Feed Freshness
+
+### 11.1 Tracking
+
+When `GET /api/feed/for-you` is served:
+1. Record products shown: `{ product_id, shown_at, position, interacted: false }`
+2. Append to `user_click_profile.recent_impressions` (jsonb array)
+3. Cap at 100 entries (drop oldest)
+4. Prune entries older than 7 days
+
+When a click event arrives for a product that has an uninteracted impression:
+1. Mark `interacted: true` on the matching impression
+
+### 11.2 Fatigue Penalty
+
+- **2% per ignored impression** (product shown, user scrolled past)
+- **Capped at 30%** (after 15 ignores, penalty maxes out)
+- **Resets** if user interacts with the product
+- **Impressions expire** after 7 days (penalty naturally decays)
+
+This creates gentle feed rotation: products a user ignores gradually sink, making room for others. Combined with exploration slots, the feed stays fresh without needing a manual refresh.
+
+---
+
+## 12. API Endpoints
+
+### Event Tracking
 
 ```
-            ┌─────────────────────────────────┐
-            │         USER ACTIONS             │
-            │  (view, wishlist, cart, buy)      │
-            └─────────────┬───────────────────┘
-                          │
-                          ▼
-            ┌─────────────────────────────────┐
-            │       EVENT COLLECTION           │
-            │  user_events table (append-only) │
-            └─────────────┬───────────────────┘
-                          │
-                          ▼
-            ┌─────────────────────────────────┐
-            │    STYLE VECTOR RECOMPUTE        │
-            │  (nightly or after 50 events)    │
-            └─────────────┬───────────────────┘
-                          │
-               ┌──────────┼──────────┐
-               ▼          ▼          ▼
-         ┌──────────┐ ┌────────┐ ┌────────┐
-         │ Template  │ │Product │ │ Search │
-         │ Ranking   │ │Ranking │ │Re-rank │
-         └─────┬────┘ └───┬────┘ └───┬────┘
-               │          │          │
-               ▼          ▼          ▼
-         ┌─────────────────────────────────┐
-         │     PERSONALIZED SURFACES        │
-         │  (Home feed, shop, suggestions)  │
-         └─────────────┬───────────────────┘
-                       │
-                       ▼
-            ┌─────────────────────────────────┐
-            │    USER SEES TAILORED CONTENT    │
-            │    → Interacts → New events      │
-            └─────────────┬───────────────────┘
-                          │
-                          └──────── (loops back to top)
+POST /api/events/track
+  Auth: Required
+  Body: { events: [{ product_id: string, event_type: string, metadata?: object }] }
+  Response: 202 Accepted
+  Rate limit: 50 events/request, 200 events/user/minute
+```
 
-    REINFORCEMENT: Clicking a recommended item strengthens
-    the signal → more similar recommendations → conversion
-    
-    EXPLORATION: 5-10% of feed slots reserved for "novelty"
-    items outside user's pattern → prevents filter bubble
+### Personalized Feed
+
+```
+GET /api/feed/for-you?limit=20&offset=0
+  Auth: Optional (anonymous → regional trending)
+  Response: {
+    products: [{
+      product_id, title, image_url, price, compare_at_price,
+      score, isExploration, boostReason?,
+      tags: { color_family, style_tags, ... }
+    }],
+    total: number,
+    hasMore: boolean
+  }
+  Cache: 60s per user
+```
+
+### Admin Boost
+
+```
+POST /api/admin/boost
+  Auth: Admin only
+  Body: { product_id, priority?: number, min_style_match?: number, expires_in_days?: number }
+  Constraint: Max 10 active boosts
+
+GET /api/admin/boost
+  Auth: Admin only
+  Response: { boosts: [{ id, product_id, priority, min_style_match, expires_at }] }
+
+DELETE /api/admin/boost/:id
+  Auth: Admin only
+```
+
+### Product Sync
+
+```
+POST /api/admin/product-sync
+  Auth: Admin only
+  Triggers full Shopify → product_catalog_cache sync
+
+POST /api/shopify/webhook/product-update
+  Auth: Shopify HMAC verification
+  Syncs single product on create/update
+```
+
+### Weight Management
+
+```
+GET /api/admin/weights
+  Auth: Admin only
+  Response: { active: {...}, history: [...last 30] }
+
+POST /api/admin/weights/tune
+  Auth: Admin only
+  Triggers manual weight recalibration (same logic as nightly cron)
 ```
 
 ---
 
-## 10. COLD START STRATEGY — New Users
+## 13. Frontend Integration
 
-For users who just completed onboarding (zero behavioral data):
+### Event Tracking Service
 
-| Phase | Duration | Strategy |
-|-------|----------|----------|
-| **Phase 0: Pre-onboarding** | First visit | Show global trending (same for everyone). Most popular templates + top-selling products |
-| **Phase 1: Post-onboarding** | 0–10 events | Use **explicit signals only** (colors, styles, fit). Match templates/products purely on profile tags. Behavioral weight = 0, Explicit = 1.0 |
-| **Phase 2: Early learning** | 10–50 events | Blend starts: Explicit = 0.5, Behavioral = 0.5. Begin inferring tags. Still show diversity exploration items (30% feed) |
-| **Phase 3: Warm** | 50–200 events | Shift to: Explicit = 0.3, Behavioral = 0.7. Inferred tags become reliable. Novelty slots drop to 10% |
-| **Phase 4: Mature** | 200+ events | Full personalization. Explicit serves as baseline/anchor. Behavioral dominates. System can confidently predict: templates, products, price tier, purchase timing |
+`web/features/tracking/trackingService.ts`:
+- `trackEvent(productId, eventType, metadata?)` — queues in memory
+- Auto-flush: every 5 seconds OR at 10 queued events
+- `visibilitychange` + `beforeunload` → `navigator.sendBeacon()` flush
+- No-op for unauthenticated users
+
+### Integration Points
+
+| Component | Event | Trigger |
+|-----------|-------|---------|
+| ForYouFeed card | `view` | IntersectionObserver, 2s dwell |
+| ProductCard "Try On" | `try_on` | Button tap |
+| Wishlist heart | `wishlist` | Toggle on |
+| "Add to Cart" | `cart_add` | Button tap |
+| Cart item remove | `cart_remove` | Remove button |
+| Payment success | `purchase` | Razorpay callback |
+
+### ForYouFeed Component
+
+`web/features/feed/ForYouFeed.tsx`:
+- Fetches from `GET /api/feed/for-you`
+- Snap-scroll container (`snap-y snap-mandatory`)
+- One card per viewport (`h-[68svh]`)
+- Focus engine (IntersectionObserver → scale/opacity/blur transitions)
+- Product image with parallax zoom on focus
+- CTA buttons: Try On, Wishlist, Add to Cart
+- Exploration badges for promoted/discovery slots
+- Infinite scroll: loads next page at last 3 cards
 
 ---
 
-## 11. SHOPIFY METAFIELD → PRODUCT → TEMPLATE LINKING
+## 14. Nightly Cron Job Summary
 
-The key insight: **every Shopify product should link to at least one try-on template**. This creates the "try before you buy" loop:
+Runs at **3 AM IST** daily:
+
+| Task | What It Does |
+|------|-------------|
+| **Tag affinity decay** | For each user with new events: recompute `user_click_profile.tag_affinities` from `click_events` with time decay |
+| **Product recent counts** | Recompute `product_click_stats.recent_*` as 7-day rolling counts |
+| **Popularity scores** | Recompute `product_click_stats.popularity_score` (normalized 0-1) |
+| **Engagement ratio** | Recompute per-user `engagement_ratio` |
+| **Self-tuning** | Compare engagement ratio to previous period, adjust `ranking_weights` |
+| **Impression cleanup** | Prune `recent_impressions` entries older than 7 days |
+| **Boost cleanup** | Delete expired `admin_boost_queue` rows |
+| **Event archival** | Optionally archive `click_events` older than 180 days |
+
+---
+
+## 15. Shopify Metafield Setup
+
+### Metafield Definitions
+
+In Shopify admin → Settings → Custom data → Products, create definitions for:
+
+| Key | Namespace | Type | Description |
+|-----|-----------|------|-------------|
+| `stiri.color_family` | stiri | List of text | Product color families |
+| `stiri.style_tags` | stiri | List of text | Style classifications |
+| `stiri.size_range` | stiri | List of text | Available sizes |
+| `stiri.body_type_fit` | stiri | List of text | Flattering body types |
+| `stiri.skin_tone_complement` | stiri | List of text | Complementing skin tones |
+| `stiri.age_group` | stiri | List of text | Target age groups |
+| `stiri.garment_type` | stiri | Single line text | shirt, kurta, saree, etc. |
+| `stiri.garment_category` | stiri | Single line text | upperwear, lowerwear, fullbody |
+| `stiri.fit_silhouette` | stiri | Single line text | slim, regular, relaxed, oversized |
+| `stiri.pattern` | stiri | Single line text | solid, stripes, floral, etc. |
+| `stiri.fabric` | stiri | Single line text | cotton, silk, linen, etc. |
+| `stiri.occasion` | stiri | List of text | daily, office, wedding, etc. |
+| `stiri.season` | stiri | List of text | summer, winter, all-season |
+| `stiri.price_tier` | stiri | Single line text | budget, mid, premium, luxury |
+| `stiri.gender` | stiri | Single line text | men, women, unisex |
+| `stiri.neckline` | stiri | Single line text | v-neck, round, collar, etc. |
+| `stiri.sleeve_length` | stiri | Single line text | sleeveless, short, full, etc. |
+| `stiri.length` | stiri | Single line text | crop, regular, long, etc. |
+| `stiri.embellishment` | stiri | Single line text | plain, embroidered, etc. |
+| `stiri.brand_tier` | stiri | Single line text | in-house, indie, designer |
+| `stiri.color_intensity` | stiri | Single line text | pastel, muted, vibrant, etc. |
+| `stiri.layering` | stiri | Single line text | standalone, layerable, set-piece |
+| `stiri.care_level` | stiri | Single line text | machine-wash, dry-clean, etc. |
+| `stiri.origin_aesthetic` | stiri | Single line text | indian-trad, indo-western, etc. |
+| `stiri.trend_tag` | stiri | List of text | quiet-luxury, old-money, etc. |
+| `stiri.weight` | stiri | Single line text | lightweight, midweight, heavyweight |
+| `stiri.transparency` | stiri | Single line text | opaque, semi-sheer, sheer |
+| `stiri.sustainability` | stiri | List of text | organic, recycled, fair-trade |
+| `stiri.versatility` | stiri | Single line text | single-occasion, everyday, etc. |
+| `stiri.is_new_arrival` | stiri | Boolean | true/false |
+
+### Sync Pipeline
 
 ```
-┌────────────────┐     ┌───────────────────┐     ┌────────────────┐
-│ Shopify Product │────▶│ Try-On Template   │────▶│ Generated Image│
-│ "Silk Saree"   │     │ (user's face +    │     │ (user wearing  │
-│ ₹15,000        │     │  this garment)    │     │  the saree)    │
-│                │     │                   │     │                │
-│ [Wishlist]     │     │ [Generate]        │     │ [Buy Now]      │
-│ [Add to Cart]  │     │                   │     │ [Share]        │
-│ [Buy Now]      │     │                   │     │                │
-└────────────────┘     └───────────────────┘     └────────────────┘
-       │                                                  │
-       │         ← All clicks tracked as events →         │
-       │                                                  │
-       ▼                                                  ▼
-  user_events:                                    user_events:
-  product_wishlist                               template_generate
-  product_add_to_cart                            template_save
-  product_buy_now                                template_share
+Shopify product create/update webhook
+  → POST /api/shopify/webhook/product-update
+  → Verify HMAC signature
+  → Extract all stiri.* metafields from payload
+  → UPSERT → product_catalog_cache
+  → Invalidate product cache (existing TTL cache)
+
+Manual full sync:
+  → POST /api/admin/product-sync
+  → Paginate through all Shopify products (250/page)
+  → For each product, fetch metafields
+  → Bulk UPSERT → product_catalog_cache
 ```
 
-**The flywheel**: User tries on → sees themselves wearing it → emotional connection → adds to cart → buys. Each step generates events that train the model to show more products they'll follow through on.
+### GraphQL Metafield Query
+
+```graphql
+query ProductWithMetafields($handle: String!) {
+  product(handle: $handle) {
+    id
+    handle
+    title
+    metafields(identifiers: [
+      { namespace: "stiri", key: "color_family" },
+      { namespace: "stiri", key: "style_tags" },
+      { namespace: "stiri", key: "garment_type" },
+      # ... all 30 keys
+    ]) {
+      namespace
+      key
+      value
+      type
+    }
+  }
+}
+```
 
 ---
 
-## 12. IMPLEMENTATION PHASES
+## 16. Example: Full Ranking Walkthrough
 
-### Phase 1: Foundation (Week 1–2)
-- [ ] Create `user_events`, `user_wishlist`, `user_cart` tables (migrations)
-- [ ] Build backend `POST /api/events/track` endpoint
-- [ ] Build frontend `trackEvent()` utility + integrate into existing template views/generates
-- [ ] Add Wishlist / Add to Cart / Buy Now buttons to product cards
-- [ ] Wire button clicks → `trackEvent()` + `user_wishlist` / `user_cart` upserts
+**User**: Priya, 25 (gen_z), Mumbai. Profile: colors=[navy, black], styles=[formal, minimalist], fit=m, bodyType=hourglass, skinTone=medium. Has 120 clicks: mostly formal suits and minimal dresses. No wardrobe yet.
 
-### Phase 2: Shopify Sync (Week 2–3)
-- [ ] Tag all 5 Shopify products with `stiri.*` metafields
-- [ ] Build `product_catalog_cache` sync (webhook + hourly poll)
-- [ ] Build product listing/detail pages reading from cache
-- [ ] Link products to try-on templates via `stiri.template_link`
+**Product A**: Classic Navy Suit — `color_family:[navy], style_tags:[formal,minimalist], body_type_fit:[hourglass,rectangle], skin_tone_complement:[fair,medium,dark], garment_type:suit, pattern:solid, price_tier:premium`
 
-### Phase 3: Style Vector (Week 3–4)
-- [ ] Create `user_style_vector` table
-- [ ] Build recomputation SQL function / Edge Function
-- [ ] Schedule nightly cron (pg_cron or Supabase scheduled function)
-- [ ] Build on-demand trigger (after 50 events threshold)
+**Product B**: Floral Party Kurta — `color_family:[pink,red], style_tags:[party,ethnic], garment_type:kurta, pattern:floral, occasion:[festive,party]`
 
-### Phase 4: Personalized Surfaces (Week 4–5)
-- [ ] Replace static trending with personalized Home feed (ranked templates)
-- [ ] Add "Made for You" section on Home
-- [ ] Add "Because you liked X" section
-- [ ] Personalize product ordering in shop
-- [ ] Add "Complete the Look" post-generation recommendations
+**Product C**: Diwali Silk Saree — `color_family:[maroon,gold], style_tags:[ethnic], body_type_fit:[hourglass,pear], occasion:[wedding,festive]` — currently trending nationally (Diwali season).
 
-### Phase 5: Search + Nudges (Week 5–6)
-- [ ] Build semantic search with LLM intent extraction
-- [ ] Re-rank search results using style vector
-- [ ] Build WhatsApp nudge triggers for cart abandonment + wishlist price drops
-- [ ] Add festival-aware recommendation boosts
+**Weights** (120 clicks, Diwali season with seasonal_boost=0.8):
+- data_richness = 120/200 = 0.60
+- wStyle = 0.85 × (1 - 0.55 × 0.60) = 0.85 × 0.67 = 0.57
+- wClicks = 0.05 + 0.38 × 0.60 = 0.278
+- wPop = 0.10 + 0.08 × 0.8 = 0.164
+- Normalized: wStyle=0.56, wClicks=0.28, wPop=0.16
 
-### Phase 6: Measure + Iterate (Ongoing)
-- [ ] A/B test personalized vs. non-personalized feed (track CTR, generation rate, purchase conversion)
-- [ ] Monitor diversity metrics (prevent filter bubbles)
-- [ ] Tune weights based on real conversion data
-- [ ] Expand product catalog as new Shopify products added (auto-tagged via metafield template)
+**Scores**:
+
+| | Style DNA | Click Affinity | Popularity | Fatigue | **Final** |
+|---|---|---|---|---|---|
+| Product A (Navy Suit) | 0.92 (color+style+body+skin match) | 0.85 (clicks align with formal+suit+navy) | 0.30 (moderate global) | 0 | **0.56×0.92 + 0.28×0.85 + 0.16×0.30 = 0.80** |
+| Product B (Party Kurta) | 0.15 (no color/style overlap) | 0.10 (no click pattern) | 0.20 | 0 | **0.56×0.15 + 0.28×0.10 + 0.16×0.20 = 0.14** |
+| Product C (Diwali Saree) | 0.25 (body_type match only) | 0.05 (minimal click pattern) | 0.90 (Diwali trending!) | 0 | **0.56×0.25 + 0.28×0.05 + 0.16×0.90 = 0.30** |
+
+**Result**: Navy Suit ranks #1 (strongly aligned). Diwali Saree ranks #2 (trending lifts it past the kurta despite low style/click match). Party Kurta ranks #3. Even during Diwali, the user's preference still dominates — but the seasonal product doesn't get buried.
 
 ---
 
-## 13. KEY METRICS TO TRACK
+## 17. Metrics & Monitoring
 
 | Metric | Formula | Target |
 |--------|---------|--------|
-| **Personalization CTR** | Clicks on "Made for You" / Impressions | > 15% (vs ~5% for generic) |
-| **Try-On → Cart Rate** | Cart adds after try-on generation | > 8% |
-| **Wishlist → Purchase Rate** | Purchases from wishlisted items | > 12% |
-| **Cart Abandonment Recovery** | Purchases after abandon nudge | > 5% |
-| **Feed Diversity Score** | Unique stacks in top 10 / Total stacks | > 0.5 |
-| **Cold Start Time-to-Personal** | Events needed for >0.7 affinity confidence | < 30 events |
-| **Revenue per Personalized User** | Revenue ÷ Users with mature vector | 2x non-personalized |
+| Feed engagement rate | (try_ons + wishlists + carts) / views | > 12% |
+| Try-on → Cart rate | cart_adds from users who tried on / total try_ons | > 8% |
+| Feed diversity | Unique garment_types in top 10 / total garment types | > 0.4 |
+| Cold start quality | Engagement rate for users with < 10 clicks | > 6% |
+| Self-tuning stability | Weight variance over 30 days | < 0.15 |
+| Exploration slot CTR | Clicks on exploration slots / exploration impressions | > 3% |
+| Boost effectiveness | Engagement on boosted products vs. baseline | > 1.5× |
+| Feed freshness | % of top-10 products unchanged vs. yesterday | < 70% |
