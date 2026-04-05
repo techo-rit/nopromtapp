@@ -12,7 +12,9 @@ interface HomeProps {
   templatesByStack: Map<string, Template[]>;
   isLoading?: boolean;
   onSelectTemplate: (template: Template) => void;
+  onTryOn?: (template: Template) => void;
   user?: User | null;
+  onLoginRequired?: () => void;
   onboardingPercent?: number;
   onOpenOnboarding?: () => void;
   wishlistedIds?: Set<string>;
@@ -24,7 +26,9 @@ export const Home: React.FC<HomeProps> = ({
   templatesByStack,
   isLoading,
   onSelectTemplate,
+  onTryOn,
   user,
+  onLoginRequired,
   onboardingPercent,
   onOpenOnboarding,
   wishlistedIds,
@@ -93,6 +97,8 @@ export const Home: React.FC<HomeProps> = ({
         <TrendingCarousel
           templates={trendingTemplates}
           onSelectTemplate={onSelectTemplate}
+          user={user}
+          onLoginRequired={onLoginRequired}
         />
       )}
 
@@ -112,6 +118,7 @@ export const Home: React.FC<HomeProps> = ({
                 isWishlisted={wishlistedIds?.has(t.id)}
                 onToggleWishlist={onToggleWishlist}
                 onClick={() => onSelectTemplate(t)}
+                onTryOn={onTryOn ? () => onTryOn(t) : undefined}
                 className="shrink-0 w-[45vw] md:w-[220px]"
               />
             ))}
@@ -140,6 +147,7 @@ export const Home: React.FC<HomeProps> = ({
                     isWishlisted={wishlistedIds?.has(t.id)}
                     onToggleWishlist={onToggleWishlist}
                     onClick={() => onSelectTemplate(t)}
+                    onTryOn={onTryOn ? () => onTryOn(t) : undefined}
                     className="shrink-0 w-[45vw] md:w-[220px]"
                   />
                 ))}

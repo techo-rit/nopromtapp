@@ -8,6 +8,7 @@ interface ProductCardProps {
   isWishlisted?: boolean;
   onToggleWishlist?: (id: string) => void;
   onClick: () => void;
+  onTryOn?: () => void;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   isWishlisted,
   onToggleWishlist,
   onClick,
+  onTryOn,
   className = '',
 }) => {
   const hasDiscount =
@@ -77,18 +79,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <p className="text-[13px] font-medium text-[#f5f5f5] truncate leading-snug">
           {template.name}
         </p>
-        {template.price && (
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm font-bold text-[#f5f5f5]" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {formatPrice(template.price)}
-            </span>
-            {hasDiscount && template.compareAtPrice && (
-              <span className="text-xs text-[#666] line-through" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {formatPrice(template.compareAtPrice)}
+        <div className="flex items-center justify-between gap-2 mt-1.5 min-h-[26px]">
+          {template.price ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-sm font-bold text-[#f5f5f5]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {formatPrice(template.price)}
               </span>
-            )}
-          </div>
-        )}
+              {hasDiscount && template.compareAtPrice && (
+                <span className="text-xs text-[#555] line-through" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {formatPrice(template.compareAtPrice)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div />
+          )}
+          {onTryOn && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onTryOn(); }}
+              className="shrink-0 text-[11px] font-semibold text-[#0a0a0a] bg-[#f0f0f0] hover:bg-white active:scale-90 rounded-full px-3 py-1 transition-all whitespace-nowrap"
+              aria-label="Try On"
+            >
+              Try On
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

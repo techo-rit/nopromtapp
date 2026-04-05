@@ -5,6 +5,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-
 // Components
 import { Header } from "./features/layout/Header";
 import { BottomNav } from "./features/layout/BottomNav";
+import { FloatingSearch } from "./features/layout/FloatingSearch";
 import { AuthModal } from "./features/auth/AuthModal";
 import { PaymentModal } from "./features/payments/PaymentModal";
 import { OnboardingModal } from "./features/profile/OnboardingModal";
@@ -362,7 +363,9 @@ const App: React.FC = () => {
                 templatesByStack={templatesByStack}
                 isLoading={templatesLoading}
                 onSelectTemplate={(t) => navigate(`/product/${t.id}`)}
+                onTryOn={(t) => user ? navigate(`/changing-room?product=${t.id}`) : openAuthModal()}
                 user={user}
+                onLoginRequired={openAuthModal}
                 onboardingPercent={onboardingPercent}
                 onOpenOnboarding={openOnboardingModal}
                 wishlistedIds={user ? wishlistedIds : undefined}
@@ -432,13 +435,12 @@ const App: React.FC = () => {
         onProductDetails={(handle) => { setShowCartDrawer(false); navigate(`/product/${handle}`); }}
       />
 
+      {/* FLOATING SEARCH (mobile only, home page) */}
+      <FloatingSearch searchQuery={searchQuery} onSearchChange={handleSearchChange} />
+
       {/* FOOTER */}
       <div className="shrink-0 z-50">
         <BottomNav
-          user={user}
-          onSignIn={openAuthModal}
-          onLogout={handleLogout}
-          onUpgrade={() => user ? openPaymentModal() : openAuthModal()}
           cartCount={user ? cartCount : 0}
           onCartClick={user ? openCartDrawer : undefined}
         />
