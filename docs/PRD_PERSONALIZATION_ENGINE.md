@@ -15,9 +15,9 @@ Stiri's home feed is static — every user sees the same trending templates in t
 A **three-signal weighted-blend ranking engine** that scores every product for every user:
 
 ```
-final_score = w_style × style_dna_match
-            + w_user_clicks × user_click_affinity
-            + w_product_pop × product_popularity
+final_score = w_style  × style_dna_match
+            + w_clicks × user_click_affinity
+            + w_pop    × product_popularity
             + new_arrival_boost
             - fatigue_penalty
 ```

@@ -313,6 +313,7 @@ CREATE TABLE product_click_stats (
   purchase_count  integer DEFAULT 0,
   recent_views    integer DEFAULT 0,
   recent_try_ons  integer DEFAULT 0,
+  recent_wishlists integer DEFAULT 0,
   recent_carts    integer DEFAULT 0,
   recent_purchases integer DEFAULT 0,
   regional_counts jsonb DEFAULT '{}',
@@ -427,6 +428,8 @@ final_score = w_style × style_dna_match(user, product)
 ```
 
 Where `w_style + w_clicks + w_pop = 1.0`, always. `new_arrival_boost` is additive and outside the normalised weight system — it does not steal from the three signals.
+
+> **Naming convention:** In the formula, abbreviated forms `w_clicks` and `w_pop` are used for readability. In the database schema (§5.6), these are stored as columns `w_user_clicks` and `w_product_pop` for clarity. In code, they become camelCase variables `wClicks` and `wPop`.
 
 ### 6.2 Style DNA Match (0-1)
 
