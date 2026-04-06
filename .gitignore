@@ -24,7 +24,7 @@ yarn-error.log*
 
 # Environment variables
 .env
-admin-commands.py
+admin_commands.py
 
 # OS
 .DS_Store
