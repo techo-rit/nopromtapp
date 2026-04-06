@@ -1,7 +1,7 @@
 // web/features/tracking/trackingService.ts — Batched event tracking
 import { CONFIG } from '../../config';
 
-export type EventType = 'view' | 'try_on' | 'wishlist' | 'cart_add' | 'cart_remove' | 'purchase';
+export type EventType = 'view' | 'try_on' | 'wishlist' | 'cart_add' | 'cart_remove' | 'purchase' | 'skip';
 
 interface TrackEvent {
   product_id: string;

@@ -15,6 +15,7 @@ const EVENT_WEIGHTS = {
   wishlist: 4,
   cart_add: 5,
   purchase: 7,
+  skip: -1,
 };
 
 // ── Dimension weights for style DNA matching ───────────────────────

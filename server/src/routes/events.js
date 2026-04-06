@@ -8,7 +8,7 @@
 
 import { createAdminClient, getUserFromRequest } from '../lib/auth.js';
 
-const VALID_EVENTS = new Set(['view', 'try_on', 'wishlist', 'cart_add', 'cart_remove', 'purchase']);
+const VALID_EVENTS = new Set(['view', 'try_on', 'wishlist', 'cart_add', 'cart_remove', 'purchase', 'skip']);
 const VIEW_DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_BATCH_SIZE = 20;
 
