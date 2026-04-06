@@ -11,7 +11,8 @@ export const searchTemplates = (query: string, templates: Template[]): Template[
   return templates.filter((template) => {
     const title = template.name.toLowerCase();
     const keywords = (template.keywords || []).map(k => k.toLowerCase());
-    const category = template.stackId.toLowerCase();
+    // Derive category from stackId or ID prefix
+    const category = (template.stackId || template.id.split('_')[0] || '').toLowerCase();
 
     // AND across tokens: every token must match title, keyword, or category.
     // Within a token check, matching against fields is OR-based.

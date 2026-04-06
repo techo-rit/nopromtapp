@@ -8,7 +8,6 @@ export interface WishlistItem {
   createdAt: string;
   template: {
     id: string;
-    stack_id: string;
     title: string;
     image: string;
     aspect_ratio: string;

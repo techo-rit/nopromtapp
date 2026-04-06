@@ -122,7 +122,6 @@ CREATE TABLE IF NOT EXISTS public.generated_images (
 -- 7. templates
 CREATE TABLE IF NOT EXISTS public.templates (
   id               text        PRIMARY KEY,
-  stack_id         text        NOT NULL,
   title            text        NOT NULL,
   description      text,
   image            text        NOT NULL,
@@ -180,7 +179,6 @@ CREATE INDEX IF NOT EXISTS idx_idempotency_keys_key            ON public.idempot
 CREATE INDEX IF NOT EXISTS idx_idempotency_keys_expires_at     ON public.idempotency_keys(expires_at);
 CREATE INDEX IF NOT EXISTS idx_generated_images_user_created   ON public.generated_images(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_generated_images_carousel       ON public.generated_images(user_id, template_id, mode) WHERE mode = 'carousel_tryon';
-CREATE INDEX IF NOT EXISTS idx_templates_stack_id               ON public.templates(stack_id);
 CREATE INDEX IF NOT EXISTS idx_templates_trending               ON public.templates(trending) WHERE trending = true;
 CREATE INDEX IF NOT EXISTS idx_templates_is_active              ON public.templates(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_user_wishlist_user_id            ON public.user_wishlist(user_id);
@@ -720,3 +718,225 @@ DO $$ BEGIN
     CREATE POLICY saved_selfies_user_delete ON saved_selfies FOR DELETE USING (auth.uid() = user_id);
   END IF;
 END $$;
+
+
+-- ==========================================
+-- PERSONALIZATION ENGINE — Templates extension + tracking tables
+-- ==========================================
+
+-- 30 style dimensions + price data added directly to templates
+-- (eliminates the old product_catalog_cache table)
+
+-- Array tag dimensions
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS color_family         text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS style_tags           text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS size_range           text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS body_type_fit        text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS skin_tone_complement text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS age_group            text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS occasion             text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS season               text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS trend_tag            text[] DEFAULT '{}';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS sustainability       text[] DEFAULT '{}';
+
+-- Scalar tag dimensions
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS garment_type         text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS garment_category     text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS fit_silhouette       text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS pattern              text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS fabric               text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS price_tier           text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS gender               text DEFAULT 'unisex';
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS neckline             text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS sleeve_length        text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS length               text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS embellishment        text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS brand_tier           text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS color_intensity      text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS layering             text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS care_level           text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS origin_aesthetic     text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS template_weight      text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS transparency         text;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS versatility          text;
+
+-- Metadata columns
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS is_new_arrival       boolean DEFAULT false;
+
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS min_price            integer;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS max_price            integer;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS available_for_sale   boolean DEFAULT true;
+ALTER TABLE public.templates ADD COLUMN IF NOT EXISTS tags_synced_at       timestamptz;
+
+-- GIN indexes for personalization queries
+CREATE INDEX IF NOT EXISTS idx_templates_style_tags    ON public.templates USING GIN(style_tags);
+CREATE INDEX IF NOT EXISTS idx_templates_color_family   ON public.templates USING GIN(color_family);
+CREATE INDEX IF NOT EXISTS idx_templates_occasion       ON public.templates USING GIN(occasion);
+
+-- click_events — Raw event log
+CREATE TABLE IF NOT EXISTS public.click_events (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  product_id  text NOT NULL,
+  event_type  text NOT NULL CHECK (event_type IN ('view','try_on','wishlist','cart_add','cart_remove','purchase')),
+  metadata    jsonb DEFAULT '{}',
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_click_events_user_time ON public.click_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_click_events_product   ON public.click_events(product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_click_events_type      ON public.click_events(event_type);
+
+-- user_click_profile — Pre-aggregated user taste
+CREATE TABLE IF NOT EXISTS public.user_click_profile (
+  user_id              uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+  tag_affinities       jsonb NOT NULL DEFAULT '{}',
+  total_views          integer DEFAULT 0,
+  total_try_ons        integer DEFAULT 0,
+  total_wishlists      integer DEFAULT 0,
+  total_cart_adds      integer DEFAULT 0,
+  total_purchases      integer DEFAULT 0,
+  engagement_ratio     decimal(5,4) DEFAULT 0,
+  recent_impressions   jsonb DEFAULT '[]',
+  last_computed_at     timestamptz DEFAULT now(),
+  events_since_compute integer DEFAULT 0,
+  updated_at           timestamptz DEFAULT now()
+);
+
+-- product_click_stats — Pre-aggregated product popularity
+CREATE TABLE IF NOT EXISTS public.product_click_stats (
+  product_id       text PRIMARY KEY,
+  view_count       integer DEFAULT 0,
+  try_on_count     integer DEFAULT 0,
+  wishlist_count   integer DEFAULT 0,
+  cart_add_count   integer DEFAULT 0,
+  purchase_count   integer DEFAULT 0,
+  recent_views     integer DEFAULT 0,
+  recent_try_ons   integer DEFAULT 0,
+  recent_wishlists integer DEFAULT 0,
+  recent_carts     integer DEFAULT 0,
+  recent_purchases integer DEFAULT 0,
+  regional_counts  jsonb DEFAULT '{}',
+  popularity_score decimal(5,4) DEFAULT 0,
+  updated_at       timestamptz DEFAULT now()
+);
+
+-- admin_boost_queue — Manual product promotion
+CREATE TABLE IF NOT EXISTS public.admin_boost_queue (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id      text NOT NULL,
+  priority        integer DEFAULT 1,
+  min_style_match decimal(3,2) DEFAULT 0.20,
+  expires_at      timestamptz NOT NULL,
+  created_at      timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_boost_queue_active ON public.admin_boost_queue(expires_at);
+
+-- ranking_weights — Self-tuning weight history
+CREATE TABLE IF NOT EXISTS public.ranking_weights (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  w_style          decimal(4,3) NOT NULL,
+  w_user_clicks    decimal(4,3) NOT NULL,
+  w_product_pop    decimal(4,3) NOT NULL,
+  engagement_ratio decimal(5,4),
+  last_delta       jsonb DEFAULT '{}'::jsonb,
+  is_active        boolean DEFAULT false,
+  created_at       timestamptz DEFAULT now()
+);
+
+-- metrics_log — Nightly health metrics
+CREATE TABLE IF NOT EXISTS public.metrics_log (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  metric_name   text NOT NULL,
+  metric_value  numeric,
+  target_value  numeric,
+  passed        boolean,
+  computed_at   timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_metrics_log_name_date ON public.metrics_log(metric_name, computed_at DESC);
+
+-- RLS for personalization tables
+ALTER TABLE public.click_events          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_click_profile    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_click_stats   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_boost_queue     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ranking_weights       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.metrics_log           ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='click_events' AND policyname='click_events_user_read') THEN
+    CREATE POLICY click_events_user_read ON public.click_events FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='click_events' AND policyname='click_events_service_insert') THEN
+    CREATE POLICY click_events_service_insert ON public.click_events FOR INSERT TO service_role WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='user_click_profile' AND policyname='user_click_profile_user_read') THEN
+    CREATE POLICY user_click_profile_user_read ON public.user_click_profile FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='user_click_profile' AND policyname='user_click_profile_service_write') THEN
+    CREATE POLICY user_click_profile_service_write ON public.user_click_profile FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='product_click_stats' AND policyname='product_stats_public_read') THEN
+    CREATE POLICY product_stats_public_read ON public.product_click_stats FOR SELECT USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='product_click_stats' AND policyname='product_stats_service_write') THEN
+    CREATE POLICY product_stats_service_write ON public.product_click_stats FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='admin_boost_queue' AND policyname='boost_queue_service_all') THEN
+    CREATE POLICY boost_queue_service_all ON public.admin_boost_queue FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='ranking_weights' AND policyname='ranking_weights_service_all') THEN
+    CREATE POLICY ranking_weights_service_all ON public.ranking_weights FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='metrics_log' AND policyname='metrics_log_service_all') THEN
+    CREATE POLICY metrics_log_service_all ON public.metrics_log FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+-- Seed ranking_weights
+INSERT INTO public.ranking_weights (w_style, w_user_clicks, w_product_pop, last_delta, is_active)
+SELECT 0.750, 0.100, 0.150, '{}'::jsonb, true
+WHERE NOT EXISTS (SELECT 1 FROM public.ranking_weights WHERE is_active = true);
+
+-- updated_at triggers for personalization tables
+CREATE OR REPLACE FUNCTION public.update_click_profile_updated_at()
+RETURNS TRIGGER AS $$ BEGIN NEW.updated_at := now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_user_click_profile_updated_at ON public.user_click_profile;
+CREATE TRIGGER trg_user_click_profile_updated_at
+  BEFORE UPDATE ON public.user_click_profile
+  FOR EACH ROW EXECUTE FUNCTION public.update_click_profile_updated_at();
+
+CREATE OR REPLACE FUNCTION public.update_product_stats_updated_at()
+RETURNS TRIGGER AS $$ BEGIN NEW.updated_at := now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_product_click_stats_updated_at ON public.product_click_stats;
+CREATE TRIGGER trg_product_click_stats_updated_at
+  BEFORE UPDATE ON public.product_click_stats
+  FOR EACH ROW EXECUTE FUNCTION public.update_product_stats_updated_at();

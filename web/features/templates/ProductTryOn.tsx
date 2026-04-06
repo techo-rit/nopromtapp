@@ -6,6 +6,7 @@ import { GenerationShowcase } from './GenerationShowcase';
 import { TryOnResult } from './TryOnResult';
 import { generateImage } from './geminiService';
 import { fetchTemplateById } from './templateService';
+import { TRYON_TEMPLATE } from './tryOnConfig';
 import { CONFIG } from '../../config';
 
 interface ProductTryOnProps {
@@ -98,7 +99,9 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
 
       const templateForGeneration = {
         ...template,
-        stackId: 'fitit',
+        id: template.id.startsWith('fitit') ? template.id : `fitit_${template.id}`,
+        prompt: template.prompt || TRYON_TEMPLATE.prompt,
+        aspectRatio: template.aspectRatio || TRYON_TEMPLATE.aspectRatio,
       };
 
       const result = await generateImage(templateForGeneration, fileToUse, wearableFile);

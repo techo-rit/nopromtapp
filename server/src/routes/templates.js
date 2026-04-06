@@ -120,13 +120,12 @@ export function templatesStream(req, res) {
 }
 
 /**
- * GET /api/templates?stack=:stackId
- * Public — returns active templates, optionally filtered by stack.
+ * GET /api/templates
+ * Public — returns active templates.
  */
 export async function listTemplates(req, res) {
   try {
-    const { stack } = req.query;
-    const cacheKey = `templates:${stack || 'all'}`;
+    const cacheKey = 'templates:all';
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
@@ -139,10 +138,6 @@ export async function listTemplates(req, res) {
       .eq('is_active', true)
       .order('trending_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
-
-    if (stack) {
-      query = query.eq('stack_id', stack);
-    }
 
     const { data, error } = await query;
     if (error) throw error;

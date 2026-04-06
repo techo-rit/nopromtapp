@@ -105,8 +105,10 @@ export function useTemplates(): UseTemplatesResult {
 
   const templatesByStack = useMemo(
     () => templates.reduce((acc, t) => {
-      if (!acc.has(t.stackId)) acc.set(t.stackId, []);
-      acc.get(t.stackId)!.push(t);
+      // Derive stack from template ID prefix (e.g. 'aesthetics_template_9' → 'aesthetics')
+      const stack = t.stackId || t.id.split('_')[0] || 'other';
+      if (!acc.has(stack)) acc.set(stack, []);
+      acc.get(stack)!.push(t);
       return acc;
     }, new Map<string, Template[]>()),
     [templates]

@@ -9,7 +9,6 @@ function normalizeTemplate(row: Record<string, any>): Template {
   return {
     id: row.id,
     name: row.title,
-    stackId: row.stack_id,
     imageUrl: row.image,
     prompt: (() => {
       try { return JSON.parse(row.prompt); }
@@ -25,11 +24,9 @@ function normalizeTemplate(row: Record<string, any>): Template {
   };
 }
 
-/** Fetch all active templates (optionally filtered by stack) */
-export async function fetchTemplates(stack?: string): Promise<Template[]> {
-  const url = stack
-    ? `${BASE}/api/templates?stack=${encodeURIComponent(stack)}`
-    : `${BASE}/api/templates`;
+/** Fetch all active templates */
+export async function fetchTemplates(): Promise<Template[]> {
+  const url = `${BASE}/api/templates`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch templates: ${res.status}`);
   const { templates } = await res.json();

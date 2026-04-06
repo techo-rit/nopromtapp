@@ -1,5 +1,6 @@
 import { createAdminClient, getUserFromRequest, ensureUserProfile } from '../lib/auth.js';
 import { createTtlCache } from '../lib/cache.js';
+import { feedCache } from './feed.js';
 
 const CACHE_TTL_MS = Number(process.env.SERVER_CACHE_TTL_MS || 60000);
 const GALLERY_CACHE_TTL_MS = Number(process.env.GALLERY_CACHE_TTL_MS || 120000); // 2 min
@@ -172,6 +173,9 @@ export async function updateProfileHandler(req, res) {
       onboardingPercent: Math.round((steps / ONBOARDING_TOTAL_STEPS) * 100),
     };
     profileCache.set(`profile:${userId}`, payload);
+    // Invalidate personalized feed cache when profile preferences change
+    feedCache.del(`${userId}:20:0`);
+    feedCache.del(`${userId}:50:0`);
     return res.status(200).json(payload);
   } catch (err) {
     console.error('updateProfile error:', err);

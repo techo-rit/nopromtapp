@@ -100,8 +100,7 @@ export async function generateImage(
   }
 
   const templateId = template.id ?? template.templateId ?? String(template);
-  const stackId = String(template?.stackId ?? '').toLowerCase();
-  const isTryOnTemplate = stackId === 'fitit' || String(templateId).toLowerCase().startsWith('fitit_');
+  const isTryOnTemplate = String(templateId).toLowerCase().startsWith('fitit');
   if (isTryOnTemplate && !wearableFile) {
     throw new Error('Try-on needs two images: a selfie and a wearable image.');
   }

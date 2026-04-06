@@ -19,6 +19,12 @@ import { listTemplates, listTrendingTemplates, getTemplate, templatesStream, sta
 import { getWishlistHandler, addWishlistHandler, removeWishlistHandler } from './routes/wishlist.js';
 import { carouselTryOnHandler } from './routes/carouselTryon.js';
 import { createShareLinkHandler, shareLinkRedirectHandler } from './routes/shareLinks.js';
+import { trackEventsHandler } from './routes/events.js';
+import { feedHandler } from './routes/feed.js';
+import { createBoostHandler, listBoostsHandler, deleteBoostHandler } from './routes/adminBoost.js';
+import { getWeightsHandler, tuneWeightsHandler } from './routes/adminWeights.js';
+import { getMetricsHandler } from './routes/adminMetrics.js';
+import { fullSyncHandler, singleSyncHandler, cronHandler } from './routes/productSync.js';
 
 export function createApp() {
   const app = express();
@@ -130,6 +136,29 @@ export function createApp() {
   // Share links
   app.post('/api/share-links', createShareLinkHandler);
   app.get('/s/:code', shareLinkRedirectHandler);
+
+  // Personalization: Event tracking
+  app.post('/api/events/track', trackEventsHandler);
+
+  // Personalization: Feed
+  app.get('/api/feed/for-you', feedHandler);
+
+  // Personalization: Admin boost queue
+  app.post('/api/admin/boost', createBoostHandler);
+  app.get('/api/admin/boost', listBoostsHandler);
+  app.delete('/api/admin/boost/:id', deleteBoostHandler);
+
+  // Personalization: Admin weights
+  app.get('/api/admin/weights', getWeightsHandler);
+  app.post('/api/admin/weights/tune', tuneWeightsHandler);
+
+  // Personalization: Admin metrics
+  app.get('/api/admin/metrics', getMetricsHandler);
+
+  // Personalization: Product sync (Gemini AI tag generation)
+  app.post('/api/admin/product-sync', fullSyncHandler);
+  app.post('/api/admin/product-sync/:templateId', singleSyncHandler);
+  app.post('/api/admin/cron/personalization', cronHandler);
 
   // Start Supabase Realtime listener for templates
   startTemplateRealtime();
