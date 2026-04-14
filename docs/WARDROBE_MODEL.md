@@ -25,23 +25,24 @@ The system has three computational layers:
 │                          USER DEVICE                                  │
 │                                                                       │
 │  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────────┐     │
-│  │ Image Pipeline   │  │ Closet UI    │  │ AI Concierge Chat    │     │
-│  │ @imgly/bg-remove │  │ Sets / Items │  │ Prompt + Refinement  │     │
-│  │ Canvas WebP      │  │ Vibe Reports │  │ Buttons              │     │
-│  │ (~3s/garment)    │  │ Gap Cards    │  │ Stiri Set Recs       │     │
+│  │ Closet UI        │  │ Upload Flow  │  │ AI Concierge Chat    │     │
+│  │ Sets / Items     │  │ Gallery Pick │  │ Prompt + Refinement  │     │
+│  │ Vibe Reports     │  │ Camera       │  │ Buttons              │     │
+│  │ Gap Cards        │  │ Batch Upload │  │ Stiri Set Recs       │     │
 │  └────────┬────────┘  └──────┬───────┘  └──────────┬───────────┘     │
 │           │                   │                      │                │
 └───────────┼───────────────────┼──────────────────────┼────────────────┘
             │                   │                      │
-   Upload WebP          Fetch Outfits          POST /api/wardrobe/chat
+   Upload Original      Fetch Outfits          POST /api/wardrobe/chat
    POST /api/wardrobe   GET /api/wardrobe      (prompt → filters → outfits)
    /garments/upload     /outfits
+   (original image)     (server does bg-removal)
             │                   │                      │
 ┌───────────┼───────────────────┼──────────────────────┼────────────────┐
 │           ▼                   ▼                      ▼                │
 │                      EXPRESS.JS API                                   │
 │                                                                       │
-│  POST /api/wardrobe/garments/upload    — Store garment image          │
+│  POST /api/wardrobe/garments/upload    — Upload + bg-removal + store  │
 │  DELETE /api/wardrobe/garments/:id     — Remove garment               │
 │  GET /api/wardrobe/garments            — List all garments            │
 │  POST /api/wardrobe/sync               — Full sync pipeline           │
@@ -102,7 +103,7 @@ The system has three computational layers:
 │  Existing tables (updated):                                          │
 │  ┌───────────────────┐  ┌──────────────────────┐                     │
 │  │ profiles           │  │ ranking_weights      │                     │
-│  │ (+wardrobe_synced) │  │ (+w_wardrobe column) │                     │
+│  │ (no new columns)   │  │ (+w_wardrobe column) │                     │
 │  └───────────────────┘  └──────────────────────┘                     │
 │                                                                       │
 └───────────────────┬──────────────────────────────────────────────────┘
@@ -121,33 +122,32 @@ The system has three computational layers:
 
 ## 3. Layer 1: Garment Intelligence
 
-### 3.1 Client-Side Image Pipeline
+### 3.1 Server-Side Image Pipeline
 
-Before any image reaches the server, the client processes it:
+User uploads original photos (∼1-2MB each). The server processes them:
 
 ```
-User selects photo(s) from gallery
-  → @imgly/background-removal (WASM, MIT license)
-      Model: ~30MB, lazy-loaded on first Closet visit, cached in browser
-      Processing: sequential, ~3s per image
-      Output: garment cutout with transparent background (PNG)
-  → Canvas API resize to 1024px max dimension
-  → canvas.toBlob('image/webp', 0.85)
+Client selects photo(s) from gallery
+  → Upload original JPEG/PNG to server endpoint
+  → Server: @imgly/background-removal (works in Node.js, MIT license)
+      Processing: ~200ms per image
+      Output: garment cutout with transparent background (PNG buffer)
+  → Server: sharp/Canvas resize to 1024px max dimension
+  → Server: Convert to WebP (quality 0.85)
       Output: ~150-250KB WebP per garment
-  → Upload to Supabase Storage (wardrobe-items bucket)
+  → Store in Supabase Storage (wardrobe-items bucket)
+  → Return clean image URL to client
 ```
 
-**Why client-side:**
-- 95% size reduction (3-5MB → 150-250KB)
-- Zero server processing cost
+**Why server-side:**
+- Eliminates 30MB WASM model download on client (critical for Indian users on slow networks)
+- Zero first-time friction (vs 60+ seconds on 3G for client WASM)
+- Universal device compatibility (no browser WASM support required)
+- Server controls output format (always WebP, no iOS Safari fallback needed)
+- 95% stored size reduction (3-5MB → 150-250KB)
 - Clean cutouts improve Gemini analysis accuracy
 - Professional-looking outfit cards (no messy backgrounds)
-
-**WASM model management:**
-- First load: "Setting up your closet scanner..." progress indicator
-- Subsequent loads: instant (cached)
-- Memory: ~200MB during processing, released after
-- Sequential processing prevents browser memory pressure
+- Negligible server cost (~200ms CPU per image)
 
 ### 3.2 Gemini Batched Analysis
 
@@ -201,10 +201,16 @@ Analyze based on visual evidence only - do not guess brand or exact fabric if no
 - **Estimated cost: $0.008-0.012 per sync of 10 garments**
 - Latency: 3-6 seconds for batch of 10
 
+**Post-processing: Layer reclassification:**
+After Gemini extraction, server reclassifies garments where `garment_type ∈ {jacket, cardigan, shrug, blazer, hoodie, coat, vest}` from `garment_category = 'upperwear'` to `garment_category = 'layer'`. This is deterministic — no Gemini ambiguity.
+
+**Response ordering:**
+Gemini multi-image responses may not be in input order. Each batch request includes image index markers in the prompt ("Image 1:", "Image 2:", etc.) and the parsed response is matched back by index. If a response cannot be matched, it falls back to positional order with validation against expected garment count.
+
 **Error handling:**
-- If Gemini returns malformed JSON for a garment → mark it as `analysis_failed`, show user "Couldn't analyze this item — try re-uploading a clearer photo"
+- If Gemini returns malformed JSON for a garment → mark it as `analysis_failed = true`, show user "Couldn't analyze this item — try re-uploading a clearer photo"
 - If rate-limited → queue and retry with exponential backoff
-- If >20 garments in one sync → split into batches of 15 images per call (Gemini input limit)
+- If >15 garments in one sync → split into batches of 15 images per call (Gemini input limit)
 
 ### 3.3 Extraction Schema
 
@@ -241,7 +247,7 @@ Given garments G₁, G₂, ..., Gₙ categorized as:
 - **U** = upperwear set
 - **L** = lowerwear set
 - **F** = fullbody set
-- **Y** = layers set
+- **Y** = layers set (server-reclassified from upperwear where garment_type ∈ {jacket, cardigan, shrug, blazer, hoodie, coat, vest})
 - **S** = footwear set
 - **A** = accessories set
 
@@ -263,17 +269,44 @@ Layer enhancement (if layers available):
     Generate layered variant → (u, l, y) or (f, y)
 ```
 
+**Incremental delta engine:**
+Instead of regenerating all combos on every change, the engine uses incremental updates:
+
+```
+On garment add:
+  1. Compute new base pairs: O(new_garments × existing_category) instead of O(all × all)
+  2. Extend new pairs through footwear → accessories tiers
+  3. Score new pairs only (Phase 1 + Phase 2 sub-scores)
+  4. Re-run diversity penalty + personalization re-rank globally (cheap: re-sort pre-computed scores)
+
+On garment delete:
+  1. Remove all stored pairs containing deleted garment: O(n) scan
+  2. Re-run diversity penalty + personalization re-rank globally
+
+Pair-intrinsic scores (color, silhouette, fabric, etc.) are STORED and reused.
+Only set-relative operations (diversity, personalization) run globally.
+```
+
 **Complexity analysis for a typical wardrobe:**
 ```
 15 tops × 10 bottoms = 150 Tier 1 core combos
 + 5 fullbody = 155 cores
-× 4 shoes = 620 Tier 2 combos
-+ 3 layers add ~200 layered variants
+Phase 1 filter (~50% pass) = ~78 surviving pairs
+× 4 shoes = 312 Tier 2 combos (footwear × surviving pairs, NOT full cross-product)
++ 3 layers add ~100 layered variants
 
-Total raw combos: ~820
-After Phase 1 filtering (~50% pass): ~410
-After Phase 2 scoring + top-N selection: display top 30-50
+Total scored combos: ~412
+Display top 30-50
+
+Incremental: adding 2 new tops = 2 × 10 = 20 new pairs (vs 150 full recalc = 87% reduction)
 ```
+
+**Garment caps (tiered by plan):**
+| Plan | Max Garments |
+|------|-------------|
+| Free | 30 |
+| Essentials | 75 |
+| Ultimate | 150 |
 
 All generated within ~500ms on a modern server (pure arithmetic, no I/O per combo).
 
@@ -292,7 +325,11 @@ function isCompatible(garments) {
   const hasFullbody = categories.includes('fullbody');
   
   if (!hasFullbody && !(hasUpper && hasLower)) return false;
-  if (hasFullbody && (hasUpper || hasLower)) return false; // fullbody is standalone
+  if (hasFullbody && (hasUpper || hasLower)) return false; // fullbody is standalone (except layers)
+  // Allow fullbody + layer (e.g., dress + jacket)
+  const hasLayer = categories.includes('layer');
+  if (hasFullbody && hasLayer) { /* valid — override the rejection above */ }
+  else if (hasFullbody && hasUpper) return false;
   
   // Allow max 1 of: footwear, layer, accessory
   const footwearCount = categories.filter(c => c === 'footwear').length;
@@ -330,16 +367,22 @@ function isCompatible(garments) {
   const minF = Math.min(...formalities);
   if (maxF - minF > 0.5) return false;
 
-  // RULE 6: Season incompatibility
+  // RULE 6: Season incompatibility (climatically opposed seasons)
+  const OPPOSED_SEASONS = [
+    ['summer', 'winter'],
+    ['summer', 'monsoon'],  // heavy layering vs minimal
+  ];
   const seasonSets = coreGarments.map(g => new Set(g.season_tags));
   for (let i = 0; i < seasonSets.length; i++) {
     for (let j = i + 1; j < seasonSets.length; j++) {
       const overlap = [...seasonSets[i]].filter(s => seasonSets[j].has(s));
       if (overlap.length === 0) {
-        const isSummerWinterClash = 
-          (seasonSets[i].has('summer') && seasonSets[j].has('winter')) ||
-          (seasonSets[i].has('winter') && seasonSets[j].has('summer'));
-        if (isSummerWinterClash) return false;
+        for (const [a, b] of OPPOSED_SEASONS) {
+          const isClash = 
+            (seasonSets[i].has(a) && seasonSets[j].has(b)) ||
+            (seasonSets[i].has(b) && seasonSets[j].has(a));
+          if (isClash) return false;
+        }
       }
     }
   }
@@ -597,6 +640,7 @@ const TEXTURE_COMPAT = {
   'knit_smooth': 0.80,
   'velvet_smooth': 0.85,
   'satin_matte': 0.90,      // Luxe contrast
+  // Note: unlisted pairs default to 0.60 (neutral). Add pairs as fashion edge cases emerge.
   // symmetric: also check reverse
 };
 
@@ -724,7 +768,7 @@ Each outfit gets a composite tag profile (union of garment attributes), then sco
 
 ```javascript
 function personalizeOutfits(outfits, userProfile, clickProfile, wardrobeProfile, activeWeights) {
-  const hasWardrobe = wardrobeProfile && wardrobeProfile.total_garments >= 15;
+  const hasWardrobe = wardrobeProfile && wardrobeProfile.total_garments >= 10;
   
   // Get data-maturity-aware weights
   const totalEvents = clickProfile ? 
@@ -739,11 +783,13 @@ function personalizeOutfits(outfits, userProfile, clickProfile, wardrobeProfile,
     const styleScore = styleDnaMatch(userProfile, tags);
     const wardrobeScore = hasWardrobe ? wardrobeAffinity(wardrobeProfile, tags) : 0;
     const clickScore = clickProfile ? userClickAffinity(clickProfile, tags) : 0;
+    const popScore = outfit.popularity_score || 0;
     
     const personalizedScore = 
         weights.style    * styleScore * 100
       + weights.wardrobe * wardrobeScore * 100
-      + weights.clicks   * clickScore * 100;
+      + weights.clicks   * clickScore * 100
+      + weights.pop      * popScore * 100;
     
     const displayScore = 0.6 * outfit.harmony_score + 0.4 * personalizedScore;
     
@@ -752,17 +798,27 @@ function personalizeOutfits(outfits, userProfile, clickProfile, wardrobeProfile,
 }
 
 function getOutfitWeights(totalEvents, hasWardrobe, activeWeights) {
-  if (hasWardrobe && totalEvents >= 200) {
-    return { style: 0.20, wardrobe: 0.25, clicks: 0.55 };
+  // With wardrobe: 4-signal blend (matches PRD Decision 5)
+  if (hasWardrobe && totalEvents >= 50 && activeWeights) {
+    // Use self-tuned weights from ranking_weights table
+    return {
+      style: activeWeights.w_style,
+      wardrobe: activeWeights.w_wardrobe,
+      clicks: activeWeights.w_user_clicks,
+      pop: activeWeights.w_product_pop,
+    };
   }
-  if (hasWardrobe && totalEvents >= 50) {
-    return { style: 0.30, wardrobe: 0.25, clicks: 0.45 };
+  if (hasWardrobe && totalEvents >= 20) {
+    return { style: 0.40, wardrobe: 0.30, clicks: 0.15, pop: 0.15 };
+  }
+  if (hasWardrobe && totalEvents >= 5) {
+    return { style: 0.45, wardrobe: 0.30, clicks: 0.10, pop: 0.15 };
   }
   if (hasWardrobe) {
-    return { style: 0.45, wardrobe: 0.30, clicks: 0.25 };
+    return { style: 0.55, wardrobe: 0.25, clicks: 0.05, pop: 0.15 };
   }
-  // No wardrobe — shouldn't happen on wardrobe page, but fallback
-  return { style: 0.60, wardrobe: 0, clicks: 0.40 };
+  // No wardrobe — shouldn't happen on wardrobe page, but fallback to 3-signal
+  return { style: 0.60, wardrobe: 0, clicks: 0.25, pop: 0.15 };
 }
 ```
 
@@ -809,7 +865,7 @@ function generateWhyThisWorks(outfit, scores) {
   const dimensionScores = [
     { dim: 'color', score: scores.color_harmony, templates: WHY_TEMPLATES.color_harmony },
     { dim: 'silhouette', score: scores.silhouette_balance, templates: WHY_TEMPLATES.silhouette_balance },
-    { dim: 'body', score: scores.body_proportion_match, templates: WHY_TEMPLATES.body_proportion },
+    { dim: 'body', score: scores.silhouette_balance, templates: WHY_TEMPLATES.body_proportion }, // uses silhouette as proxy
     { dim: 'texture', score: scores.fabric_compatibility, templates: WHY_TEMPLATES.texture_contrast },
   ].sort((a, b) => b.score - a.score);
   
@@ -899,10 +955,8 @@ const GAP_DETECTORS = [
       
       const CORE_OCCASIONS = ['casual', 'office', 'party', 'date', 'festive'];
       for (const occ of CORE_OCCASIONS) {
-        if (!allOccasions.has(occ)) {
-          const count = garments.filter(g => (g.occasion_tags || []).includes(occ)).length;
-          if (count < 2) missing.push(occ);
-        }
+        const count = garments.filter(g => (g.occasion_tags || []).includes(occ)).length;
+        if (count < 2) missing.push(occ);
       }
       
       if (missing.length > 0) {
@@ -946,7 +1000,7 @@ const GAP_DETECTORS = [
   {
     type: 'season',
     detect: (garments) => {
-      const seasonCounts = { summer: 0, winter: 0, monsoon: 0, 'all-season': 0 };
+      const seasonCounts = { summer: 0, winter: 0, monsoon: 0, spring: 0, autumn: 0, 'all-season': 0 };
       garments.forEach(g => {
         (g.season_tags || []).forEach(s => { seasonCounts[s] = (seasonCounts[s] || 0) + 1; });
       });
@@ -1309,12 +1363,12 @@ function computeWardrobeStyleProfile(garments) {
 The existing `rankProducts()` in `ranking.js` gains a 4th signal:
 
 ```javascript
-// Updated DATA_MATURITY_THRESHOLDS
+// Updated DATA_MATURITY_THRESHOLDS (unified with PRD Decision 5 — single source of truth)
 const DATA_MATURITY_THRESHOLDS_WITH_WARDROBE = [
-  { maxEvents: 5,   style: 0.45, wardrobe: 0.30, user: 0.10, pop: 0.15 },
-  { maxEvents: 20,  style: 0.35, wardrobe: 0.30, user: 0.15, pop: 0.20 },
-  { maxEvents: 50,  style: 0.30, wardrobe: 0.25, user: 0.25, pop: 0.20 },
-  // Above 50: use self-tuned weights from ranking_weights table
+  { maxEvents: 5,   style: 0.55, wardrobe: 0.25, user: 0.05, pop: 0.15 },
+  { maxEvents: 20,  style: 0.45, wardrobe: 0.30, user: 0.10, pop: 0.15 },
+  { maxEvents: 50,  style: 0.40, wardrobe: 0.30, user: 0.15, pop: 0.15 },
+  // Above 50: use self-tuned weights from ranking_weights table (w_wardrobe column added)
 ];
 
 // wardrobeAffinity — matches product tags against wardrobe composition
@@ -1497,7 +1551,7 @@ Standalone gap analysis.
 
 | Operation | Target | Strategy |
 |-----------|--------|----------|
-| Garment upload (client processing) | <5s per image | Sequential bg-removal + WebP |
+| Garment upload (server processing) | <1s per image | Server bg-removal + WebP |
 | Sync: Gemini analysis | <8s for 10 garments | Single batched call |
 | Sync: Pairing + scoring | <2s for 150 combos | Pure computation, no I/O per combo |
 | Sync: Total pipeline | <15s for 10 new garments | SSE progress stream |
@@ -1516,4 +1570,8 @@ Standalone gap analysis.
 - Gemini prompts are server-side only — user input never injected into system prompts
 - AI Concierge: user message sanitized before Gemini call (no prompt injection)
 - Storage bucket: private, signed URLs for image access
-- Rate limiting: max 50 garment uploads per hour, max 5 syncs per hour, max 20 chat messages per hour
+- Rate limiting: max 50 garment uploads per hour, max 5 syncs per hour, max 20 free-text chat messages per hour (button refinements exempt — they're client-side filter operations)
+
+### Chat Session Cleanup
+
+Chat sessions older than 30 days with no activity are eligible for cleanup. A weekly cron job (or manual admin trigger) deletes stale sessions: `DELETE FROM wardrobe_chat_sessions WHERE last_active_at < now() - interval '30 days'`.

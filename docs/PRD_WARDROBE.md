@@ -38,7 +38,7 @@ A **three-layer wardrobe intelligence system**:
 
 ### Layer 1 — Garment Intelligence (Gemini, on sync)
 
-Each garment photo is analyzed once via a batched Gemini Flash call that extracts ~30 structured attributes (color hex values, fit, fabric, formality score, occasion tags, aesthetic alignment, etc.). Client-side background removal + WebP compression before upload minimizes storage and improves analysis quality.
+Each garment photo is analyzed once via a batched Gemini Flash call that extracts ~30 structured attributes (color hex values, fit, fabric, formality score, occasion tags, aesthetic alignment, etc.). Server-side background removal + WebP compression on upload minimizes storage and improves analysis quality.
 
 ### Layer 2 — Outfit Pairing Engine (Deterministic algorithm, on sync)
 
@@ -59,7 +59,7 @@ No AI calls per combination. Pure math on pre-extracted garment attributes.
 
 | Operation | Engine | Cost per user | Frequency |
 |-----------|--------|--------------|-----------|
-| Image processing | Client-side (@imgly/background-removal + Canvas WebP) | $0 | Per upload |
+| Image processing | Server-side (@imgly/background-removal + Canvas WebP) | ~$0 (200ms CPU) | Per upload |
 | Garment analysis | Gemini Flash (batched, all unanalyzed in 1 call) | ~$0.008-0.012 per sync | Per sync |
 | Outfit pairing | Server-side algorithm | $0 | Per sync |
 | Outfit ranking | Server-side algorithm | $0 | Per page load |
@@ -146,11 +146,11 @@ No AI calls per combination. Pure math on pre-extracted garment attributes.
 
 **Reason**: Hard filtering reduces the search space before the expensive scoring pass. A wardrobe with 150 raw top+bottom combos might filter to 80 valid ones, reducing scoring work by 47%. The separation also makes debugging easier — "why wasn't this combo shown?" is either "it was filtered" or "it scored low."
 
-### Decision 3: Client-side image pipeline (background removal + WebP)
+### Decision 3: Server-side image pipeline (background removal + WebP)
 
-**Choice**: `@imgly/background-removal` (WASM, MIT, free) + Canvas API WebP compression, all in-browser before upload. Sequential processing (~3s per garment).
+**Choice**: `@imgly/background-removal` + sharp/Canvas WebP compression, all server-side after upload. User uploads original photo (~1-2MB), server returns clean WebP cutout (~150-250KB) stored in Supabase.
 
-**Reason**: Drops upload size from 3-5MB to 150-250KB per garment (95% reduction). Background-removed garment cutouts improve Gemini analysis accuracy AND make outfit cards look dramatically more professional. Zero server processing cost. The WASM model (~30MB) is lazy-loaded on first Closet visit and cached.
+**Reason**: Eliminates 30MB WASM client download (critical for Indian users on slow networks — first-time friction kills retention). Server processing adds ~200ms per image (negligible). Drops stored size from 3-5MB to 150-250KB per garment (95% reduction). Background-removed garment cutouts improve Gemini analysis accuracy AND make outfit cards look dramatically more professional. Universal device compatibility — no browser WASM support required.
 
 ### Decision 4: Batched Gemini analysis via "Sync Pairs" button
 
@@ -174,19 +174,29 @@ final_score = w_style    × S_style
             − fatigue_penalty
 ```
 
-**Weight allocation with wardrobe**:
+**Weight allocation with wardrobe** (events = total tracked events; matches existing `dataMaturityWeights` structure):
 | Phase | Style | Wardrobe | Clicks | Popularity |
 |-------|-------|----------|--------|------------|
-| No wardrobe, <50 clicks | 0.75 | 0.00 | 0.10 | 0.15 |
-| With wardrobe, <50 clicks | 0.45 | 0.30 | 0.10 | 0.15 |
-| With wardrobe, 50-200 clicks | 0.30 | 0.25 | 0.25 | 0.20 |
-| With wardrobe, 200+ clicks | 0.20 | 0.25 | 0.35 | 0.20 |
+| No wardrobe (any events) | Use existing DATA_MATURITY_THRESHOLDS (3-signal) | — | — | — |
+| With wardrobe, <5 events | 0.55 | 0.25 | 0.05 | 0.15 |
+| With wardrobe, <20 events | 0.45 | 0.30 | 0.10 | 0.15 |
+| With wardrobe, <50 events | 0.40 | 0.30 | 0.15 | 0.15 |
+| With wardrobe, ≥50 events | Self-tuned (w_wardrobe added to ranking_weights table) |
 
-### Decision 6: Outfit slot structure with diversity penalty
+### Decision 6: Outfit slot structure with diversity penalty + layer reclassification
 
 **Choice**: Minimum viable outfit = 1 upper + 1 lower OR 1 fullbody. Optional slots: layer, footwear, accessories. After an outfit containing garment X is ranked, subsequent outfits with X get -5% score penalty per repetition.
 
-**Reason**: The required minimum keeps combos manageable. Optional slots enrich when available but don't block outfit generation. Diversity penalty ensures the top 20 displayed outfits feel varied — not "10 ways to wear your black jeans."
+**Layer category**: Gemini extracts all tops/jackets as `upperwear`. Server-side post-processing reclassifies garments where `garment_type ∈ {jacket, cardigan, shrug, blazer, hoodie, coat, vest}` to `garment_category = 'layer'`. This enables 3-piece combos (top + bottom + layer) and populates the "Layers" section in All Items view.
+
+**Garment caps** (tiered by plan):
+| Plan | Max Garments |
+|------|-------------|
+| Free | 30 |
+| Essentials | 75 |
+| Ultimate | 150 |
+
+**Reason**: The required minimum keeps combos manageable. Optional slots enrich when available but don't block outfit generation. Diversity penalty ensures the top 20 displayed outfits feel varied — not "10 ways to wear your black jeans." Garment caps provide a business upsell lever while keeping costs negligible (~$0.27-$1.35 one-time analysis cost per tier).
 
 ### Decision 7: Vibe Report — server-side template engine, not AI
 
@@ -197,6 +207,8 @@ final_score = w_style    × S_style
 ### Decision 8: AI Concierge — multi-turn with button-first design
 
 **Choice**: Multi-turn conversation is supported, but the UI is designed with attractive, contextual refinement buttons so that 80%+ of interactions are free filter adjustments (no Gemini call). Only new free-text prompts trigger Gemini.
+
+**Rate limit**: 20 free-text messages per hour. **Button refinements do NOT count against the rate limit** — they are client-side filter operations that never call Gemini.
 
 **Reason**: Each Gemini call costs ~$0.002-0.004. If 80% of refinements are button-based, average cost drops from ~$0.012/session (3 turns) to ~$0.003/session (1 Gemini + 2 button refinements). The buttons also deliver faster response times and guide users toward better queries.
 
@@ -225,23 +237,29 @@ final_score = w_style    × S_style
 
 **Reason**: Below 15 garments, gaps are trivially obvious ("you only have 3 things, of course you're missing formal wear"). At 15+, the wardrobe has enough composition to identify meaningful, actionable gaps. Inline placement (not a separate tab) prevents the "ads section" stigma.
 
-### Decision 11: Full AI try-on for wardrobe outfits (same FitIt pipeline)
+### Decision 11: Collage-based outfit try-on (same FitIt pipeline)
 
-**Choice**: "Try On" button on each outfit card uses the same AI generation pipeline as FitIt. User's selfie + garment images → composite generation. Uses the user's credits.
+**Choice**: "Try On" button on outfit cards generates a **flat-lay collage** of all garments in the outfit (via Canvas API), then sends the collage as a single "garment" image through the existing FitIt pipeline. 1 credit per try-on, same model, same prompt.
 
-**Reason**: Garment photos are already background-removed, clean WebP cutouts — same quality as product photos in FitIt. The pipeline is proven. Credits cover the generation cost. Wardrobe try-on has no separate quota or paywall — it's part of the user's existing credit system.
+**Reason**: Tested approach — Gemini 3.1 Flash Image Preview produces accurate full-outfit composites when given a well-composed collage. No new prompt engineering. No multi-image complexity. Reuses the entire proven FitIt pipeline unchanged. Single credit keeps the cost model simple.
 
-### Decision 12: Navigation placement — Closet as second tab
+### Decision 12: Navigation placement — Closet as second tab (4-tab nav)
 
-**Choice**: Bottom nav becomes `Home | Closet | Rooms | Bag | Me`. Wardrobe occupies position #2 with a hanger icon and "Closet" label.
+**Choice**: Bottom nav becomes `Home | Closet | Room | Bag` (4 tabs). Profile access moves to a top-right avatar icon in the header (like Instagram). Wardrobe occupies position #2 with a hanger icon and "Closet" label.
 
-**Reason**: Position #2 signals "hero feature" — it's the natural thumb path after Home. "Closet" (6 chars) fits cleanly in 5-tab nav. The hanger icon (🪝) is universally recognized as a closet/wardrobe symbol.
+**Reason**: Position #2 signals "hero feature" — it's the natural thumb path after Home. 4 tabs instead of 5 avoids cramped mobile nav on Indian devices (5.5-6.1" screens). Profile is accessed infrequently and works well as a header icon. "Closet" (6 chars) fits cleanly. The hanger icon (🪝) is universally recognized as a closet/wardrobe symbol.
 
-### Decision 13: Outfit caching and recalculation strategy
+### Decision 13: Incremental outfit caching and recalculation strategy
 
-**Choice**: Outfit combinations are computed and stored in the database (not generated per page load). Recalculation triggers: garment add/delete (full recalc) or personalization change (re-rank only). Cached outfits re-ranked if stale > 24h.
+**Choice**: Outfit combinations are computed and stored in the database (not generated per page load). Recalculation uses an **incremental delta engine**:
 
-**Reason**: Outfit generation involves filtering + scoring across potentially hundreds of combos — too expensive for per-request computation. Caching means page loads are instant (read from DB). Re-ranking (reordering existing scored outfits by personalization) is cheap and happens on load if the personalization profile has changed since last rank.
+**On garment add**: Only compute new pairs involving the added garment(s) — `O(new × existing_category)` instead of `O(all × all)`.
+**On garment delete**: Remove stored pairs containing the deleted garment — `O(n)` scan. Then re-run diversity penalty + personalization re-rank globally on remaining pre-scored outfits.
+**Sequential tier building**: Footwear attaches to surviving base pairs (not full cross-product). Accessories attach to surviving footwear combos. Each tier multiplies only against the previous tier's results.
+**Set-relative re-scoring**: Pair-intrinsic scores (color, silhouette, fabric, etc.) are stored and reused. Only diversity penalty + personalization re-rank (both cheap sort operations) run globally after incremental changes.
+**Personalization change**: Re-rank only (reorder existing scored outfits). Cached outfits re-ranked if stale > 24h.
+
+**Reason**: A wardrobe of 50 tops × 30 bottoms × 10 shoes = 15,000 raw combos with full recalc. Adding 2 new tops incrementally = `2 × 30 = 60` new pairs — 99.6% reduction. Caching means page loads are instant (read from DB).
 
 ---
 
@@ -318,7 +336,7 @@ final_score = w_style    × S_style
 {
   // Identity
   "garment_type": "crop_top",           // from fixed enum
-  "garment_category": "upperwear",      // upperwear | lowerwear | fullbody | footwear | accessory
+  "garment_category": "upperwear",      // upperwear | lowerwear | fullbody | footwear | accessory | layer (server-reclassified)
 
   // Color (critical for pairing — hex enables color-wheel math)
   "primary_color_hex": "#2B3A55",       // extracted from image
@@ -373,9 +391,10 @@ Eliminates impossible combinations before scoring.
 
 ```
 RULE 1 — Category compatibility:
-  Valid cores: (upperwear + lowerwear) OR (fullbody alone)
+  Valid cores: (upperwear + lowerwear) OR (fullbody alone) OR (fullbody + layer)
   Invalid: two of same category except layering combos
   Layers can stack: upperwear + lowerwear + layer ✓
+  Fullbody + layer ✓ (e.g., dress + jacket)
 
 RULE 2 — Fabric weight extremes:
   |garmentA.weight - garmentB.weight| must not exceed 1 step
@@ -397,8 +416,10 @@ RULE 5 — Formality extreme mismatch:
   Smart blouse (0.6) + casual jeans (0.3) = OK (difference 0.3)
 
 RULE 6 — Season incompatibility:
-  No overlap in season_tags AND one is ["winter"] while other is ["summer"] = REJECT
+  No overlap in season_tags AND seasons are climatically opposed = REJECT
+  Opposed pairs: summer↔winter, summer↔monsoon (heavy layering vs minimal)
   Wool sweater (winter) + linen shorts (summer) = REJECT
+  Spring + autumn garments with no overlap = OK (mild seasons, compatible)
 ```
 
 ### Phase 2: Harmony Scorer (Weighted 0-100)
@@ -593,10 +614,11 @@ CREATE TABLE wardrobe_garments (
   
   -- Image
   image_url           text NOT NULL,         -- Supabase Storage URL (bg-removed WebP)
+  original_image_url  text,                  -- Original uploaded image (before bg removal)
   
   -- Identity
   garment_type        text NOT NULL,         -- from Gemini: crop_top, jeans, dress, etc.
-  garment_category    text NOT NULL,         -- upperwear | lowerwear | fullbody | footwear | accessory
+  garment_category    text NOT NULL,         -- upperwear | lowerwear | fullbody | footwear | accessory | layer (server-reclassified)
   
   -- Color
   primary_color_hex   text,                  -- #2B3A55
@@ -639,6 +661,7 @@ CREATE TABLE wardrobe_garments (
   
   -- State
   is_analyzed         boolean DEFAULT false,      -- false until Gemini extraction completes
+  analysis_failed     boolean DEFAULT false,      -- true if Gemini extraction failed for this garment
   
   created_at          timestamptz DEFAULT now(),
   updated_at          timestamptz DEFAULT now()
@@ -769,8 +792,9 @@ CREATE POLICY "Users can manage own chats" ON wardrobe_chat_sessions
 
 ```sql
 INSERT INTO storage.buckets (id, name, file_size_limit, allowed_mime_types)
-VALUES ('wardrobe-items', 'wardrobe-items', 524288, ARRAY['image/webp']);
--- 512KB limit, WebP only (client compresses before upload)
+VALUES ('wardrobe-items', 'wardrobe-items', 524288, ARRAY['image/webp'])
+ON CONFLICT (id) DO NOTHING;
+-- 512KB limit, WebP only (server compresses after upload, stores clean version)
 ```
 
 ---

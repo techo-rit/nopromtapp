@@ -41,17 +41,18 @@ Issue 4: Closet UI Shell + Nav ─────┤         │         │
 Foundation for all wardrobe features. Creates the 4 new tables, RLS policies, indexes, and Supabase storage bucket.
 
 ### Acceptance Criteria
-- [ ] `wardrobe_garments` table with all ~30 attribute columns + `is_analyzed` flag
+- [ ] `wardrobe_garments` table with all ~30 attribute columns + `is_analyzed` flag + `analysis_failed` flag + `original_image_url` column
 - [ ] `wardrobe_outfits` table with garment_ids array, harmony/personalization scores, vibe report fields, composite_tags JSONB
 - [ ] `wardrobe_style_profile` table with tag_affinities, category_counts, identified_gaps
 - [ ] `wardrobe_chat_sessions` table with active_filters, messages JSONB
 - [ ] RLS enabled on all 4 tables (users manage own rows only)
 - [ ] Indexes: user_id on all tables, (user_id, garment_category) on garments, display_score DESC on outfits
 - [ ] `wardrobe-items` Supabase Storage bucket (WebP only, 512KB limit)
-- [ ] `ranking_weights` gains `w_wardrobe` column (decimal, default 0)
+- [ ] `ranking_weights` gains `w_wardrobe` column (decimal(4,3), default 0)
 - [ ] All changes in `server/supabase/migrations/000_schema.sql` (idempotent)
-- [ ] `docs/DATABASE_REFERENCE.md` updated with new tables
+- [ ] `docs/DATABASE_REFERENCE.md` updated with new tables + existing personalization tables (currently undocumented)
 - [ ] `web/types/index.ts` updated with TypeScript interfaces
+- [ ] `garment_category` includes `layer` value (server reclassifies from upperwear)
 
 ### Implementation Notes
 - Follow the exact schema from WARDROBE_MODEL.md §Database Schema
@@ -68,64 +69,70 @@ Foundation for all wardrobe features. Creates the 4 new tables, RLS policies, in
 ## Issue 2: [AFK] Garment Upload & Delete API Routes
 
 ### Context
-Server-side endpoints for uploading processed garment images to Supabase Storage and creating garment records. Also handles garment deletion with outfit staleness marking.
+Server-side endpoints for uploading garment photos, processing them (background removal + WebP compression), storing in Supabase Storage, and creating garment records. Also handles garment deletion with outfit staleness marking.
 
 ### Acceptance Criteria
-- [ ] `POST /api/wardrobe/garments/upload` — accepts WebP file (multipart/form-data), stores in `wardrobe-items` bucket, creates `wardrobe_garments` row with `is_analyzed: false`
+- [ ] `POST /api/wardrobe/garments/upload` — accepts original photo (multipart/form-data, max 5MB), server performs background removal + WebP compression, stores clean WebP in `wardrobe-items` bucket, creates `wardrobe_garments` row with `is_analyzed: false`
+- [ ] Server-side image pipeline: `@imgly/background-removal` (Node.js) + sharp/Canvas resize (1024px max) + WebP conversion (quality 0.85)
+- [ ] If bg-removal fails, fall back to resize + compress only (still useful)
 - [ ] `DELETE /api/wardrobe/garments/:id` — soft-enforces ownership, deletes image from storage, deletes DB row, marks affected outfits as `is_stale = true`
-- [ ] `GET /api/wardrobe/garments` — returns all user garments grouped by `garment_category`, with counts
+- [ ] `GET /api/wardrobe/garments` — returns all user garments grouped by `garment_category` (including `layer`), with counts
 - [ ] Auth required on all endpoints (`getUserFromRequest` pattern)
-- [ ] Input validation: file must be WebP, max 512KB, garment_id must be valid UUID owned by user
+- [ ] Input validation: file must be image (JPEG/PNG/WebP), max 5MB, garment_id must be valid UUID owned by user
+- [ ] Garment cap enforcement: reject uploads above plan limit (free: 30, essentials: 75, ultimate: 150)
 - [ ] Rate limiting: max 50 uploads per hour per user
 
 ### Implementation Notes
 - New file: `server/src/routes/wardrobe.js`
+- New file: `server/src/lib/imageProcessing.js` — bg-removal + resize + WebP conversion
 - Register in `server/src/app.js`
 - Use `createAdminClient()` for storage operations
+- Install `@imgly/background-removal` in server workspace (MIT, works in Node.js without WASM client download)
 - Image path format: `wardrobe-items/{user_id}/{garment_id}.webp`
 - On delete: query `wardrobe_outfits` where `garment_ids @> ARRAY[deleted_id]`, set `is_stale = true`
 - Update `docs/API_CONTRACTS.md`
 
 ### Testing
-- Upload valid WebP → verify storage + DB record created
-- Upload non-WebP → verify 400 rejection
-- Upload >512KB → verify 400 rejection
+- Upload valid JPEG → verify bg-removal, WebP stored, DB record created
+- Upload non-image file → verify 400 rejection
+- Upload >5MB → verify 400 rejection
+- Upload when at garment cap → verify 403 with clear message
 - Delete garment → verify storage cleaned, DB row gone, affected outfits marked stale
 - Attempt to delete another user's garment → verify 403
+- Bg-removal failure → verify fallback to resize+compress only
 
 ### Dependencies
 - Issue 1 (schema + storage)
 
 ---
 
-## Issue 3: [AFK] Client-Side Image Processing Pipeline
+## Issue 3: [AFK] Server-Side Image Processing Pipeline
 
 ### Context
-Browser-side pipeline: `@imgly/background-removal` (WASM) + Canvas resize + WebP compression. Processes garment photos before upload to dramatically reduce size and improve analysis quality.
+Server-side pipeline: `@imgly/background-removal` (Node.js) + sharp resize + WebP compression. Processes garment photos on upload to dramatically reduce size and improve analysis quality. Called by the upload route (Issue 2).
 
 ### Acceptance Criteria
-- [ ] `@imgly/background-removal` package installed in web workspace
-- [ ] Processing service: `web/features/wardrobe/imageProcessingService.ts`
-  - `processGarmentImage(file: File): Promise<Blob>` — bg removal → resize 1024px → WebP 0.85
-  - Returns processed WebP blob (~150-250KB)
-- [ ] Lazy model loading: WASM model downloads on first use with progress callback
-- [ ] Sequential processing for batches (prevents browser memory pressure)
-- [ ] Progress tracking: `onProgress(stage: 'loading-model' | 'removing-bg' | 'compressing', pct: number)`
-- [ ] Error handling: if bg-removal fails, fall back to resize + compress only (still useful)
-- [ ] Works on mobile Safari, Chrome, Firefox
+- [ ] `@imgly/background-removal` package installed in server workspace
+- [ ] Processing service: `server/src/lib/imageProcessing.js`
+  - `processGarmentImage(buffer: Buffer, mimeType: string): Promise<{ cleanBuffer: Buffer, originalResized: Buffer }>`
+  - bg removal → resize 1024px max dimension → WebP 0.85
+  - Returns clean WebP buffer (~150-250KB) + resized original as fallback
+- [ ] If bg-removal fails, fall back to resize + compress only (still useful for analysis and display)
+- [ ] Processing time: <1s per image on server
+- [ ] Memory-safe: processes one image at a time, no memory leaks from WASM model
+- [ ] No client-side WASM download required — all processing server-side
 
 ### Implementation Notes
-- New directory: `web/features/wardrobe/`
-- `@imgly/background-removal` — MIT, WASM-based, ~30MB model cached after first load
-- Canvas API for resize: `const canvas = document.createElement('canvas')` → draw → `canvas.toBlob('image/webp', 0.85)`
-- For batch: iterate sequentially with async/await, yield progress per image
-- Test on low-end device (throttled CPU in DevTools)
+- `@imgly/background-removal` — MIT, works in Node.js environment
+- Use `sharp` for resize + WebP conversion (already common in Node.js servers)
+- Export single function consumed by upload route
+- Log processing time per image for performance monitoring
 
 ### Testing
 - Process a garment photo: verify background removed, WebP output, size <300KB
 - Process non-garment photo (e.g., landscape): verify fallback works
-- Batch 5 images: verify sequential processing, no memory crash
-- First-time model load: verify progress indicator fires
+- Process 10 images sequentially: verify no memory leak, consistent performance
+- Corrupt/invalid image input: verify graceful error
 
 ### Dependencies
 - None (can start immediately)
@@ -139,25 +146,29 @@ Create the Closet page shell with two view tabs (Sets / All Items), empty state 
 
 ### Acceptance Criteria
 - [ ] New route: `/closet` in App.tsx, renders `ClosetPage` component
-- [ ] BottomNav updated: `Home | Closet | Rooms | Bag | Me` with hanger icon
+- [ ] BottomNav updated: `Home | Closet | Room | Bag` (4 tabs) with hanger icon for Closet
+- [ ] Profile access moved to top-right avatar icon in header (removed from BottomNav)
 - [ ] ClosetPage has two tabs: "Sets" and "All Items" (toggle at top)
 - [ ] Empty state (0 garments): guided upload with category prompts (Tops, Bottoms, Shoes), "Add Your First Piece" CTA
 - [ ] Progress state (<10 garments or <3 tops or <3 bottoms): progress counter "X/10 — add Y more", category counters showing ✓ when threshold met
 - [ ] "Sync Pairs" button: disabled with clear message when thresholds not met, enabled + prominent when ready
 - [ ] Upload button ("+" FAB or header button) visible in all states
+- [ ] Garment cap indicator: "12/30 garments" (based on user's plan)
 - [ ] Props from App.tsx: user, onLoginRequired
 - [ ] Editorial aesthetic matching existing Home page (Playfair Display, Cormorant Garamond, dark theme, gold accents)
 
 ### Implementation Notes
 - New files: `web/features/wardrobe/ClosetPage.tsx`, update `web/features/layout/BottomNav.tsx`
 - Add hanger icon to `web/shared/ui/Icons.tsx`
+- Move profile access from BottomNav to header (top-right avatar icon)
+- BottomNav goes from 3 tabs to 4: Home, Closet, Room, Bag
 - Route registration in `App.tsx` with user prop pass-through
 - Follow the frontend-design skill: editorial, premium feel, not generic
 - Empty state should feel inviting, not bare — use the serif typography, maybe a fashion illustration or abstract pattern
 
 ### Testing
 - Navigate to /closet: verify page loads with empty state
-- BottomNav: verify 5 tabs, correct active states
+- BottomNav: verify 4 tabs, correct active states, profile icon in header
 - Verify login required to access (redirect to auth if not logged in)
 
 ### Dependencies
@@ -172,8 +183,9 @@ The "Sync Pairs" endpoint that orchestrates the full pipeline: batch Gemini anal
 
 ### Acceptance Criteria
 - [ ] `POST /api/wardrobe/sync` endpoint with SSE streaming
-- [ ] Step 1: Query unanalyzed garments (`is_analyzed = false`), send to Gemini Flash in batched multi-image call (max 15 images per batch)
-- [ ] Step 2: Parse Gemini JSON response, update `wardrobe_garments` rows with extracted attributes, set `is_analyzed = true`
+- [ ] Step 1: Query unanalyzed garments (`is_analyzed = false AND analysis_failed = false`), send to Gemini Flash in batched multi-image call (max 15 images per batch)
+- [ ] Step 2: Parse Gemini JSON response, update `wardrobe_garments` rows with extracted attributes, set `is_analyzed = true`. Post-process: reclassify garment_category to `layer` where garment_type ∈ {jacket, cardigan, shrug, blazer, hoodie, coat, vest}. Match responses to images by index markers (handle non-deterministic ordering).
+- [ ] Step 3: Mark garments with failed extraction as `analysis_failed = true`
 - [ ] Step 3: Delete `wardrobe_outfits` where `is_stale = true`
 - [ ] Step 4: Call pairing algorithm (Issue 6) with all analyzed garments
 - [ ] Step 5: Call vibe report engine (Issue 7) for each outfit
@@ -182,15 +194,17 @@ The "Sync Pairs" endpoint that orchestrates the full pipeline: batch Gemini anal
 - [ ] Step 8: Store everything in DB
 - [ ] SSE events: `analyzing`, `pairing`, `ranking`, `complete` with progress data
 - [ ] Rate limiting: max 5 syncs per hour per user
-- [ ] Gemini error handling: mark garments as `analysis_failed` if extraction fails, continue with remaining
+- [ ] Gemini error handling: mark garments as `analysis_failed = true` if extraction fails, continue with remaining
 - [ ] If 0 garments unanalyzed and no staleness, skip to re-rank only (fast path)
+- [ ] Wardrobe activation threshold: ≥10 garments for sync, ≥10 garments for hasWardrobe signal
 
 ### Implementation Notes
 - New file: `server/src/routes/wardrobe.js` (add sync handler to existing route file)
 - New file: `server/src/lib/wardrobeSync.js` — orchestration logic
-- New file: `server/src/lib/geminiWardrobe.js` — Gemini prompt construction + response parsing
+- New file: `server/src/lib/geminiWardrobe.js` — Gemini prompt construction + response parsing + layer reclassification
 - Gemini model: `gemini-2.0-flash` via existing Google AI SDK
 - For >15 unanalyzed garments: split into batches of 15, process sequentially
+- Include image index markers in prompt for response ordering
 - SSE pattern: `res.writeHead(200, { 'Content-Type': 'text/event-stream', ... })`
 - Pass user profile to pairing algorithm for trend scoring
 
@@ -214,12 +228,12 @@ The deterministic two-phase algorithm: Phase 1 compatibility filter (hard rules)
 ### Acceptance Criteria
 - [ ] New file: `server/src/lib/outfitPairing.js`
 - [ ] Phase 1 — Compatibility Filter with 6 hard rules:
-  1. Category validity (upper+lower OR fullbody)
+  1. Category validity (upper+lower OR fullbody OR fullbody+layer)
   2. Fabric weight extremes (reject if >1 step apart)
   3. Opacity conflict (two sheer without opaque base)
   4. Competing large-scale patterns
   5. Formality extreme mismatch (>0.5 gap)
-  6. Season incompatibility (summer+winter clash)
+  6. Season incompatibility (climatically opposed: summer↔winter, summer↔monsoon)
 - [ ] Phase 2 — Harmony Scorer:
   - Color Harmony (25%) — hex-to-HSL, color wheel math, complementary/analogous/clash
   - Silhouette Balance (20%) — fit pairing matrix, length bonuses, volume contrast
@@ -228,8 +242,11 @@ The deterministic two-phase algorithm: Phase 1 compatibility filter (hard rules)
   - Fabric Compatibility (10%) — texture contrast, weight, stretch
   - Trend Factor (10%) — current trends + user style match
   - Practicality (5%) — season coherence, comfort, quality
-- [ ] Combo generation: Tier 1 (core) → Tier 2 (+footwear) → Tier 3 (+accessories) → Layer variants
+- [ ] Combo generation: Tier 1 (core) → Tier 2 (+footwear on surviving pairs) → Tier 3 (+accessories) → Layer variants
+- [ ] **Incremental delta engine**: On garment add, only compute new pairs O(new×existing_category). On delete, remove affected pairs O(n). Store pair-intrinsic scores. Re-run diversity penalty + personalization globally (cheap sort).
 - [ ] Diversity penalty: -5% per garment repeat in higher-ranked outfits (capped at 40%)
+- [ ] Garment caps enforced: free 30, essentials 75, ultimate 150
+- [ ] Layer reclassification: garment_type ∈ {jacket, cardigan, shrug, blazer, hoodie, coat, vest} → category = 'layer'
 - [ ] Composite tags generation: union of garment attributes for personalization scoring
 - [ ] Export functions: `generateOutfits(garments, userProfile)`, `isCompatible(garments)`, `harmonyScore(garments, userProfile)`
 - [ ] All sub-scoring functions individually exported for unit testing
@@ -242,6 +259,9 @@ The deterministic two-phase algorithm: Phase 1 compatibility filter (hard rules)
 - `TEXTURE_COMPAT` lookup table for fabric pairing
 - `CURRENT_TRENDS` set (update quarterly)
 - Combo limit: generate max 500 raw combos, filter, score top 200, apply diversity penalty, return top 50
+- Store pair-intrinsic scores in `wardrobe_outfits` for incremental reuse
+- On garment add: delta-update pairs, score new ones, global diversity re-rank
+- On garment delete: remove pairs with deleted garment, global diversity re-rank
 
 ### Testing
 - Unit test each Phase 1 rule with PASS and REJECT cases
@@ -307,7 +327,7 @@ Frontend display of generated outfits as editorial split-panel cards with vibe r
   - Best occasions as emoji + label pills
   - Accessory suggestions row
   - Vibe match % as warm circular indicator
-  - "Try On" button (uses existing FitIt pipeline, credits-based)
+  - "Try On" button generates flat-lay collage of outfit garments (Canvas API), sends as single "garment" image through existing FitIt pipeline (1 credit)
   - "View Details" expand to see full vibe report
 - [ ] Inline gap cards every 5-6 outfit cards (when 15+ garments synced)
 - [ ] Infinite scroll / "Load More" pagination
@@ -323,7 +343,7 @@ Frontend display of generated outfits as editorial split-panel cards with vibe r
 - Layout: CSS Grid or Flexbox for the split-panel garment arrangement
 - IntersectionObserver for lazy loading images
 - Gap cards reuse the editorial card format with Stiri product recommendation
-- "Try On" navigates to `/changing-room` with outfit garment data
+- "Try On" generates collage → navigates to `/changing-room` with collage image data
 
 ### Testing
 - Load page with 20+ outfits: verify cards render with correct garments, vibe reports, scores
@@ -344,7 +364,7 @@ Second tab of the Closet page showing all uploaded garments organized by categor
 
 ### Acceptance Criteria
 - [ ] `web/features/wardrobe/AllItemsView.tsx`
-- [ ] Category sections: Tops, Bottoms, Dresses & Sets, Layers, Footwear, Accessories
+- [ ] Category sections: Tops, Bottoms, Dresses & Sets, Layers (server-reclassified), Footwear, Accessories
 - [ ] Each section shows garment thumbnails in a grid (3 columns mobile, 4-5 desktop)
 - [ ] Category header with count: "Tops (8)"
 - [ ] Empty categories hidden (don't show "Footwear (0)")
@@ -392,9 +412,9 @@ Natural language chat where users ask outfit questions. Gemini parses prompts to
   - `generateRefinementButtons(filters, results)` → contextual button options
   - `getStiriRecommendation(filters, bestScore, products, profile)` → monetization
 - [ ] Multi-turn support: conversation history stored in `wardrobe_chat_sessions`
-- [ ] Button refinements: modify filters locally, no Gemini call, instant results
+- [ ] Button refinements: modify filters locally, no Gemini call, instant results, **do NOT count against rate limit**
 - [ ] New free-text: new Gemini call with conversation context
-- [ ] Rate limiting: max 20 chat messages per hour
+- [ ] Rate limiting: max 20 free-text chat messages per hour (buttons exempt)
 - [ ] Buttons are visually dominant — large, colorful, with emojis — making them clearly preferred over typing
 
 ### Implementation Notes
@@ -425,9 +445,9 @@ Server-side engine that detects stylistic gaps in the user's wardrobe and matche
 ### Acceptance Criteria
 - [ ] New file: `server/src/lib/gapAnalysis.js`
 - [ ] 5 gap detectors:
-  1. Occasion gap — missing core occasions (casual, office, party, date, festive)
+  1. Occasion gap — fewer than 2 garments for core occasions (casual, office, party, date, festive)
   2. Aesthetic gap — Style DNA vs wardrobe composition mismatch
-  3. Season gap — underrepresented seasons
+  3. Season gap — underrepresented seasons (includes spring + autumn)
   4. Color palette gap — >50% dominated by one color
   5. Versatility gap — >60% single-occasion garments
 - [ ] Gap severity scoring (0-1) for prioritization
@@ -463,10 +483,12 @@ Wardrobe data becomes the 4th signal in the ranking formula. Wardrobe style prof
 - [ ] New function in `server/src/lib/ranking.js`: `wardrobeAffinity(wardrobeProfile, productTags)` — returns 0-1 score
 - [ ] Updated `rankProducts()` to include wardrobe signal when available:
   - `final = w_style × S_style + w_wardrobe × S_wardrobe + w_clicks × S_user + w_pop × S_pop + ...`
-- [ ] Updated data maturity thresholds for users with wardrobe:
-  - With wardrobe, <50 clicks: style 0.45, wardrobe 0.30, clicks 0.10, pop 0.15
-  - With wardrobe, 50-200 clicks: style 0.30, wardrobe 0.25, clicks 0.25, pop 0.20
-  - With wardrobe, 200+: style 0.20, wardrobe 0.25, clicks 0.35, pop 0.20
+- [ ] Updated data maturity thresholds for users with wardrobe (4 signals: style, wardrobe, clicks, popularity):
+  - With wardrobe, <5 events: style 0.55, wardrobe 0.25, clicks 0.05, pop 0.15
+  - With wardrobe, <20 events: style 0.45, wardrobe 0.30, clicks 0.10, pop 0.15
+  - With wardrobe, <50 events: style 0.40, wardrobe 0.30, clicks 0.15, pop 0.15
+  - With wardrobe, ≥50 events: self-tuned from ranking_weights table
+- [ ] Wardrobe activation threshold: ≥10 garments (consistent with sync threshold)
 - [ ] Wardrobe style profile computation: `computeWardrobeStyleProfile(garments)` → aggregated tag affinities
 - [ ] Profile updated on every sync (stored in `wardrobe_style_profile` table)
 - [ ] Feed API (`GET /api/feed/for-you`) reads wardrobe profile if available
@@ -475,7 +497,8 @@ Wardrobe data becomes the 4th signal in the ranking formula. Wardrobe style prof
 ### Implementation Notes
 - `wardrobeAffinity()` follows same pattern as `userClickAffinity()` — iterate tag dimensions, find best match per dimension, average
 - `computeWardrobeStyleProfile()` aggregates garment attributes into same JSONB structure as `user_click_profile.tag_affinities`
-- Modify `dataMaturityWeights()` in ranking.js to check for wardrobe presence
+- Modify `dataMaturityWeights()` in ranking.js to check for wardrobe presence and use 4-signal thresholds
+- Existing column `w_user_clicks` in `ranking_weights` maps to `w_clicks` in the formula — do NOT rename the column
 - The wardrobe signal should reinforce/correct onboarding data — if user says "minimal" but owns 70% coquette, wardrobe signal pulls recommendations toward coquette
 
 ### Testing
