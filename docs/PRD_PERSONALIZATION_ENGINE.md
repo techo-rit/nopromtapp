@@ -15,21 +15,20 @@ Stiri's home feed is static — every user sees the same trending templates in t
 A **three-signal weighted-blend ranking engine** that scores every product for every user:
 
 ```
-final_score = w_style × style_dna_match
-            + w_user_clicks × user_click_affinity
-            + w_product_pop × product_popularity
-            + boost_suits_them
-            + boost_exploration
-            - penalty_fatigue
+final_score = w_style  × style_dna_match
+            + w_clicks × user_click_affinity
+            + w_pop    × product_popularity
+            + new_arrival_boost
+            - fatigue_penalty
 ```
 
 Where:
 - **Style DNA match** — dot product of user profile vector (colors, styles, fit, body type, skin tone, age range) against product meta-tags
 - **User click affinity** — aggregated from per-user behavioral events (views, try-ons, wishlists, carts, purchases), with dual time decay
 - **Product popularity** — aggregated from per-product click counts across all users, with seasonal/regional signals
-- **Suits-them boost** — gentle score bump when product meta-tags match user's body type, skin tone, size (third-party / prescriptive)
-- **Exploration boost** — 10-15% of feed slots reserved for admin-boosted clearance items + random discovery
+- **New arrival boost** — additive +0.15 on day 0, fading linearly to 0 over 14 days; breaks the discovery death spiral for freshly-added products
 - **Fatigue penalty** — 1-3% per ignored impression, prevents stale feed
+- **Exploration** — 12% of feed slots replaced via injection (admin-boosted items + random discovery); not a score term
 
 **Weights are dynamic**, shifting on three axes:
 1. **Data maturity** — as a user accumulates clicks + wardrobe data, click weight rises, style DNA weight falls
@@ -75,7 +74,7 @@ Where:
 
 **Choice**: All products are scored and ranked. No hard filtering by style DNA.
 
-**Reason**: Filtering kills serendipity. During Diwali, a suits-lover should still see the trending floral kurta — it just won't be #1 in their feed. The blend ensures relevance without creating a filter bubble.
+**Reason**: Filtering kills serendipity. During seasonal spikes, a suits-lover should still see the trending floral kurta — it just won't be #1 in their feed. The blend ensures relevance without creating a filter bubble.
 
 ### Decision 2: Two-layer click storage (event log + pre-aggregated)
 
@@ -117,7 +116,7 @@ Where:
 
 **Choice**: Daily feedback loop measuring `(try_ons + wishlists + carts + 2×buys) / views`. Adjust weights ±0.03/cycle toward better engagement. No ML.
 
-**Reason**: Simple, transparent, auditable. Naturally adapts to seasonal shifts (Diwali = more collective purchasing = product-popularity weight rises). Bounded adjustments prevent wild swings.
+**Reason**: Simple, transparent, auditable. Naturally adapts to seasonal shifts (seasonal events = more collective purchasing = product-popularity weight rises). Bounded adjustments prevent wild swings.
 
 ### Decision 9: Cold start strategy
 
@@ -220,7 +219,7 @@ CREATE TABLE user_click_profile (
   -- Engagement depth ratio (self-tuning input)
   engagement_ratio    decimal(5,4) DEFAULT 0,
   -- Last N product IDs shown (for fatigue penalty)
-  recent_impressions  jsonb DEFAULT '[]',   -- [{ product_id, shown_at, position }]
+  recent_impressions  jsonb DEFAULT '[]',   -- [{ product_id, shown_at, position, interacted }]
   -- Recomputation watermark
   last_computed_at    timestamptz DEFAULT now(),
   events_since_compute integer DEFAULT 0,
@@ -242,6 +241,7 @@ CREATE TABLE product_click_stats (
   -- Recent counts (last 7 days, for trending detection)
   recent_views    integer DEFAULT 0,
   recent_try_ons  integer DEFAULT 0,
+  recent_wishlists integer DEFAULT 0,
   recent_carts    integer DEFAULT 0,
   recent_purchases integer DEFAULT 0,
   -- Regional popularity: { "maharashtra": 45, "delhi": 32, ... }
@@ -290,6 +290,7 @@ CREATE TABLE product_catalog_cache (
   sustainability      text[] DEFAULT '{}',
   versatility         text,
   is_new_arrival      boolean DEFAULT false,
+  shopify_published_at timestamptz,        -- From Shopify publishedAt; drives newArrivalBoost()
   -- Pricing
   min_price           integer,            -- In paise
   max_price           integer,
@@ -328,6 +329,9 @@ CREATE TABLE ranking_weights (
   w_user_clicks       decimal(4,3) NOT NULL,
   w_product_pop       decimal(4,3) NOT NULL,
   engagement_ratio    decimal(5,4),        -- The ratio that produced this config
+  -- Direction of the last weight adjustment; required by self-tuning to nudge forward or revert.
+  -- e.g. { "w_style": -0.02, "w_user_clicks": 0.02, "w_product_pop": 0 }
+  last_delta          jsonb DEFAULT '{}'::jsonb,
   is_active           boolean DEFAULT false,
   created_at          timestamptz DEFAULT now()
 );
@@ -384,14 +388,19 @@ function userClickAffinity(userClickProfile, productTags) {
     if (!productValue) continue;
     
     const values = Array.isArray(productValue) ? productValue : [productValue];
-    let dimScore = 0;
+    // Initialise to null so we can distinguish "no match" from "explicit 0"
+    let bestMatch = null;
     for (const val of values) {
-      dimScore = Math.max(dimScore, affinities[val] || 0);
+      const a = affinities[val];
+      if (a !== undefined) {
+        bestMatch = bestMatch === null ? a : Math.max(bestMatch, a);
+      }
     }
-    if (dimScore > 0) { score += dimScore; dimensions++; }
+    // Include negative affinities (cart_remove produces negative scores)
+    if (bestMatch !== null) { score += bestMatch; dimensions++; }
   }
 
-  return dimensions > 0 ? score / dimensions : 0; // Normalized 0-1
+  return dimensions > 0 ? score / dimensions : 0; // Range: -1 to 1
 }
 ```
 
@@ -438,7 +447,23 @@ function computeWeights(userClickProfile, seasonalBoost = 0) {
 }
 ```
 
-### Step 5: Fatigue Penalty
+### Step 5: New Arrival Boost
+
+```javascript
+function newArrivalBoost(product) {
+  if (!product.is_new_arrival) return 0;
+
+  const daysOld = (Date.now() - new Date(product.shopify_published_at).getTime())
+                  / (1000 * 60 * 60 * 24);
+
+  if (daysOld > 14) return 0;
+
+  // Linear fade: +0.15 on day 0, down to 0 on day 14
+  return 0.15 * (1 - daysOld / 14);
+}
+```
+
+### Step 6: Fatigue Penalty
 
 ```javascript
 function fatiguePenalty(productId, recentImpressions) {
@@ -452,7 +477,7 @@ function fatiguePenalty(productId, recentImpressions) {
 }
 ```
 
-### Step 6: Final Score
+### Step 7: Final Score
 
 ```javascript
 function rankProducts(products, userProfile, userClickProfile, userRegion, boostQueue) {
@@ -462,17 +487,20 @@ function rankProducts(products, userProfile, userClickProfile, userRegion, boost
 
   // Score all products
   const scored = products.map(product => {
-    const style = styleDnaMatch(userProfile, product.tags);
-    const clicks = userClickAffinity(userClickProfile, product.tags);
-    const pop = productPopularity(product.stats, userRegion);
+    const style   = styleDnaMatch(userProfile, product.tags);
+    const clicks  = userClickAffinity(userClickProfile, product.tags);
+    const pop     = productPopularity(product.stats, userRegion);
+    const arrival = newArrivalBoost(product);  // +0.15→0 over 14 days
     const fatigue = fatiguePenalty(product.id, userClickProfile.recent_impressions);
 
     const score = weights.wStyle * style
                 + weights.wClicks * clicks
                 + weights.wPop * pop
+                + arrival
                 - fatigue;
 
-    return { product, score };
+    // Clamp to 0 — negative scores push product to bottom, not below zero
+    return { product, score: Math.max(0, score) };
   });
 
   // Sort by score descending
@@ -539,6 +567,7 @@ function rankProducts(products, userProfile, userClickProfile, userRegion, boost
 ### Product Catalog Sync
 - `POST /api/admin/product-sync` — Trigger full catalog sync from Shopify → `product_catalog_cache`.
 - `POST /api/shopify/webhook/product-update` — Shopify webhook. Syncs single product on create/update.
+- `POST /api/shopify/webhook/product-delete` — Shopify webhook. Deletes product from `product_catalog_cache`, `product_click_stats`, and `admin_boost_queue`.
 
 ### Weight Management
 - `GET /api/admin/weights` — Current active weights + history.
@@ -614,11 +643,12 @@ function recomputeTagAffinities(clickEvents) {
     }
   }
 
-  // Normalize each dimension to 0-1
+  // Normalize each dimension to [-1, 1] using absolute max.
+  // Preserves negative signals from cart_remove events.
   for (const dim of Object.keys(affinities)) {
-    const maxVal = Math.max(...Object.values(affinities[dim]), 1);
+    const absMax = Math.max(...Object.values(affinities[dim]).map(Math.abs), 0.001);
     for (const key of Object.keys(affinities[dim])) {
-      affinities[dim][key] = Math.round((affinities[dim][key] / maxVal) * 1000) / 1000;
+      affinities[dim][key] = Math.round((affinities[dim][key] / absMax) * 1000) / 1000;
     }
   }
 

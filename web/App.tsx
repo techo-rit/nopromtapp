@@ -17,6 +17,7 @@ import { ProductPage } from "./features/shop/ProductPage";
 import { Home } from "./features/pages/Home";
 import { StackView } from "./features/pages/StackView";
 import { ChangingRoom } from "./features/templates/ChangingRoom";
+import { ForYouFeed } from "./features/feed/ForYouFeed";
 
 // Services & Utils
 import { authService } from "./features/auth/authService";
@@ -417,6 +418,15 @@ const App: React.FC = () => {
               ) : (
                 <Navigate to="/" replace />
               )
+            }
+          />
+          <Route
+            path="/for-you"
+            element={
+              <ForYouFeed
+                user={user}
+                onLoginRequired={openAuthModal}
+              />
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

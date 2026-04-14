@@ -6,6 +6,7 @@ import { SmartSelfieModal } from '../camera/SmartSelfieModal';
 import { StandardCameraModal } from '../camera/StandardCameraModal';
 import { generateImage } from '../templates/geminiService';
 import { fetchTemplateById } from '../templates/templateService';
+import { TRYON_TEMPLATE } from '../templates/tryOnConfig';
 import { ProductTryOn } from './ProductTryOn';
 import { TryOnResult } from './TryOnResult';
 import { CONFIG } from '../../config';
@@ -67,12 +68,8 @@ export const ChangingRoom: React.FC<ChangingRoomProps> = ({
     setGeneratedImages(null);
 
     try {
-      // Use template if available (from product URL), otherwise create a minimal fitit template
-      const templateForGeneration = template || {
-        id: 'fitit_custom',
-        stackId: 'fitit',
-        name: 'Custom Try-On',
-      };
+      // Use template if available (from product URL), otherwise use built-in try-on config
+      const templateForGeneration = template || TRYON_TEMPLATE;
       const result = await generateImage(templateForGeneration, selfieImage, wearableImage);
       setGeneratedImages(result);
       if (result.length === 0) {

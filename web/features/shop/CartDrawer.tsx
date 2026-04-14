@@ -409,7 +409,6 @@ const WishlistTabContent: React.FC<WishlistTabProps> = ({ items, loading, onRemo
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <div>
                 <p className="text-[13px] font-semibold text-[#f5f5f5] truncate leading-snug">{t.title}</p>
-                <p className="text-[11px] text-[#666] mt-0.5 capitalize">{t.stack_id?.replace(/_/g, ' ')}</p>
               </div>
               <div className="flex items-center justify-between mt-2">
                 <button

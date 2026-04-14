@@ -45,8 +45,10 @@ The engine eliminates the need for a fashion designer/specialist by acting as a 
 │  │  score = w_style × style_dna_match               │     │
 │  │        + w_clicks × user_click_affinity           │     │
 │  │        + w_pop × product_popularity               │     │
+│  │        + new_arrival_boost                        │     │
 │  │        - fatigue_penalty                          │     │
-│  │        + exploration_boost                        │     │
+│  │                                                  │     │
+│  │  12% of slots replaced via exploration injection  │     │
 │  │                                                  │     │
 │  │  Weights: DYNAMIC (data maturity × seasonal      │     │
 │  │           × self-tuning feedback)                 │     │
@@ -163,9 +165,8 @@ What everyone is buying/viewing. Blends:
 Formula: `60% global + 40% regional`
 
 Regional trending enables:
-- Diwali kurta surge in North India
-- Silk saree demand in South India
-- Regional fashion preferences reflected in feed
+- Seasonal fashion surges by region (e.g. ethnic wear spikes during major festivals)
+- Regional fabric and style preferences reflected in feed
 
 ---
 
@@ -271,7 +272,7 @@ CREATE TABLE user_click_profile (
   total_cart_adds     integer DEFAULT 0,
   total_purchases     integer DEFAULT 0,
   engagement_ratio    decimal(5,4) DEFAULT 0,
-  recent_impressions  jsonb DEFAULT '[]',
+  recent_impressions  jsonb DEFAULT '[]',   -- [{ product_id, shown_at, position, interacted }]
   last_computed_at    timestamptz DEFAULT now(),
   events_since_compute integer DEFAULT 0,
   updated_at          timestamptz DEFAULT now()
@@ -312,6 +313,7 @@ CREATE TABLE product_click_stats (
   purchase_count  integer DEFAULT 0,
   recent_views    integer DEFAULT 0,
   recent_try_ons  integer DEFAULT 0,
+  recent_wishlists integer DEFAULT 0,
   recent_carts    integer DEFAULT 0,
   recent_purchases integer DEFAULT 0,
   regional_counts jsonb DEFAULT '{}',
@@ -362,6 +364,7 @@ CREATE TABLE product_catalog_cache (
   sustainability      text[] DEFAULT '{}',
   versatility         text,
   is_new_arrival      boolean DEFAULT false,
+  shopify_published_at timestamptz,        -- From Shopify publishedAt; drives newArrivalBoost()
   min_price           integer,
   max_price           integer,
   available_for_sale  boolean DEFAULT true,
@@ -399,12 +402,16 @@ CREATE TABLE ranking_weights (
   w_user_clicks       decimal(4,3) NOT NULL,
   w_product_pop       decimal(4,3) NOT NULL,
   engagement_ratio    decimal(5,4),
+  -- last_delta records the direction of each weight's last change,
+  -- required by the self-tuning loop to know which way to nudge next cycle.
+  -- e.g. { "w_style": -0.02, "w_user_clicks": +0.02, "w_product_pop": 0 }
+  last_delta          jsonb DEFAULT '{}'::jsonb,
   is_active           boolean DEFAULT false,
   created_at          timestamptz DEFAULT now()
 );
 ```
 
-Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, is_active: true }`.
+Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, last_delta: {}, is_active: true }`.
 
 ---
 
@@ -416,10 +423,13 @@ Seed row: `{ w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15, is_active:
 final_score = w_style × style_dna_match(user, product)
             + w_clicks × user_click_affinity(user_click_profile, product)
             + w_pop   × product_popularity(product_stats, region)
+            + new_arrival_boost(product)
             - fatigue_penalty(product, impressions)
 ```
 
-Where `w_style + w_clicks + w_pop = 1.0`, always.
+Where `w_style + w_clicks + w_pop = 1.0`, always. `new_arrival_boost` is additive and outside the normalised weight system — it does not steal from the three signals.
+
+> **Naming convention:** In the formula, abbreviated forms `w_clicks` and `w_pop` are used for readability. In the database schema (§5.6), these are stored as columns `w_user_clicks` and `w_product_pop` for clarity. In code, they become camelCase variables `wClicks` and `wPop`.
 
 ### 6.2 Style DNA Match (0-1)
 
@@ -463,9 +473,9 @@ function styleDnaMatch(userProfile, productTags) {
 }
 ```
 
-### 6.3 User Click Affinity (0-1)
+### 6.3 User Click Affinity (-1 to 1)
 
-Measures how well a product matches the user's behavioral taste across all 30 dimensions. Uses pre-aggregated tag affinities from `user_click_profile`.
+Measures how well a product matches the user's behavioral taste across all 30 dimensions. Uses pre-aggregated tag affinities from `user_click_profile`. Negative affinities (from `cart_remove` events) actively penalise products the user has rejected.
 
 ```javascript
 function userClickAffinity(userClickProfile, productTags) {
@@ -477,11 +487,16 @@ function userClickAffinity(userClickProfile, productTags) {
     if (!productValue) continue;
 
     const values = Array.isArray(productValue) ? productValue : [productValue];
-    let bestMatch = 0;
+    // Initialise to null so we can distinguish "no match" from "explicit 0"
+    let bestMatch: number | null = null;
     for (const v of values) {
-      bestMatch = Math.max(bestMatch, userAffinityMap[v] || 0);
+      const val = userAffinityMap[v];
+      if (val !== undefined) {
+        bestMatch = bestMatch === null ? val : Math.max(bestMatch, val);
+      }
     }
-    if (bestMatch > 0) {
+    // Include negative affinities (cart_remove produces negative scores)
+    if (bestMatch !== null) {
       totalScore += bestMatch;
       matchedDims++;
     }
@@ -515,13 +530,40 @@ function computePopularityScore(stats) {
   // Weighted recent activity (last 7 days)
   const raw = stats.recent_views * 1
             + stats.recent_try_ons * 3
+            + stats.recent_wishlists * 4
             + stats.recent_carts * 6
             + stats.recent_purchases * 10;
   return raw; // Normalized across all products later (divide each by max)
 }
 ```
 
-### 6.5 Fatigue Penalty
+### 6.5 New Arrival Boost
+
+A newly-added product has `popularity_score = 0`, `view_count = 0`, and zero click history. Without intervention it ranks near the bottom permanently — users who would have loved it never see it, it never accumulates clicks, and the low rank is self-reinforcing. The new-arrival boost breaks this death spiral by injecting a temporary score bump for the first 14 days.
+
+```javascript
+function newArrivalBoost(product) {
+  if (!product.is_new_arrival) return 0;
+
+  // shopify_published_at is stored in product_catalog_cache at sync time
+  const daysOld = (Date.now() - new Date(product.shopify_published_at).getTime())
+                  / (1000 * 60 * 60 * 24);
+
+  if (daysOld > 14) return 0;
+
+  // Linear fade: +0.15 on day 0, down to 0 on day 14
+  return 0.15 * (1 - daysOld / 14);
+}
+```
+
+**Properties:**
+- **+0.15 on day 0** — strong enough to surface a new arrival in the top third of a typical ranked feed
+- **Linear fade over 14 days** — by day 7 it's +0.075; by day 14 it's 0. The product earns its rank organically from that point
+- **Not style-gated** — applies regardless of profile match. A new kurta surfaces for everyone briefly so it can gather the initial clicks needed to build its own signal
+- **Stackable** — a new arrival that also matches the user's style DNA will score even higher, which is the correct outcome
+- **Auto-expiry** — once `shopify_published_at` is more than 14 days ago the function returns 0 with no database writes needed. `is_new_arrival` can be set to `false` by the nightly cron as a housekeeping step (see §9)
+
+### 6.6 Fatigue Penalty
 
 Products shown repeatedly without interaction get a mild penalty to keep the feed fresh.
 
@@ -535,7 +577,7 @@ function fatiguePenalty(productId, recentImpressions) {
 }
 ```
 
-### 6.6 Putting It Together
+### 6.7 Putting It Together
 
 ```javascript
 function rankProducts(products, userProfile, userClickProfile, statsMap, region, boostQueue) {
@@ -544,18 +586,22 @@ function rankProducts(products, userProfile, userClickProfile, statsMap, region,
   const scored = products
     .filter(p => p.available_for_sale)
     .map(product => {
-      const stats = statsMap[product.product_id] || {};
+      const stats   = statsMap[product.product_id] || {};
       const style   = styleDnaMatch(userProfile, product);
       const clicks  = userClickAffinity(userClickProfile, product);
       const pop     = productPopularity(stats, region);
+      const arrival = newArrivalBoost(product);                              // §6.5
       const fatigue = fatiguePenalty(product.product_id, userClickProfile.recent_impressions || []);
 
       const score = weights.wStyle * style
                   + weights.wClicks * clicks
                   + weights.wPop * pop
+                  + arrival
                   - fatigue;
 
-      return { product, score, isExploration: false };
+      // Clamp to 0 — negative scores (from strong cart_remove affinity) just
+      // push the product to the bottom; they should not invert sort order.
+      return { product, score: Math.max(0, score), isExploration: false };
     });
 
   scored.sort((a, b) => b.score - a.score);
@@ -613,29 +659,15 @@ When they **disagree** (user said casual + keeps clicking formal): the self-tuni
 
 ```javascript
 function getSeasonalBoost() {
-  const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
-  const day = now.getDate();
-
-  const FESTIVALS = [
-    { name: 'diwali', month: 10, days: [15, 31], boost: 0.8 },
-    { name: 'christmas', month: 12, days: [20, 31], boost: 0.5 },
-    { name: 'eid', month: 3, days: [25, 31], boost: 0.6 },    // Approximate
-    { name: 'holi', month: 3, days: [1, 15], boost: 0.5 },
-    { name: 'new_year_sale', month: 1, days: [1, 15], boost: 0.7 },
-    { name: 'summer_sale', month: 6, days: [1, 30], boost: 0.4 },
-  ];
-
-  for (const f of FESTIVALS) {
-    if (month === f.month && day >= f.days[0] && day <= f.days[1]) {
-      return f.boost; // 0→1
-    }
-  }
+  // Returns 0-1 based on proximity to seasonal events that affect clothing demand.
+  // v1: stub returning 0. Future: load seasonal calendar from DB or config.
+  // Seasonal events (festivals, sales, weather shifts) are NOT hardcoded here —
+  // they will be managed via an admin-configurable seasonal_calendar table.
   return 0;
 }
 ```
 
-During festivals, product-popularity weight increases: `wPop = 0.10 + 0.08 × seasonalBoost`. This lets collective buying trends (everyone buying kurtas for Diwali) break through individual preferences.
+During seasonal events, product-popularity weight increases: `wPop = 0.10 + 0.08 × seasonalBoost`. This lets collective buying trends break through individual preferences.
 
 ### 7.2 Combined Weight Function
 
@@ -817,11 +849,12 @@ function recomputeTagAffinities(userId) {
     }
   }
 
-  // Normalize each dimension to 0-1
+  // Normalize each dimension to [-1, 1] using absolute max.
+  // This preserves negative signals from cart_remove events.
   for (const dim of Object.keys(affinities)) {
-    const max = Math.max(...Object.values(affinities[dim]), 0.001);
+    const absMax = Math.max(...Object.values(affinities[dim]).map(Math.abs), 0.001);
     for (const key of Object.keys(affinities[dim])) {
-      affinities[dim][key] = Math.round((affinities[dim][key] / max) * 1000) / 1000;
+      affinities[dim][key] = Math.round((affinities[dim][key] / absMax) * 1000) / 1000;
     }
   }
 
@@ -926,6 +959,10 @@ POST /api/admin/product-sync
 POST /api/shopify/webhook/product-update
   Auth: Shopify HMAC verification
   Syncs single product on create/update
+
+POST /api/shopify/webhook/product-delete
+  Auth: Shopify HMAC verification
+  Deletes product from product_catalog_cache + product_click_stats + admin_boost_queue
 ```
 
 ### Weight Management
@@ -1083,9 +1120,9 @@ query ProductWithMetafields($handle: String!) {
 
 **Product B**: Floral Party Kurta — `color_family:[pink,red], style_tags:[party,ethnic], garment_type:kurta, pattern:floral, occasion:[festive,party]`
 
-**Product C**: Diwali Silk Saree — `color_family:[maroon,gold], style_tags:[ethnic], body_type_fit:[hourglass,pear], occasion:[wedding,festive]` — currently trending nationally (Diwali season).
+**Product C**: Festive Silk Saree — `color_family:[maroon,gold], style_tags:[ethnic], body_type_fit:[hourglass,pear], occasion:[wedding,festive]` — currently trending nationally (seasonal spike).
 
-**Weights** (120 clicks, Diwali season with seasonal_boost=0.8):
+**Weights** (120 clicks, seasonal_boost=0.8):
 - data_richness = 120/200 = 0.60
 - wStyle = 0.85 × (1 - 0.55 × 0.60) = 0.85 × 0.67 = 0.57
 - wClicks = 0.05 + 0.38 × 0.60 = 0.278
@@ -1098,9 +1135,9 @@ query ProductWithMetafields($handle: String!) {
 |---|---|---|---|---|---|
 | Product A (Navy Suit) | 0.92 (color+style+body+skin match) | 0.85 (clicks align with formal+suit+navy) | 0.30 (moderate global) | 0 | **0.56×0.92 + 0.28×0.85 + 0.16×0.30 = 0.80** |
 | Product B (Party Kurta) | 0.15 (no color/style overlap) | 0.10 (no click pattern) | 0.20 | 0 | **0.56×0.15 + 0.28×0.10 + 0.16×0.20 = 0.14** |
-| Product C (Diwali Saree) | 0.25 (body_type match only) | 0.05 (minimal click pattern) | 0.90 (Diwali trending!) | 0 | **0.56×0.25 + 0.28×0.05 + 0.16×0.90 = 0.30** |
+| Product C (Festive Saree) | 0.25 (body_type match only) | 0.05 (minimal click pattern) | 0.90 (seasonal trending!) | 0 | **0.56×0.25 + 0.28×0.05 + 0.16×0.90 = 0.30** |
 
-**Result**: Navy Suit ranks #1 (strongly aligned). Diwali Saree ranks #2 (trending lifts it past the kurta despite low style/click match). Party Kurta ranks #3. Even during Diwali, the user's preference still dominates — but the seasonal product doesn't get buried.
+**Result**: Navy Suit ranks #1 (strongly aligned). Festive Saree ranks #2 (trending lifts it past the kurta despite low style/click match). Party Kurta ranks #3. Even during seasonal spikes, the user's preference still dominates — but the trending product doesn't get buried.
 
 ---
 

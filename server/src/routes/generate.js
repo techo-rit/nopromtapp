@@ -78,7 +78,7 @@ async function persistGeneratedImage(supabase, userId, base64Data, mimeType, met
       image_url: imageUrl,
       template_id: metadata.templateId || null,
       template_name: metadata.templateName || null,
-      stack_id: metadata.stackId || null,
+      stack_id: metadata.mode === 'tryon' ? 'fitit' : null,
       mode: metadata.mode,
       aspect_ratio: metadata.aspectRatio || null,
     });
@@ -114,9 +114,8 @@ export async function generateHandler(req, res) {
     const { imageData, wearableData, templateReferenceData, templateId, templateOptions } = req.body || {};
     const userLog = createLogger(requestId, authResult.userId);
     const supabase = createAdminClient();
-    const requestedStackId = String(templateOptions?.template?.stackId || '').toLowerCase();
     const requestedTemplateId = String(templateId || '').toLowerCase();
-    const isTryOnRequest = requestedStackId === 'fitit' || requestedTemplateId.startsWith('fitit_');
+    const isTryOnRequest = requestedTemplateId.startsWith('fitit');
 
     const mainImage = validateAndParseImage(imageData);
     if (!mainImage) {
@@ -199,9 +198,16 @@ export async function generateHandler(req, res) {
 
     if (isTryOnRequest && validWearable) {
       // ── TRY-ON MODE ──
-      // Template prompt from constants.ts is used as-is — it is self-sufficient.
-      // System instruction is format-only: enforce a single front-view output.
-      finalPrompt = userInstruction || 'Perform a photorealistic virtual try-on using the first image as the subject and the second image as the garment.';
+      // Use the prompt from the client (hardcoded TRYON_TEMPLATE config) or a rich fallback.
+      finalPrompt = userInstruction || [
+        'Perform a photorealistic virtual try-on.',
+        'Input 1 is the user photo (selfie/half-body/full-body). Preserve identity, face, hairstyle, skin tone.',
+        'Input 2 is the garment to try on.',
+        'If the input is not full-body, generate missing body parts with correct anatomy and proportions.',
+        'Fit the garment naturally: proper scaling, alignment, draping, fabric physics.',
+        'Match lighting, shadows, perspective. No artifacts or identity drift.',
+        'Output: single photorealistic full-body front-view image, high resolution.',
+      ].join(' ');
 
     } else {
       // ── REMIX / CREATIVE MODE ──
@@ -246,7 +252,6 @@ export async function generateHandler(req, res) {
 
     userLog.info('Generation request payload summary', {
       templateId: templateId || null,
-      stackId: templateOptions?.template?.stackId || null,
       isTryOnRequest,
       hasWearable: Boolean(validWearable),
       hasTemplateReference: Boolean(validTemplateReference),
@@ -259,7 +264,6 @@ export async function generateHandler(req, res) {
     const imageMetadata = {
       templateId: templateId || null,
       templateName: templateOptions?.template?.name || null,
-      stackId: templateOptions?.template?.stackId || null,
       mode: validWearable ? 'tryon' : 'remix',
       aspectRatio: aspectRatio || null,
     };

@@ -7,7 +7,7 @@ export interface Stack {
 export interface Template {
   id: string;
   name: string;
-  stackId: string;
+  stackId?: string;
   imageUrl: string;
   prompt: string | Record<string, any>;
   aspectRatio: string;
@@ -283,4 +283,38 @@ declare global {
       close: () => void;
     };
   }
+}
+
+
+// ─── Personalization Engine Types ─────────────────────────────
+
+export interface FeedItem {
+  product_id: string;
+  title: string;
+  image?: string;
+  score: number;
+  isExploration: boolean;
+  style_tags?: string[];
+  color_family?: string[];
+  occasion?: string[];
+  garment_type?: string;
+  min_price?: number;
+  max_price?: number;
+  is_new_arrival?: boolean;
+}
+
+export interface FeedResponse {
+  items: FeedItem[];
+  total: number;
+  hasMore: boolean;
+}
+
+export type EventType = 'view' | 'try_on' | 'wishlist' | 'cart_add' | 'cart_remove' | 'purchase';
+
+export interface TrackEventPayload {
+  events: {
+    product_id: string;
+    event_type: EventType;
+    metadata?: Record<string, unknown>;
+  }[];
 }
