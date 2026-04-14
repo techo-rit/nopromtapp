@@ -325,11 +325,10 @@ function isCompatible(garments) {
   const hasFullbody = categories.includes('fullbody');
   
   if (!hasFullbody && !(hasUpper && hasLower)) return false;
-  if (hasFullbody && (hasUpper || hasLower)) return false; // fullbody is standalone (except layers)
-  // Allow fullbody + layer (e.g., dress + jacket)
+  // Allow fullbody + layer (e.g., dress + jacket), but not fullbody + upper/lower
   const hasLayer = categories.includes('layer');
-  if (hasFullbody && hasLayer) { /* valid — override the rejection above */ }
-  else if (hasFullbody && hasUpper) return false;
+  if (hasFullbody && (hasUpper || hasLower)) return false;
+  // At this point, fullbody can only be alone or with layer/footwear/accessory — both valid
   
   // Allow max 1 of: footwear, layer, accessory
   const footwearCount = categories.filter(c => c === 'footwear').length;
@@ -1416,9 +1415,9 @@ UPDATE ranking_weights SET w_wardrobe = 0 WHERE is_active = true;
 ## 9. API Contracts
 
 ### POST /api/wardrobe/garments/upload
-Upload a processed garment image.
+Upload a garment photo for server-side processing.
 
-**Request**: `multipart/form-data` with `image` (WebP file, max 512KB)
+**Request**: `multipart/form-data` with `image` (JPEG/PNG/WebP, max 5MB — server performs bg-removal + WebP compression)
 **Response**: `{ garment_id, image_url, is_analyzed: false }`
 
 ### DELETE /api/wardrobe/garments/:id
@@ -1566,7 +1565,7 @@ Standalone gap analysis.
 
 - All wardrobe endpoints require authentication (`getUserFromRequest`)
 - RLS on all wardrobe tables (user can only access their own data)
-- Image upload validation: WebP only, max 512KB, no executable content
+- Image upload validation: JPEG/PNG/WebP accepted, max 5MB, no executable content (server produces WebP ≤512KB for storage)
 - Gemini prompts are server-side only — user input never injected into system prompts
 - AI Concierge: user message sanitized before Gemini call (no prompt injection)
 - Storage bucket: private, signed URLs for image access
