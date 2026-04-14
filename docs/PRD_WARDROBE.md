@@ -526,10 +526,12 @@ personalized_score =
     w_style    × styleDnaMatch(user, outfit_tags)
   + w_wardrobe × wardrobeAffinity(wardrobe_profile, outfit_tags)
   + w_clicks   × userClickAffinity(click_profile, outfit_tags)
-  + diversity_penalty  // -5% per repeat of same garment in higher-ranked outfits
+  + w_pop      × S_pop  // (0 for wardrobe outfits — no cross-user popularity data)
 ```
 
 Final display score = `0.6 × harmony_score + 0.4 × personalized_score`
+
+Diversity penalty (-5% per garment repeat, capped at 40%) is applied AFTER scoring — see §Diversity Penalty.
 
 ---
 

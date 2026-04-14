@@ -13,7 +13,7 @@ Issue 1: Schema + Storage ─────────┐
                                     │
 Issue 2: Garment Upload API ────────┤
                                     ├──→ Issue 5: Sync Pipeline API
-Issue 3: Client Image Pipeline ─────┤         │
+Issue 3: Server Image Pipeline ─────┤         │
                                     │         ├──→ Issue 8: Outfit Display (Sets View)
 Issue 4: Closet UI Shell + Nav ─────┤         │         │
                                     │         │         ├──→ Issue 10: AI Concierge Chat
@@ -102,7 +102,7 @@ Server-side endpoints for uploading garment photos, processing them (background 
 - Bg-removal failure → verify fallback to resize+compress only
 
 ### Dependencies
-- Issue 1 (schema + storage)
+- Issue 1 (schema + storage), Issue 3 (image processing library)
 
 ---
 
