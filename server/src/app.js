@@ -25,6 +25,7 @@ import { createBoostHandler, listBoostsHandler, deleteBoostHandler } from './rou
 import { getWeightsHandler, tuneWeightsHandler } from './routes/adminWeights.js';
 import { getMetricsHandler } from './routes/adminMetrics.js';
 import { fullSyncHandler, singleSyncHandler, cronHandler } from './routes/productSync.js';
+import { uploadGarmentHandler, deleteGarmentHandler, listGarmentsHandler, syncWardrobeHandler, listOutfitsHandler, chatHandler, gapsHandler } from './routes/wardrobe.js';
 
 export function createApp() {
   const app = express();
@@ -159,6 +160,15 @@ export function createApp() {
   app.post('/api/admin/product-sync', fullSyncHandler);
   app.post('/api/admin/product-sync/:templateId', singleSyncHandler);
   app.post('/api/admin/cron/personalization', cronHandler);
+
+  // Wardrobe
+  app.post('/api/wardrobe/garments/upload', uploadGarmentHandler);
+  app.delete('/api/wardrobe/garments/:id', deleteGarmentHandler);
+  app.get('/api/wardrobe/garments', listGarmentsHandler);
+  app.post('/api/wardrobe/sync', syncWardrobeHandler);
+  app.get('/api/wardrobe/outfits', listOutfitsHandler);
+  app.post('/api/wardrobe/chat', chatHandler);
+  app.get('/api/wardrobe/gaps', gapsHandler);
 
   // Start Supabase Realtime listener for templates
   startTemplateRealtime();
