@@ -18,6 +18,8 @@ import { Home } from "./features/pages/Home";
 import { StackView } from "./features/pages/StackView";
 import { ChangingRoom } from "./features/templates/ChangingRoom";
 import { ForYouFeed } from "./features/feed/ForYouFeed";
+import { ClosetPage } from "./features/wardrobe/ClosetPage";
+import { AIConcierge } from "./features/wardrobe/AIConcierge";
 
 // Services & Utils
 import { authService } from "./features/auth/authService";
@@ -424,6 +426,24 @@ const App: React.FC = () => {
             path="/for-you"
             element={
               <ForYouFeed
+                user={user}
+                onLoginRequired={openAuthModal}
+              />
+            }
+          />
+          <Route
+            path="/closet"
+            element={
+              <ClosetPage
+                user={user}
+                onLoginRequired={openAuthModal}
+              />
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <AIConcierge
                 user={user}
                 onLoginRequired={openAuthModal}
               />

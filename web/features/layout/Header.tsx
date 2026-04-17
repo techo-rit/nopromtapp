@@ -246,17 +246,13 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                     </div>
 
-                    <div className="w-[45%] mx-auto flex items-center gap-1.5 h-[40px] px-4 rounded-full border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors">
+                    <button
+                        onClick={() => navigate('/chat')}
+                        className="w-[45%] mx-auto flex items-center gap-1.5 h-[40px] px-4 rounded-full border border-[#2a2a2a] hover:border-[#c9a962]/40 transition-colors cursor-pointer"
+                    >
                         <SearchIcon />
-                        <input
-                            ref={desktopSearchRef}
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
-                            className={`${inputClasses} flex-1 min-w-0 w-auto`}
-                        />
-                    </div>
+                        <span className="text-[15px] italic text-[#E4C085]/70">desire for...</span>
+                    </button>
 
                     <div className="flex items-center gap-4">
                         <button
