@@ -45,12 +45,11 @@ export const FloatingSearch: React.FC<FloatingSearchProps> = () => {
                     }}
                     aria-label="Open search"
                 >
-                    <span className="text-[#c9a962] text-[13px] font-medium whitespace-nowrap">Manifesting</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                        <circle cx="11" cy="11" r="8" stroke="#6b6b6b" strokeWidth="2" />
-                        <path d="M21 21l-4.35-4.35" stroke="#6b6b6b" strokeWidth="2" strokeLinecap="round" />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                        <circle cx="11" cy="11" r="8" stroke="#c9a962" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="#c9a962" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <span className="flex-1 text-[14px] text-[#c9a962]/60 italic">desire for...</span>
+                    <span className="flex-1 text-[14px] text-[#a0a0a0]">Search styles...</span>
                 </button>
             ) : (
                 /* ── Collapsed: gold accent pill ── */

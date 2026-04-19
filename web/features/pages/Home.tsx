@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom";
 import { fetchFeed } from "../feed/feedService";
 import { trackEvent } from "../tracking/trackingService";
-import { getManifestationQuote } from "../../data/manifestationQuotes";
 import { ChevronLeftIcon, ChevronRightIcon } from "../../shared/ui/Icons";
 import type { FeedItem, Template, User } from "../../types";
 
@@ -171,14 +170,13 @@ export const Home: React.FC<HomeProps> = ({
   return (
     <div data-home-scroll="true" className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a]">
 
-      {/* ═══ HEADER — "Choose your form" (old nopromt style) ═══ */}
-      <header className="pt-10 pb-6 md:pt-16 md:pb-10 px-6 md:px-[7.5vw]">
+      {/* ═══ HEADER — "Choose your form" ═══ */}
+      <header className="pt-6 pb-3 md:pt-10 md:pb-6 px-5 md:px-[7.5vw]">
         <h1
-          className="text-[28px] md:text-[48px] font-light text-[#f5f5f5] tracking-[-0.02em] leading-[1.1]"
+          className="text-[22px] md:text-[40px] font-light text-[#f5f5f5] tracking-[-0.02em] leading-[1.15]"
           style={{ fontFamily: "var(--font-serif)" }}
         >
-          Choose your
-          <span className="block text-[#c9a962] italic font-normal">form</span>
+          Choose your <span className="text-[#c9a962] italic font-normal">form</span>
         </h1>
 
         {/* Onboarding progress */}
@@ -201,14 +199,21 @@ export const Home: React.FC<HomeProps> = ({
         )}
       </header>
 
-      {/* ═══ TRENDING CAROUSEL — hero snap scroll (old nopromt style) ═══ */}
+      {/* ═══ TRENDING CAROUSEL ═══ */}
       {topPicks.length > 0 && (
+        <>
+        <div className="px-5 md:px-[7.5vw] mb-3">
+          <h2 className="text-[13px] tracking-[0.15em] uppercase text-[#c9a962]/80 font-medium" style={{ fontFamily: "var(--font-serif)" }}>
+            Only For You
+          </h2>
+        </div>
         <TrendingCarousel
           items={topPicks}
           onTryOn={handleTryOn}
           onClick={handleProductClick}
           observeCard={observeCard}
         />
+        </>
       )}
 
       {/* ═══ CATEGORY STACKS — horizontal scroll groups ═══ */}
@@ -377,11 +382,17 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
         <div
           ref={scrollRef}
           className="flex overflow-x-auto gap-4 md:gap-6 snap-x snap-mandatory scroll-smooth scrollbar-hide items-center px-[7.5vw]"
+          style={{ overscrollBehaviorX: 'contain' }}
+          onWheel={(e) => {
+            // Let vertical scrolling pass through to the page
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+              e.currentTarget.style.overflowX = 'hidden';
+              requestAnimationFrame(() => { if (scrollRef.current) scrollRef.current.style.overflowX = 'auto'; });
+            }
+          }}
         >
           {items.map((item, i) => {
             const isFocused = focusedId === item.product_id;
-            const quote = getManifestationQuote(item.title);
-            const occasionLabel = getOccasionLabel(item);
 
             return (
               <div
@@ -397,8 +408,8 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                   onClick={() => onClick(item.product_id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(item.product_id); } }}
                   className={`
-                    w-[85vw] md:w-[85vw] max-w-[1400px]
-                    aspect-[4/5] md:aspect-[16/9]
+                    w-[78vw] md:w-[78vw] max-w-[1400px]
+                    aspect-[3/4] md:aspect-[16/9]
                     rounded-[24px] md:rounded-[40px] overflow-hidden
                     relative cursor-pointer group
                     transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
@@ -424,26 +435,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
-                  {/* Top labels */}
-                  <div className="absolute top-5 left-5 md:top-8 md:left-10 flex items-center gap-2">
-                    {item.is_new_arrival && (
-                      <span className="px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.15em] rounded-full bg-[#c9a962] text-[#0a0a0a]">
-                        New
-                      </span>
-                    )}
-                    {occasionLabel && (
-                      <span className="px-3 py-1 text-[9px] font-medium uppercase tracking-[0.12em] rounded-full bg-white/8 text-white/60 border border-[#2a2a2a]">
-                        {occasionLabel}
-                      </span>
-                    )}
-                  </div>
 
-                  {/* Card number */}
-                  <div className="absolute top-5 right-5 md:top-8 md:right-10">
-                    <span className="text-[11px] tabular-nums text-white/20 tracking-wider font-serif">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                  </div>
 
                   {/* Bottom content */}
                   <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
@@ -472,13 +464,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                       </p>
                     )}
 
-                    {/* Gold italic manifestation quote */}
-                    <p
-                      className={`text-[#c9a962] text-[14px] md:text-[17px] italic transition-all duration-700 max-w-xl ${isFocused ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
-                      style={{ fontFamily: "var(--font-serif)" }}
-                    >
-                      {quote}
-                    </p>
+
                   </div>
                 </div>
               </div>
@@ -523,9 +509,6 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, index, onTryOn, onClick, obse
     return () => obs.disconnect();
   }, []);
 
-  const quote = getManifestationQuote(item.title);
-  const occasionLabel = getOccasionLabel(item);
-
   return (
     <div
       ref={(el) => { cardRef.current = el; observeRef(el); }}
@@ -566,19 +549,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, index, onTryOn, onClick, obse
         {/* Gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-        {/* Top labels */}
-        <div className="absolute top-5 left-5 md:top-8 md:left-10 flex items-center gap-2">
-          {item.is_new_arrival && (
-            <span className="px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.15em] rounded-full bg-[#c9a962] text-[#0a0a0a]">
-              New
-            </span>
-          )}
-          {occasionLabel && (
-            <span className="px-3 py-1 text-[9px] font-medium uppercase tracking-[0.12em] rounded-full bg-white/8 text-white/60 border border-[#2a2a2a]">
-              {occasionLabel}
-            </span>
-          )}
-        </div>
+
 
         {/* Bottom content */}
         <div className={`absolute bottom-0 left-0 right-0 p-6 md:p-10 transition-all duration-700 ${isFocused ? "translate-y-0 opacity-100" : "translate-y-2 opacity-40"}`}>
@@ -605,13 +576,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, index, onTryOn, onClick, obse
             </p>
           )}
 
-          {/* Gold italic quote */}
-          <p
-            className={`text-[#c9a962] text-[14px] md:text-[17px] italic transition-all duration-700 max-w-xl ${isFocused ? "opacity-80 translate-y-0" : "opacity-0 translate-y-2"}`}
-            style={{ fontFamily: "var(--font-serif)" }}
-          >
-            {quote}
-          </p>
+
         </div>
       </div>
     </div>

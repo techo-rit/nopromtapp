@@ -127,22 +127,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
     return (
         <nav
-            className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#2a2a2a]"
+            className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/95 border-t border-[#1a1a1a]"
             style={{
                 paddingBottom: "env(safe-area-inset-bottom)",
                 zIndex: 50,
             }}
         >
-            <div className="flex items-center justify-around h-[60px]">
+            <div className="flex items-center justify-around h-[56px]">
                 {tabs.map((tab) => {
                     const active = isActive(tab);
                     return (
                         <button
                             key={tab.id}
                             onClick={() => handleTap(tab)}
-                            className="relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] min-h-[44px] active:scale-95 transition-transform cursor-pointer"
+                            className="relative flex flex-col items-center justify-center gap-1 w-14 min-h-[44px] active:scale-90 transition-transform duration-150 cursor-pointer"
                         >
-                            <span style={{ color: active ? '#f5f5f5' : '#6b6b6b' }}>
+                            <span style={{ color: active ? '#c9a962' : '#555' }}>
                                 {tab.id === 'home' && <HomeIcon active={active} />}
                                 {tab.id === 'closet' && <ClosetIcon active={active} />}
                                 {tab.id === 'room' && <RoomIcon active={active} />}
@@ -151,15 +151,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                                     <ProfileIcon active={active} avatarUrl={user?.avatarUrl} name={user?.name} />
                                 )}
                             </span>
-                            <span
-                                className="text-[10px] font-medium"
-                                style={{ color: active ? '#f5f5f5' : '#6b6b6b' }}
-                            >
-                                {tab.label}
-                            </span>
+                            {active && <span className="w-1 h-1 rounded-full bg-[#c9a962]" />}
                             {/* Cart badge */}
                             {tab.id === 'bag' && cartCount > 0 && (
-                                <span className="absolute top-0.5 right-1 min-w-[16px] h-[16px] bg-[#c9a962] text-[#0a0a0a] text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] bg-[#c9a962] text-[#0a0a0a] text-[9px] font-bold rounded-full flex items-center justify-center px-1">
                                     {cartCount > 9 ? '9+' : cartCount}
                                 </span>
                             )}

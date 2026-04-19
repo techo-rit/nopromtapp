@@ -65,26 +65,11 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                         <ArrowLeftIcon />
                     </button>
-                    <div className="flex items-center gap-1 h-[40px] px-2">
-                        <SearchIcon />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
-                            className="bg-transparent text-[15px] text-[#f5f5f5] placeholder-[#c9a962]/70 italic focus:outline-none w-[11ch] text-left"
-                        />
-                    </div>
                     <button
-                        onClick={onUpgrade}
-                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95 cursor-pointer"
+                        onClick={() => navigate('/')}
+                        className="p-2 text-[#f5f5f5] hover:text-[#c9a962] transition-colors cursor-pointer"
                     >
-                        <svg className="w-3.5 h-3.5 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span className="text-[15px] text-[#f5f5f5]">
-                            {creationsLeft} <span className="text-[#6b6b6b]">credits</span>
-                        </span>
+                        <RemixLogoIcon />
                     </button>
                 </div>
             </header>
@@ -104,25 +89,27 @@ export const Header: React.FC<HeaderProps> = ({
                         <RemixLogoIcon />
                         <span>stiri</span>
                     </button>
-                    <nav className="flex items-center gap-2">
+                    <nav className="flex items-center gap-1">
                         {[
-                            { label: 'Home', path: '/' },
-                            { label: 'Closet', path: '/closet' },
-                            { label: 'Changing Room', path: '/changing-room' },
-                            { label: 'Concierge', path: '/search' },
+                            { label: 'Home', path: '/', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>) },
+                            { label: 'Closet', path: '/closet', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L8 6h8l-4-4z" /><path d="M4 6h16v2H4z" /><path d="M8 10c0 2 1.5 3 4 3s4-1 4-3" /><path d="M9 13l-1 9" /><path d="M15 13l1 9" /></svg>) },
+                            { label: 'Room', path: '/changing-room', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M6 21v-1a6 6 0 0112 0v1" /></svg>) },
+                            { label: 'Concierge', path: '/search', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>) },
                         ].map((link) => {
                             const isActive = location.pathname === link.path;
                             return (
                                 <button
                                     key={link.path}
                                     onClick={() => navigate(link.path)}
-                                    className={`min-h-[44px] px-5 py-2.5 cursor-pointer text-base font-medium rounded-full transition-all ${
+                                    title={link.label}
+                                    className={`relative min-h-[44px] w-11 flex items-center justify-center cursor-pointer rounded-xl transition-all duration-200 ${
                                         isActive
-                                            ? "bg-[#1a1a1a] text-[#f5f5f5] border border-[#3a3a3a]"
-                                            : "text-[#a0a0a0] hover:text-[#f5f5f5]"
+                                            ? "text-[#c9a962]"
+                                            : "text-[#6b6b6b] hover:text-[#f5f5f5]"
                                     }`}
                                 >
-                                    {link.label}
+                                    {link.icon}
+                                    {isActive && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#c9a962]" />}
                                 </button>
                             );
                         })}
@@ -207,35 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             </div>
 
-            {/* Bottom row: Manifesting + Search + Credits */}
-            <div className="w-full border-t border-[#2a2a2a]">
-                <div className="max-w-[720px] mx-auto h-[56px] flex items-center justify-center gap-8">
-                    <span className="text-[#c9a962] text-base font-medium whitespace-nowrap">
-                        Manifesting
-                    </span>
-                    <div className="flex items-center gap-1 h-[40px] px-2">
-                        <SearchIcon />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
-                            className="bg-transparent text-[15px] text-[#f5f5f5] placeholder-[#c9a962]/70 italic focus:outline-none w-[11ch] text-left"
-                        />
-                    </div>
-                    <button
-                        onClick={onUpgrade}
-                        className="shrink-0 flex items-center gap-2 px-4 py-2 border border-[#3a3a3a] rounded-full hover:border-[#c9a962]/50 hover:bg-[#c9a962]/5 transition-all active:scale-95 hover:cursor-pointer"
-                    >
-                        <svg className="w-4 h-4 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                        <span className="text-sm font-medium text-[#f5f5f5] whitespace-nowrap">
-                            {creationsLeft} credits
-                        </span>
-                    </button>
-                </div>
-            </div>
+
         </header>
     );
 };
