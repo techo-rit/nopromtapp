@@ -48,12 +48,12 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-base flex items-center justify-center px-4">
           <div className="max-w-md w-full text-center">
             {/* Error Icon */}
             <div className="mb-6">
               <svg
-                className="w-16 h-16 mx-auto text-[#6b6b6b]"
+                className="w-16 h-16 mx-auto text-tertiary"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -68,10 +68,10 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error Message */}
-            <h1 className="text-2xl font-semibold text-[#f5f5f5] mb-3">
+            <h1 className="text-2xl font-semibold text-primary mb-3">
               Something went wrong
             </h1>
-            <p className="text-[#6b6b6b] mb-8">
+            <p className="text-tertiary mb-8">
               We're sorry, but something unexpected happened. Please try again.
             </p>
 
@@ -79,15 +79,15 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={this.handleReload}
-                className="px-6 py-3 bg-[#f5f5f5] text-[#0a0a0a] rounded-lg font-medium 
+                className="px-6 py-3 bg-primary text-base rounded-lg font-medium 
                          hover:bg-white transition-colors duration-200"
               >
                 Reload Page
               </button>
               <button
                 onClick={this.handleGoHome}
-                className="px-6 py-3 bg-[#2a2a2a] text-[#f5f5f5] rounded-lg font-medium 
-                         hover:bg-[#3a3a3a] transition-colors duration-200"
+                className="px-6 py-3 bg-elevated text-primary rounded-lg font-medium 
+                         hover:bg-elevated transition-colors duration-200"
               >
                 Go to Home
               </button>
@@ -95,8 +95,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {/* Error Details (only in development) */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mt-8 p-4 bg-[#1a1a1a] rounded-lg text-left">
-                <p className="text-xs text-[#6b6b6b] mb-2">Error Details:</p>
+              <div className="mt-8 p-4 bg-surface rounded-lg text-left">
+                <p className="text-xs text-tertiary mb-2">Error Details:</p>
                 <pre className="text-xs text-red-400 overflow-x-auto whitespace-pre-wrap">
                   {this.state.error.message}
                 </pre>

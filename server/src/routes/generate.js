@@ -38,7 +38,17 @@ function validateAndParseImage(dataUrl) {
   if (!dataUrl) return null;
   const m = /^data:(.+);base64,(.*)$/.exec(dataUrl);
   if (!m) return { error: 'Invalid image format' };
-  return { mimeType: m[1].toLowerCase(), data: m[2] };
+  const mimeType = m[1].toLowerCase();
+  // Validate MIME type
+  if (!UPLOAD_CONFIG.ALLOWED_MIME_TYPES.has(mimeType)) {
+    return { error: `Unsupported image type: ${mimeType}` };
+  }
+  const data = m[2];
+  // Validate base64 size
+  if (data.length > UPLOAD_CONFIG.MAX_BASE64_LENGTH) {
+    return { error: 'Image too large' };
+  }
+  return { mimeType, data };
 }
 
 function sanitizePrompt(text) {

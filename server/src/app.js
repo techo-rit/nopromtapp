@@ -68,6 +68,19 @@ export function createApp() {
     next();
   });
 
+  // Security headers
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0'); // Modern browsers: rely on CSP instead
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(self)');
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
+
   app.use(express.json({
     limit: bodyLimit,
     verify: (req, _res, buf) => {

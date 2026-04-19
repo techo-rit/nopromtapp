@@ -63,8 +63,8 @@ export const PersonalizedCard: React.FC<PersonalizedCardProps> = ({
         rounded-[24px] md:rounded-[40px] overflow-hidden
         relative cursor-pointer group
         transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-        bg-[#141414] border border-white/5 shadow-2xl
-        ${isFocused ? "scale-[1.02] md:scale-[1.01] border-white/20" : "scale-100 opacity-90 md:opacity-100"}
+        bg-surface border border-white/5 shadow-2xl
+        ${isFocused ? "scale-[1.02] md:scale-[1.01] border-active" : "scale-100 opacity-90 md:opacity-100"}
       `}
     >
       {/* 2x1 collage layout */}
@@ -98,11 +98,11 @@ export const PersonalizedCard: React.FC<PersonalizedCardProps> = ({
               loading="lazy"
             />
           ) : isGenerating ? (
-            <div className="w-full h-full bg-[#1a1a1a] animate-pulse flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-[#c9a962] border-t-transparent rounded-full animate-spin" />
+            <div className="w-full h-full bg-surface animate-pulse flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
             </div>
           ) : hasError ? (
-            <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center">
+            <div className="w-full h-full bg-surface flex items-center justify-center">
               <img
                 src={template.imageUrl}
                 alt={template.name}
@@ -111,7 +111,7 @@ export const PersonalizedCard: React.FC<PersonalizedCardProps> = ({
               />
             </div>
           ) : (
-            <div className="w-full h-full bg-[#1a1a1a] shimmer-placeholder" />
+            <div className="w-full h-full bg-surface shimmer-placeholder" />
           )}
 
           {/* "Your Look" badge on try-on side */}

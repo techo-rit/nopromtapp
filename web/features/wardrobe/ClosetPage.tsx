@@ -30,16 +30,19 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
-        <div className="text-5xl mb-6">👗</div>
-        <h2 className="font-['Playfair_Display'] text-2xl text-white mb-3">Your Digital Wardrobe</h2>
-        <p className="text-[14px] text-[#777] max-w-[300px] mb-8 leading-relaxed">
+        <div className="w-16 h-16 rounded-full bg-elevated flex items-center justify-center mb-6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-gold)" strokeWidth="1.5" strokeLinecap="round"><path d="M20.38 3.46L16 2 12 5.5 8 2 3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47c.06.37.29.7.62.89L8 13v9l4-3 4 3v-9l4.52-2.95c.33-.19.56-.52.62-.89l.58-3.47a2 2 0 00-1.34-2.23z"/></svg>
+        </div>
+        <h2 className="font-display text-2xl text-primary mb-3">Your Digital Wardrobe</h2>
+        <p className="text-[14px] text-secondary max-w-[300px] mb-8 leading-relaxed">
           Upload your clothes, get AI-styled outfits, and find what's missing.
         </p>
         <button
           onClick={onLoginRequired}
-          className="px-8 py-3 rounded-xl text-[13px] uppercase tracking-[0.15em] font-semibold
-            bg-gradient-to-r from-[#c9a962] to-[#d4b872] text-[#0a0a0a]
-            hover:from-[#d4b872] hover:to-[#c9a962] active:scale-[0.98] transition-all"
+          className="px-8 py-3 rounded-[var(--radius-pill)] text-[13px] uppercase tracking-[0.15em] font-semibold
+            bg-gold text-base hover:bg-gold-hover active:scale-[0.97] transition-all
+            shadow-[0_0_24px_-4px_rgba(232,195,125,0.25)]"
+          style={{ transitionTimingFunction: 'var(--ease-spring)' }}
         >
           Sign In to Start
         </button>
@@ -113,31 +116,31 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pb-24">
+    <div className="min-h-screen bg-base pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-[#1e1e1e]">
+      <div className="sticky top-0 z-40 glass border-b border-border">
         <div className="px-4 py-3 flex items-center justify-between">
-          <h1 className="font-['Playfair_Display'] text-xl text-white">My Closet</h1>
+          <h1 className="font-display text-xl text-primary">My Closet</h1>
           <div className="flex items-center gap-2">
             {/* Concierge button */}
             <button
               onClick={() => navigate('/chat')}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c9a962]/20 to-[#d4b872]/10
-                border border-[#c9a962]/30 flex items-center justify-center
-                hover:border-[#c9a962]/60 transition-colors"
+              className="w-9 h-9 rounded-full bg-gold-subtle
+                border border-gold/30 flex items-center justify-center
+                hover:border-gold/60 transition-colors min-w-[44px] min-h-[44px]"
             >
-              <span className="text-[14px]">✨</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--color-gold)"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
             </button>
 
             {/* Gaps button */}
             {gaps.length > 0 && (
               <button
                 onClick={() => setShowGaps(!showGaps)}
-                className="relative w-9 h-9 rounded-full bg-[#1a1a1a] border border-[#2a2a2a]
-                  flex items-center justify-center hover:border-[#c9a962]/40 transition-colors"
+                className="relative w-9 h-9 rounded-full bg-surface border border-border
+                  flex items-center justify-center hover:border-gold/40 transition-colors min-w-[44px] min-h-[44px]"
               >
-                <span className="text-[14px]">🎯</span>
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#c9a962] rounded-full text-[9px] font-bold text-[#0a0a0a] flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-secondary)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold rounded-full text-[9px] font-bold text-base flex items-center justify-center">
                   {gaps.length}
                 </span>
               </button>
@@ -149,13 +152,13 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         {syncing && (
           <div className="px-4 pb-3">
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div className="flex-1 h-1 bg-surface rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#c9a962] to-[#d4b872] rounded-full transition-all duration-500"
+                  className="h-full bg-gold rounded-full transition-all duration-500"
                   style={{ width: `${syncProgress}%` }}
                 />
               </div>
-              <span className="text-[11px] text-[#666] shrink-0">{syncMessage}</span>
+              <span className="text-[11px] text-tertiary shrink-0">{syncMessage}</span>
             </div>
           </div>
         )}
@@ -168,8 +171,8 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
               onClick={() => setActiveTab(tab)}
               className={`pb-2.5 text-[13px] font-semibold tracking-wide transition-colors border-b-2 ${
                 activeTab === tab
-                  ? 'text-[#c9a962] border-[#c9a962]'
-                  : 'text-[#555] border-transparent hover:text-[#888]'
+                  ? 'text-gold border-gold'
+                  : 'text-tertiary border-transparent hover:text-secondary'
               }`}
             >
               {tab === 'sets' ? 'Sets' : 'All Items'}
@@ -180,8 +183,8 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="ml-auto pb-2.5 text-[12px] font-semibold tracking-wide text-[#c9a962]
-              hover:text-[#d4b872] disabled:opacity-40 transition-colors flex items-center gap-1.5"
+            className="ml-auto pb-2.5 text-[12px] font-semibold tracking-wide text-gold
+              hover:text-gold-hover disabled:opacity-40 transition-colors flex items-center gap-1.5"
           >
             <svg
               width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -198,8 +201,8 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
 
       {/* Gap cards (collapsible) */}
       {showGaps && gaps.length > 0 && (
-        <div className="px-4 py-4 space-y-3 border-b border-[#1e1e1e]">
-          <h3 className="text-[11px] uppercase tracking-[0.2em] text-[#666] font-semibold">Wardrobe Gaps</h3>
+        <div className="px-4 py-4 space-y-3 border-b border-border">
+          <h3 className="text-[11px] uppercase tracking-[0.2em] text-tertiary font-semibold">Wardrobe Gaps</h3>
           {gaps.map((gap, i) => (
             <GapCard key={i} gap={gap} onShop={handleShopGap} />
           ))}
@@ -220,14 +223,14 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
         className="fixed bottom-20 right-4 w-14 h-14 rounded-full z-40
-          bg-gradient-to-br from-[#c9a962] to-[#d4b872] shadow-lg shadow-[#c9a962]/20
+          bg-gold shadow-lg shadow-gold/20
           flex items-center justify-center
           active:scale-90 transition-transform disabled:opacity-50"
       >
         {uploading ? (
-          <div className="w-5 h-5 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-base border-t-transparent rounded-full animate-spin" />
         ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-base)" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>

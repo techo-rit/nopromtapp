@@ -120,12 +120,12 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
               /* VISUAL STYLING */
               cursor-pointer rounded-[24px] md:rounded-[40px] overflow-hidden 
               transition-all duration-500 cubic-bezier(0.2, 0.8, 0.2, 1)
-              border border-[#2a2a2a]
-              bg-[#050505]
+              border border-border
+              bg-base
 
               /* FOCUS STATE */
               ${isFocused 
-                ? 'scale-100 opacity-100 shadow-2xl border-[#c9a962]/50 z-10' 
+                ? 'scale-100 opacity-100 shadow-2xl border-gold/50 z-10' 
                 : 'scale-[0.95] opacity-60 blur-[1px] z-0'
               }
             `}
@@ -144,13 +144,13 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
                  loading="lazy" 
                />
                <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-               <div className="md:hidden absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#050505] to-transparent" />
+               <div className="md:hidden absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-base to-transparent" />
             </div>
 
             {/* 2. CONTENT AREA */}
             <div className={`
                 relative w-full h-[40%] flex flex-col justify-center px-6 
-                -mt-[1px] bg-[#050505]
+                -mt-[1px] bg-base
                 gap-3 md:gap-5 items-start
                 md:absolute md:bottom-0 md:left-0 md:h-auto md:bg-transparent md:border-0 md:p-12 md:justify-end md:mt-0
             `}>
@@ -163,25 +163,25 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
                   px-6 py-2.5 text-sm md:px-10 md:py-4 md:text-lg 
                   active:scale-95 transition-all duration-300
               `}>
-                  <span className="relative z-10 text-black group-hover/button:text-white transition-colors duration-[600ms] ease-out">
+                  <span className="relative z-10 text-base group-hover/button:text-white transition-colors duration-[600ms] ease-out">
                       Step into
                   </span>
-                  <div className="absolute inset-0 z-0 bg-[#BFA770] translate-y-[101%] group-hover/button:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
+                  <div className="absolute inset-0 z-0 bg-gold-hover translate-y-[101%] group-hover/button:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
               </button>
 
               {/* HEADING */}
               <div>
-                <h3 className="text-[#f5f5f5] text-[24px] md:text-[56px] font-bold leading-tight md:drop-shadow-lg">
+                <h3 className="text-primary text-[24px] md:text-[56px] font-bold leading-tight md:drop-shadow-lg">
                   {template.name}
                 </h3>
                 {!isAvailable && (
-                  <p className="mt-1 text-[#c9a962] text-[12px] md:text-[14px] font-medium">(coming soon...)</p>
+                  <p className="mt-1 text-gold text-[12px] md:text-[14px] font-medium">(coming soon...)</p>
                 )}
               </div>
 
               {/* DESCRIPTION */}
               <p className={`
-                  text-[#E4C085] text-[17px] md:text-[19px] lg:text-[21px] 
+                  text-gold text-[17px] md:text-[19px] lg:text-[21px] 
                   italic leading-[1.4] lg:leading-[1.33]
                   transition-all duration-700 delay-150
                   ${isFocused ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}

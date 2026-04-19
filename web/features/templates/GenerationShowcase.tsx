@@ -48,7 +48,7 @@ export const GenerationShowcase: React.FC<GenerationShowcaseProps> = ({
   const currentStage = PROGRESS_STAGES[stageIndex] || PROGRESS_STAGES[PROGRESS_STAGES.length - 1];
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0a0a] px-6">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-base px-6">
       {/* Product image showcase */}
       <div className="relative w-64 h-80 mb-10 rounded-2xl overflow-hidden">
         <img
@@ -57,31 +57,31 @@ export const GenerationShowcase: React.FC<GenerationShowcaseProps> = ({
           className="w-full h-full object-cover animate-showcase-zoom"
         />
         {/* Subtle overlay shimmer */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-base via-transparent to-transparent opacity-60" />
         <div className="absolute inset-0 animate-shimmer-sweep" />
       </div>
 
       {/* Product name */}
-      <p className="text-sm font-medium text-[#f5f5f5] mb-6 text-center truncate max-w-[280px]">
+      <p className="text-sm font-medium text-primary mb-6 text-center truncate max-w-[280px]">
         {productName}
       </p>
 
       {/* Progress bar */}
       <div className="w-full max-w-xs mb-4">
-        <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+        <div className="h-1 bg-surface rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-[#c9a962] to-[#d4b872] rounded-full transition-all duration-500 ease-out"
+            className="h-full bg-gold rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
       {/* Stage text */}
-      <p className="text-sm text-[#a0a0a0] animate-fade-in-up" key={stageIndex}>
+      <p className="text-sm text-secondary animate-fade-in-up" key={stageIndex}>
         {currentStage.text}
       </p>
 
-      <p className="text-xs text-[#4a4a4a] mt-3">
+      <p className="text-xs text-tertiary mt-3">
         This usually takes 20-30 seconds
       </p>
 

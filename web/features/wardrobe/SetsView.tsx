@@ -45,7 +45,7 @@ export const SetsView: React.FC<SetsViewProps> = ({ onTryOn, refreshTrigger }) =
   if (loading && outfits.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-[#c9a962] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -53,9 +53,11 @@ export const SetsView: React.FC<SetsViewProps> = ({ onTryOn, refreshTrigger }) =
   if (outfits.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-        <div className="text-4xl mb-4">✨</div>
-        <h3 className="font-['Playfair_Display'] text-lg text-white mb-2">No outfits yet</h3>
-        <p className="text-[13px] text-[#666] max-w-[260px]">
+        <div className="w-14 h-14 rounded-full bg-elevated flex items-center justify-center mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-gold)"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
+        </div>
+        <h3 className="font-display text-lg text-white mb-2">No outfits yet</h3>
+        <p className="text-[13px] text-tertiary max-w-[260px]">
           Add at least 10 garments and tap "Sync Pairs" to generate outfit combinations.
         </p>
       </div>
@@ -75,7 +77,7 @@ export const SetsView: React.FC<SetsViewProps> = ({ onTryOn, refreshTrigger }) =
           <button
             onClick={loadMore}
             disabled={loading}
-            className="text-[12px] uppercase tracking-[0.12em] font-semibold text-[#c9a962] hover:text-[#d4b872] disabled:opacity-50 transition-colors"
+            className="text-[12px] uppercase tracking-[0.12em] font-semibold text-gold hover:text-gold-hover disabled:opacity-50 transition-colors"
           >
             {loading ? 'Loading...' : 'Load more'}
           </button>

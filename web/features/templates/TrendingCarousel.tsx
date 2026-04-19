@@ -112,7 +112,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
     const dotCount = Math.min(visibleTemplates.length, 8);
 
     return (
-        <section className="bg-[#080808] pt-8 pb-6 md:py-14 relative overflow-hidden">
+        <section className="bg-base pt-8 pb-6 md:py-14 relative overflow-hidden">
 
             {/* Editorial section label */}
             <div className="flex items-center gap-4 px-[7.5vw] mb-5 md:mb-7">
@@ -131,7 +131,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                 {canScrollLeft && (
                     <button
                         onClick={() => scroll("left")}
-                        className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-50 w-12 h-12 items-center justify-center text-white/50 hover:text-white/90 transition-all duration-200 active:scale-90"
+                        className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-50 w-12 h-12 items-center justify-center text-white/50 hover:text-primary/90 transition-all duration-200 active:scale-90"
                         aria-label="Scroll left"
                     >
                         <ChevronLeftIcon />
@@ -140,7 +140,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                 {canScrollRight && (
                     <button
                         onClick={() => scroll("right")}
-                        className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-50 w-12 h-12 items-center justify-center text-white/50 hover:text-white/90 transition-all duration-200 active:scale-90"
+                        className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-50 w-12 h-12 items-center justify-center text-white/50 hover:text-primary/90 transition-all duration-200 active:scale-90"
                         aria-label="Scroll right"
                     >
                         <ChevronRightIcon />
@@ -164,7 +164,7 @@ export const TrendingCarousel: React.FC<TrendingCarouselProps> = ({
                             >
                                 <div
                                     onClick={() => onSelectTemplate(template)}
-                                    className="relative cursor-pointer w-[85vw] md:w-[82vw] max-w-[1500px] aspect-[4/5] md:aspect-[16/9] rounded-2xl md:rounded-[28px] overflow-hidden bg-[#111]"
+                                    className="relative cursor-pointer w-[85vw] md:w-[82vw] max-w-[1500px] aspect-[4/5] md:aspect-[16/9] rounded-2xl md:rounded-[28px] overflow-hidden bg-surface"
                                     style={{
                                         transform: isFocused
                                             ? "scale(1)"

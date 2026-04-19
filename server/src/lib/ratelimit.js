@@ -1,9 +1,45 @@
 /**
- * Redis-backed Rate Limiting (Upstash) - fail-open
+ * Redis-backed Rate Limiting (Upstash) - fail-closed with in-memory fallback
  */
 
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
+
+let redisClient = null;
+let isRedisConfigured = false;
+
+// In-memory fallback rate limiter when Redis is unavailable
+const inMemoryWindows = new Map(); // key → { count, windowStart }
+const IN_MEMORY_CLEANUP_INTERVAL = 60_000;
+let lastCleanup = Date.now();
+
+function cleanupInMemory() {
+  const now = Date.now();
+  if (now - lastCleanup < IN_MEMORY_CLEANUP_INTERVAL) return;
+  lastCleanup = now;
+  for (const [key, entry] of inMemoryWindows) {
+    if (now - entry.windowStart > 120_000) inMemoryWindows.delete(key);
+  }
+}
+
+function inMemoryRateCheck(identifier, maxRequests, windowMs) {
+  cleanupInMemory();
+  const now = Date.now();
+  const key = identifier;
+  let entry = inMemoryWindows.get(key);
+  if (!entry || now - entry.windowStart > windowMs) {
+    entry = { count: 0, windowStart: now };
+    inMemoryWindows.set(key, entry);
+  }
+  entry.count++;
+  return {
+    success: entry.count <= maxRequests,
+    limit: maxRequests,
+    remaining: Math.max(0, maxRequests - entry.count),
+    reset: entry.windowStart + windowMs,
+    fallback: true,
+  };
+}
 
 let redisClient = null;
 let isRedisConfigured = false;
@@ -64,15 +100,14 @@ export function getGenerateRateLimiter() {
   return generateRateLimiter;
 }
 
-export async function checkRateLimit(limiter, identifier) {
+export async function checkRateLimit(limiter, identifier, maxRequests = 20, windowMs = 60_000) {
   if (!limiter) {
-    console.log('Rate limiter not configured - allowing request (fail-open)');
-    return { success: true, limit: 100, remaining: 100, reset: 0, failedOpen: true };
+    // Redis unavailable — use in-memory fallback instead of failing open
+    return inMemoryRateCheck(identifier, maxRequests, windowMs);
   }
 
   try {
     const result = await limiter.limit(identifier);
-    console.log(`Rate limit check for ${identifier}: success=${result.success}, remaining=${result.remaining}/${result.limit}`);
     return {
       success: result.success,
       limit: result.limit,
@@ -80,8 +115,8 @@ export async function checkRateLimit(limiter, identifier) {
       reset: result.reset,
     };
   } catch (error) {
-    console.warn('Rate limit check failed (Redis error). Allowing request:', error);
-    return { success: true, limit: 100, remaining: 100, reset: 0, failedOpen: true };
+    console.warn('Rate limit check failed (Redis error). Using in-memory fallback:', error.message);
+    return inMemoryRateCheck(identifier, maxRequests, windowMs);
   }
 }
 

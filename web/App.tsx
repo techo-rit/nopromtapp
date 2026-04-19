@@ -1,32 +1,40 @@
 // src/App.tsx
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 
-// Components
+// Components — eagerly loaded (needed on every page)
 import { Header } from "./features/layout/Header";
 import { BottomNav } from "./features/layout/BottomNav";
 import { FloatingSearch } from "./features/layout/FloatingSearch";
 import { AuthModal } from "./features/auth/AuthModal";
-import { PaymentModal } from "./features/payments/PaymentModal";
-import { OnboardingModal } from "./features/profile/OnboardingModal";
-import { ProfilePage } from "./features/pages/ProfilePage";
 import { CartDrawer } from "./features/shop/CartDrawer";
-import { ProductPage } from "./features/shop/ProductPage";
 
-// New Routes
-import { Home } from "./features/pages/Home";
-import { StackView } from "./features/pages/StackView";
-import { ChangingRoom } from "./features/templates/ChangingRoom";
-import { ForYouFeed } from "./features/feed/ForYouFeed";
-import { ClosetPage } from "./features/wardrobe/ClosetPage";
-import { AIConcierge } from "./features/wardrobe/AIConcierge";
+// Lazy-loaded route components (code-split for faster initial load)
+const Home = React.lazy(() => import("./features/pages/Home").then(m => ({ default: m.Home })));
+const StackView = React.lazy(() => import("./features/pages/StackView").then(m => ({ default: m.StackView })));
+const ChangingRoom = React.lazy(() => import("./features/templates/ChangingRoom").then(m => ({ default: m.ChangingRoom })));
+const ForYouFeed = React.lazy(() => import("./features/feed/ForYouFeed").then(m => ({ default: m.ForYouFeed })));
+const ClosetPage = React.lazy(() => import("./features/wardrobe/ClosetPage").then(m => ({ default: m.ClosetPage })));
+const AIConcierge = React.lazy(() => import("./features/wardrobe/AIConcierge").then(m => ({ default: m.AIConcierge })));
+const ProfilePage = React.lazy(() => import("./features/pages/ProfilePage").then(m => ({ default: m.ProfilePage })));
+const ProductPage = React.lazy(() => import("./features/shop/ProductPage").then(m => ({ default: m.ProductPage })));
+const PaymentModal = React.lazy(() => import("./features/payments/PaymentModal").then(m => ({ default: m.PaymentModal })));
+const OnboardingModal = React.lazy(() => import("./features/profile/OnboardingModal").then(m => ({ default: m.OnboardingModal })));
 
 // Services & Utils
 import { authService } from "./features/auth/authService";
 import { profileService } from "./features/profile/profileService";
 import { useTemplates } from "./shared/hooks/useTemplates";
 import { useWishlist } from "./shared/hooks/useWishlist";
+import { ToastProvider } from "./shared/ui/Toast";
 import type { User, UserProfile } from "./types";
+
+// Suspense fallback for lazy-loaded routes
+const RouteFallback = () => (
+  <div className="flex-1 flex items-center justify-center h-full">
+    <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -291,12 +299,17 @@ const App: React.FC = () => {
     setShowCartDrawer(true);
   }, []);
 
+  const handleCartUpdateAndRefresh = useCallback((count?: number) => {
+    handleCartUpdate(count);
+    triggerCartRefresh();
+  }, [handleCartUpdate, triggerCartRefresh]);
+
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] font-sans overflow-hidden">
+    <ToastProvider>
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-base text-primary font-body overflow-hidden">
       
-      {/* HEADER */}
-      <div className="shrink-0 z-50">
-        <Header
+      {/* HEADER — fixed glassmorphism overlay, no layout push */}
+      <Header
           user={user}
           onSignIn={openAuthModal}
           onLogout={handleLogout}
@@ -309,7 +322,6 @@ const App: React.FC = () => {
           cartCount={user ? cartCount : 0}
           onCartClick={user ? openCartDrawer : undefined}
         />
-      </div>
 
       {/* MODALS */}
       <AuthModal
@@ -335,6 +347,7 @@ const App: React.FC = () => {
       />
 
       {user && (
+        <Suspense fallback={null}>
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={closePaymentModal}
@@ -344,29 +357,33 @@ const App: React.FC = () => {
              if (u) setUser(u);
           }}
         />
+        </Suspense>
       )}
 
       {user && (
+        <Suspense fallback={null}>
         <OnboardingModal
           isOpen={showOnboardingModal}
           onClose={closeOnboardingModal}
           onComplete={handleOnboardingComplete}
           userName={user.name || ''}
         />
+        </Suspense>
       )}
       
       {/* MAIN CONTENT */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route 
             path="/" 
             element={
-              <Home 
+              <Home
                 trendingTemplates={trendingTemplates}
                 templatesByStack={templatesByStack}
                 isLoading={templatesLoading}
                 onSelectTemplate={(t) => navigate(`/product/${t.id}`)}
-                onTryOn={(t) => user ? navigate(`/changing-room?product=${t.id}`) : openAuthModal()}
+                onTryOn={(t) => navigate(`/changing-room?product=${t.id}`)}
                 user={user}
                 onLoginRequired={openAuthModal}
                 onboardingPercent={onboardingPercent}
@@ -388,7 +405,7 @@ const App: React.FC = () => {
             path="/product/:handle"
             element={
               <ProductPage
-                onCartUpdate={(count) => { handleCartUpdate(count); triggerCartRefresh(); }}
+                onCartUpdate={handleCartUpdateAndRefresh}
                 wishlistedIds={user ? wishlistedIds : undefined}
                 onToggleWishlist={user ? toggleWishlist : undefined}
                 onLoginRequired={openAuthModal}
@@ -451,6 +468,7 @@ const App: React.FC = () => {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </main>
 
       {/* CART DRAWER */}
@@ -468,14 +486,14 @@ const App: React.FC = () => {
       {/* FLOATING SEARCH (mobile only, home page) */}
       <FloatingSearch searchQuery={searchQuery} onSearchChange={handleSearchChange} />
 
-      {/* FOOTER */}
-      <div className="shrink-0 z-50">
-        <BottomNav
+      {/* BOTTOM NAV — fixed glassmorphism overlay */}
+      <BottomNav
           cartCount={user ? cartCount : 0}
           onCartClick={user ? openCartDrawer : undefined}
+          user={user}
         />
-      </div>
     </div>
+    </ToastProvider>
   );
 };
 

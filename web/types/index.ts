@@ -442,7 +442,7 @@ export interface ConciergeMessage {
 
 export interface RefinementButton {
   label: string;
-  emoji: string;
+  emoji?: string;
   filter_patch: Record<string, unknown>;
 }
 

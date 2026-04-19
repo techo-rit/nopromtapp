@@ -6,16 +6,11 @@
  * Reference: docs/PERSONALIZATION_MODEL.md §11
  */
 
-import { createAdminClient } from '../lib/auth.js';
-
-const ADMIN_KEY = process.env.ADMIN_PURGE_KEY || '';
+import { createAdminClient, verifyAdmin } from '../lib/auth.js';
 
 export async function getMetricsHandler(req, res) {
   try {
-    const key = req.headers['x-admin-key'];
-    if (!ADMIN_KEY || key !== ADMIN_KEY) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    if (!verifyAdmin(req, res)) return;
 
     const supabase = createAdminClient();
     const days = Math.min(parseInt(req.query.days, 10) || 7, 90);

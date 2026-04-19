@@ -24,10 +24,10 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
       role: 'assistant',
       content: "What's the vibe today? Tell me the occasion and I'll pull looks from your wardrobe.",
       refinement_buttons: [
-        { label: 'Date Night', emoji: '💕', filter_patch: { occasion: ['date'] } },
-        { label: 'Office Ready', emoji: '💼', filter_patch: { occasion: ['office'] } },
-        { label: 'Party Mode', emoji: '🎉', filter_patch: { occasion: ['party'] } },
-        { label: 'Casual Day', emoji: '☀️', filter_patch: { occasion: ['casual'] } },
+        { label: 'Date Night', filter_patch: { occasion: ['date'] } },
+        { label: 'Office Ready', filter_patch: { occasion: ['office'] } },
+        { label: 'Party Mode', filter_patch: { occasion: ['party'] } },
+        { label: 'Casual Day', filter_patch: { occasion: ['casual'] } },
       ],
     },
   ]);
@@ -90,16 +90,19 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
-        <div className="text-5xl mb-6">✨</div>
-        <h2 className="font-['Playfair_Display'] text-2xl text-white mb-3">Style Concierge</h2>
-        <p className="text-[14px] text-[#777] max-w-[300px] mb-8 leading-relaxed">
+        <div className="w-16 h-16 rounded-full bg-elevated flex items-center justify-center mb-6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--color-gold)"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
+        </div>
+        <h2 className="font-display text-2xl text-primary mb-3">Style Concierge</h2>
+        <p className="text-[14px] text-secondary max-w-[300px] mb-8 leading-relaxed">
           Sign in to chat with your AI stylist and discover outfits from your wardrobe.
         </p>
         <button
           onClick={onLoginRequired}
-          className="px-8 py-3 rounded-xl text-[13px] uppercase tracking-[0.15em] font-semibold
-            bg-gradient-to-r from-[#c9a962] to-[#d4b872] text-[#0a0a0a]
-            hover:from-[#d4b872] hover:to-[#c9a962] active:scale-[0.98] transition-all"
+          className="px-8 py-3 rounded-[var(--radius-pill)] text-[13px] uppercase tracking-[0.15em] font-semibold
+            bg-gold text-base hover:bg-gold-hover active:scale-[0.97] transition-all
+            shadow-[0_0_24px_-4px_rgba(232,195,125,0.25)]"
+          style={{ transitionTimingFunction: 'var(--ease-spring)' }}
         >
           Sign In to Start
         </button>
@@ -108,22 +111,22 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col pb-16">
+    <div className="min-h-screen bg-base flex flex-col pb-16">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-[#1e1e1e] shrink-0">
+      <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center hover:bg-[#222] transition-colors mr-1"
+            className="w-8 h-8 rounded-full bg-surface flex items-center justify-center hover:bg-elevated transition-colors mr-1 min-w-[44px] min-h-[44px]"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15,18 9,12 15,6" />
             </svg>
           </button>
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c9a962] to-[#d4b872] flex items-center justify-center">
-            <span className="text-[12px]">✨</span>
+          <div className="w-7 h-7 rounded-full bg-gold flex items-center justify-center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--color-base)"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
           </div>
-          <span className="font-['Playfair_Display'] text-[15px] text-white">Style Concierge</span>
+          <span className="font-display text-[15px] text-primary">Style Concierge</span>
         </div>
       </div>
 
@@ -136,8 +139,8 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
               <div
                 className={`rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-[#c9a962]/15 text-[#c9a962] rounded-br-sm'
-                    : 'bg-[#141414] text-[#ccc] border border-[#1e1e1e] rounded-bl-sm'
+                    ? 'bg-gold-subtle text-gold rounded-br-sm'
+                    : 'bg-surface text-secondary border border-border rounded-bl-sm'
                 }`}
               >
                 {msg.content}
@@ -161,8 +164,8 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
                       onClick={() => send(undefined, btn.filter_patch)}
                       disabled={loading}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                        bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#c9a962]/40
-                        text-[12px] text-[#aaa] hover:text-[#c9a962] transition-all
+                        bg-surface border border-border hover:border-gold/40
+                        text-[12px] text-secondary hover:text-gold transition-all
                         disabled:opacity-50"
                     >
                       {btn.emoji && <span>{btn.emoji}</span>}
@@ -177,10 +180,10 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-[#141414] border border-[#1e1e1e] rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
-              <span className="w-1.5 h-1.5 bg-[#c9a962] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 bg-[#c9a962] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 bg-[#c9a962] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="bg-surface border border-border rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
+              <span className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}
@@ -191,7 +194,7 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
       {/* Input */}
       <form
         onSubmit={handleSubmit}
-        className="shrink-0 border-t border-[#1e1e1e] px-4 py-3 flex items-center gap-3"
+        className="shrink-0 border-t border-border px-4 py-3 flex items-center gap-3"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
       >
         <input
@@ -199,18 +202,18 @@ export const AIConcierge: React.FC<AIConciergeProps> = ({ user, onLoginRequired,
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Describe the vibe you want..."
-          className="flex-1 bg-[#141414] border border-[#2a2a2a] rounded-xl px-4 py-2.5
-            text-[13px] text-white placeholder-[#555]
-            focus:border-[#c9a962]/40 focus:outline-none transition-colors"
+          className="flex-1 bg-surface border border-border rounded-[var(--radius-input)] px-4 py-2.5
+            text-[13px] text-primary placeholder-tertiary
+            focus:border-gold/40 focus:outline-none transition-colors"
         />
         <button
           type="submit"
           disabled={!input.trim() || loading}
-          className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#c9a962] to-[#d4b872]
-            flex items-center justify-center shrink-0
+          className="w-10 h-10 rounded-[var(--radius-input)] bg-gold
+            flex items-center justify-center shrink-0 min-w-[44px] min-h-[44px]
             disabled:opacity-30 active:scale-95 transition-all"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-base)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22,2 15,22 11,13 2,9" />
           </svg>

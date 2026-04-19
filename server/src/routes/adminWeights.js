@@ -8,18 +8,7 @@
  * Reference: docs/PERSONALIZATION_MODEL.md §9
  */
 
-import { createAdminClient } from '../lib/auth.js';
-
-const ADMIN_KEY = process.env.ADMIN_PURGE_KEY || '';
-
-function verifyAdmin(req, res) {
-  const key = req.headers['x-admin-key'];
-  if (!ADMIN_KEY || key !== ADMIN_KEY) {
-    res.status(403).json({ error: 'Forbidden' });
-    return false;
-  }
-  return true;
-}
+import { createAdminClient, verifyAdmin } from '../lib/auth.js';
 
 export async function getWeightsHandler(req, res) {
   try {

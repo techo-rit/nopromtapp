@@ -6,7 +6,9 @@ import { createAdminClient, getUserFromRequest } from '../lib/auth.js';
 function verifyRazorpaySignature(orderId, paymentId, signature, secret) {
   const body = `${orderId}|${paymentId}`;
   const expectedSignature = crypto.createHmac('sha256', secret).update(body).digest('hex');
-  return expectedSignature === signature;
+  // Timing-safe comparison to prevent timing attacks
+  if (signature.length !== expectedSignature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
 }
 
 async function addEntitlementsWithRetry(supabase, userId, creations, accountType, log) {

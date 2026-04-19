@@ -9,13 +9,11 @@
 
 import { createAdminClient, getUserFromRequest } from '../lib/auth.js';
 import { createTtlCache } from '../lib/cache.js';
+import { feedCache } from '../lib/feedCache.js';
 import {
   rankProducts,
   injectExplorationSlots,
 } from '../lib/ranking.js';
-
-const feedCache = createTtlCache(60 * 1000); // 60s per-user cache
-export { feedCache };
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -61,41 +59,34 @@ export async function feedHandler(req, res) {
       return res.json({ items: [], total: 0, hasMore: false });
     }
 
-    // Fetch product stats
+    // Parallel fetch: product stats, weights, boosts, and user data (all independent)
     const productIds = products.map((p) => p.id);
-    const { data: stats } = await supabase
-      .from('product_click_stats')
-      .select('*')
-      .in('product_id', productIds);
+    const parallelQueries = [
+      supabase.from('product_click_stats').select('*').in('product_id', productIds),
+      supabase.from('ranking_weights').select('*').eq('is_active', true).single(),
+      supabase.from('admin_boost_queue').select('*').gt('expires_at', new Date().toISOString()),
+    ];
+
+    if (userId) {
+      parallelQueries.push(
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('user_click_profile').select('*').eq('user_id', userId).single(),
+      );
+    }
+
+    const results = await Promise.all(parallelQueries);
 
     const productStatsMap = {};
-    for (const s of (stats || [])) {
+    for (const s of (results[0].data || [])) {
       productStatsMap[s.product_id] = s;
     }
 
-    // Fetch active weights
-    const { data: activeWeights } = await supabase
-      .from('ranking_weights')
-      .select('*')
-      .eq('is_active', true)
-      .single();
+    const weights = results[1].data || { w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15 };
+    const boosts = results[2].data || [];
 
-    const weights = activeWeights || { w_style: 0.75, w_user_clicks: 0.10, w_product_pop: 0.15 };
-
-    // Fetch active boosts
-    const { data: boosts } = await supabase
-      .from('admin_boost_queue')
-      .select('*')
-      .gt('expires_at', new Date().toISOString());
-
-    // If authenticated, fetch user profile and click profile
     if (userId) {
-      const [profileResult, clickResult] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase.from('user_click_profile').select('*').eq('user_id', userId).single(),
-      ]);
-      userProfile = profileResult.data;
-      clickProfile = clickResult.data;
+      userProfile = results[3]?.data;
+      clickProfile = results[4]?.data;
     }
 
     // If no user profile, create minimal one for cold start

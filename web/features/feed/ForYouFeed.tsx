@@ -109,7 +109,7 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
       </div>
     );
   }
@@ -117,10 +117,10 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 px-6">
-        <p className="text-neutral-500 text-sm">{error}</p>
+        <p className="text-tertiary text-sm">{error}</p>
         <button
           onClick={() => loadFeed(0, false)}
-          className="px-4 py-2 text-sm font-medium text-neutral-900 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-primary bg-surface rounded-lg hover:bg-elevated transition-colors"
         >
           Retry
         </button>
@@ -131,8 +131,8 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-2 px-6">
-        <p className="text-neutral-500 text-sm">No recommendations yet</p>
-        <p className="text-neutral-400 text-xs">Browse some products to get personalized picks</p>
+        <p className="text-tertiary text-sm">No recommendations yet</p>
+        <p className="text-tertiary/60 text-xs">Browse some products to get personalized picks</p>
       </div>
     );
   }
@@ -140,8 +140,8 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
   return (
     <div className="w-full">
       <div className="px-4 pt-4 pb-2">
-        <h2 className="text-lg font-semibold tracking-tight text-neutral-900">For You</h2>
-        <p className="text-xs text-neutral-500 mt-0.5">Curated based on your style</p>
+        <h2 className="text-lg font-semibold tracking-tight text-primary">For You</h2>
+        <p className="text-xs text-tertiary mt-0.5">Curated based on your style</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-3 lg:grid-cols-4">
@@ -150,17 +150,17 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
             key={item.product_id}
             ref={setCardRef}
             data-product-id={item.product_id}
-            className="group relative flex flex-col rounded-xl overflow-hidden bg-white border border-neutral-100 shadow-sm hover:shadow-md transition-shadow"
+            className="group relative flex flex-col rounded-xl overflow-hidden bg-surface border border-border shadow-sm hover:shadow-md transition-shadow"
           >
             {/* Card header badges */}
             <div className="absolute top-2 left-2 z-10 flex gap-1">
               {item.is_new_arrival && (
-                <span className="px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-green-500 text-white rounded">
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-success text-base rounded">
                   New
                 </span>
               )}
               {item.isExploration && (
-                <span className="px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-amber-500 text-white rounded">
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-gold text-base rounded">
                   Explore
                 </span>
               )}
@@ -171,11 +171,11 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
               onClick={() => handleProductClick(item)}
               className="w-full text-left focus:outline-none"
             >
-              <div className="aspect-[3/4] bg-neutral-50 flex items-center justify-center">
-                <span className="text-neutral-300 text-xs">Product Image</span>
+              <div className="aspect-[3/4] bg-surface flex items-center justify-center">
+                <span className="text-tertiary text-xs">Product Image</span>
               </div>
               <div className="px-3 pt-2 pb-1">
-                <h3 className="text-sm font-medium text-neutral-900 line-clamp-2 leading-tight">
+                <h3 className="text-sm font-medium text-primary line-clamp-2 leading-tight">
                   {item.title}
                 </h3>
                 {item.style_tags && item.style_tags.length > 0 && (
@@ -183,7 +183,7 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
                     {item.style_tags.slice(0, 2).map((tag) => (
                       <span
                         key={tag}
-                        className="px-1.5 py-0.5 text-[10px] text-neutral-500 bg-neutral-50 rounded"
+                        className="px-1.5 py-0.5 text-[10px] text-tertiary bg-elevated rounded"
                       >
                         {tag}
                       </span>
@@ -191,7 +191,7 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
                   </div>
                 )}
                 {item.min_price != null && (
-                  <p className="text-xs text-neutral-600 mt-1">
+                  <p className="text-xs text-secondary mt-1">
                     ₹{Math.round(item.min_price / 100)}
                   </p>
                 )}
@@ -202,7 +202,7 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
             <div className="px-3 pb-3 mt-auto">
               <button
                 onClick={() => handleTryOn(item)}
-                className="w-full py-2 text-xs font-semibold text-white bg-neutral-900 rounded-lg hover:bg-neutral-800 active:scale-[0.98] transition-all"
+                className="w-full py-2 text-xs font-semibold text-base bg-gold rounded-lg hover:bg-gold-hover active:scale-[0.98] transition-all"
               >
                 Try On
               </button>
@@ -216,7 +216,7 @@ export const ForYouFeed: React.FC<ForYouFeedProps> = ({ user, onLoginRequired })
 
       {loadingMore && (
         <div className="flex justify-center py-6">
-          <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-gold/40 border-t-gold rounded-full animate-spin" />
         </div>
       )}
     </div>

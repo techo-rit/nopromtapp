@@ -18,10 +18,11 @@ const WARDROBE_ACTIVATION_THRESHOLD = 10;
  * @param {object} userProfile - profiles row
  * @param {object} res - Express response (for SSE)
  */
-export async function runWardrobeSync(userId, userProfile, res) {
+export async function runWardrobeSync(userId, userProfile, res, isAborted = () => false) {
   const admin = createAdminClient();
 
   const sendEvent = (type, data) => {
+    if (isAborted()) return;
     res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`);
   };
 
@@ -41,24 +42,25 @@ export async function runWardrobeSync(userId, userProfile, res) {
     if (unanalyzed.length > 0) {
       sendEvent('analyzing', { progress: 0, message: `Analyzing ${unanalyzed.length} garments...` });
 
-      // Fetch image buffers for unanalyzed garments
-      const garmentInputs = [];
-      for (const g of unanalyzed) {
+      // Fetch image buffers in parallel
+      const garmentInputs = await Promise.all(unanalyzed.map(async (g) => {
         try {
           const { data: fileData } = await admin.storage
             .from('wardrobe-items')
             .download(g.storage_path);
           const buffer = fileData ? Buffer.from(await fileData.arrayBuffer()) : null;
-          garmentInputs.push({ id: g.id, imageUrl: g.image_url, imageBuffer: buffer });
+          return { id: g.id, imageUrl: g.image_url, imageBuffer: buffer };
         } catch {
-          garmentInputs.push({ id: g.id, imageUrl: g.image_url });
+          return { id: g.id, imageUrl: g.image_url };
         }
-      }
+      }));
+
+      if (isAborted()) return;
 
       const analysisResults = await analyzeGarmentsBatch(garmentInputs);
 
-      // Update garments with extracted attributes
-      for (const result of analysisResults) {
+      // Update garments with extracted attributes in parallel
+      await Promise.all(analysisResults.map(async (result) => {
         if (result.attributes) {
           const attrs = result.attributes;
           await admin.from('wardrobe_garments').update({
@@ -113,8 +115,9 @@ export async function runWardrobeSync(userId, userProfile, res) {
           }).eq('id', result.id);
           logger.warn(`Garment ${result.id} analysis failed: ${result.error}`);
         }
-      }
+      }));
 
+      if (isAborted()) return;
       sendEvent('analyzing', { progress: 100, message: 'Analysis complete' });
     }
 
@@ -140,6 +143,7 @@ export async function runWardrobeSync(userId, userProfile, res) {
     }
 
     // ── Step 5: Generate outfit pairings ──
+    if (isAborted()) return;
     sendEvent('pairing', { progress: 0, message: 'Creating outfit combinations...' });
 
     const outfits = generateOutfits(analyzedGarments, userProfile);
@@ -147,6 +151,7 @@ export async function runWardrobeSync(userId, userProfile, res) {
     sendEvent('pairing', { progress: 100, message: `Generated ${outfits.length} outfits` });
 
     // ── Step 6: Generate vibe reports ──
+    if (isAborted()) return;
     sendEvent('ranking', { progress: 0, message: 'Crafting vibe reports...' });
 
     const userAccessories = analyzedGarments.filter(g => g.garment_category === 'accessory');
@@ -156,10 +161,10 @@ export async function runWardrobeSync(userId, userProfile, res) {
       .delete()
       .eq('user_id', userId);
 
-    for (const outfit of outfits) {
+    // Build all outfit rows and batch insert
+    const outfitRows = outfits.map(outfit => {
       const vibe = generateVibeReport(outfit, outfit.garments, userProfile, userAccessories);
-
-      await admin.from('wardrobe_outfits').insert({
+      return {
         user_id: userId,
         garment_ids: outfit.garment_ids,
         harmony_score: outfit.harmony_score,
@@ -170,14 +175,18 @@ export async function runWardrobeSync(userId, userProfile, res) {
         fabric_compatibility: outfit.fabric_compatibility,
         trend_factor: outfit.trend_factor,
         practicality: outfit.practicality,
-        display_score: outfit.harmony_score, // Personalization applied separately
+        display_score: outfit.harmony_score,
         composite_tags: outfit.composite_tags,
         vibe_title: vibe.title,
         vibe_why: vibe.why,
         vibe_occasions: vibe.occasions,
         vibe_accessories: vibe.accessories,
         vibe_match_pct: vibe.match_pct,
-      });
+      };
+    });
+
+    if (outfitRows.length > 0) {
+      await admin.from('wardrobe_outfits').insert(outfitRows);
     }
 
     // ── Step 7: Compute wardrobe style profile + gaps ──

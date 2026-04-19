@@ -329,7 +329,7 @@ export const SmartSelfieModal: React.FC<SmartSelfieModalProps> = ({
 
             <button
                 onClick={onClose}
-                className="absolute right-6 z-50 p-4 rounded-full bg-gray-100 hover:bg-gray-200 text-black transition-colors shadow-sm"
+                className="absolute right-6 z-50 p-4 rounded-full bg-gray-100 hover:bg-gray-200 text-base transition-colors shadow-sm"
                 style={{ top: 'calc(1.5rem + env(safe-area-inset-top))' }}
             >
                 <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" fill="none">

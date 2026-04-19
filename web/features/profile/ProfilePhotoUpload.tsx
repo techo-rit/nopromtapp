@@ -91,11 +91,11 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
           <img
             src={currentPhotoUrl}
             alt={userName}
-            className="w-20 h-20 rounded-full object-cover border-2 border-[#2a2a2a]"
+            className="w-20 h-20 rounded-full object-cover border-2 border-border"
           />
         ) : (
-          <div className="w-20 h-20 rounded-full bg-[#1a1a1a] border-2 border-dashed border-[#3a3a3a] flex items-center justify-center">
-            <svg className="w-8 h-8 text-[#4a4a4a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <div className="w-20 h-20 rounded-full bg-surface border-2 border-dashed border-active flex items-center justify-center">
+            <svg className="w-8 h-8 text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
@@ -113,15 +113,15 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading || isDeleting}
-            className="text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
+            className="text-sm text-gold hover:text-gold-hover transition-colors disabled:opacity-50"
           >
             {currentPhotoUrl ? 'Change Photo' : 'Add Photo'}
           </button>
-          <span className="text-[#2a2a2a]">|</span>
+          <span className="text-tertiary">|</span>
           <button
             onClick={() => setShowCamera(true)}
             disabled={isUploading || isDeleting}
-            className="flex items-center gap-1.5 text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm text-gold hover:text-gold-hover transition-colors disabled:opacity-50"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -134,7 +134,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
           <button
             onClick={handleDelete}
             disabled={isUploading || isDeleting}
-            className="text-xs text-[#6b6b6b] hover:text-red-400 transition-colors disabled:opacity-50"
+            className="text-xs text-tertiary hover:text-red-400 transition-colors disabled:opacity-50"
           >
             {isDeleting ? 'Removing...' : 'Remove Photo'}
           </button>

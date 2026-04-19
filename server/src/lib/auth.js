@@ -225,6 +225,24 @@ export async function getUserFromRequest(req, res) {
   return { user, accessToken: refreshData.session.access_token };
 }
 
+/**
+ * Shared admin key verification.
+ * Returns true if authorized, false (with response sent) if not.
+ */
+export function verifyAdmin(req, res) {
+  const adminKey = process.env.ADMIN_PURGE_KEY || '';
+  if (!adminKey) {
+    res.status(503).json({ error: 'Admin access not configured' });
+    return false;
+  }
+  const key = req.headers['x-admin-key'];
+  if (!key || key !== adminKey) {
+    res.status(403).json({ error: 'Forbidden' });
+    return false;
+  }
+  return true;
+}
+
 export async function fetchUserProfile(adminClient, userId) {
   const { data: profile } = await adminClient
     .from('profiles')

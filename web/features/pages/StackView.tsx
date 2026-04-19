@@ -20,7 +20,7 @@ export const StackView: React.FC<StackViewProps> = ({ templatesByStack, onSelect
   const stackTemplates = templatesByStack.get(selectedStack.id) ?? [];
 
   return (
-    <div className="w-full h-full overflow-hidden bg-[#0a0a0a]">
+    <div className="w-full h-full overflow-hidden bg-base">
       <TemplateGrid templates={stackTemplates} onSelectTemplate={onSelectTemplate} />
     </div>
   );

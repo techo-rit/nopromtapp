@@ -15,7 +15,7 @@ const MAX_BATCH_SIZE = 20;
 export async function trackEventsHandler(req, res) {
   try {
     const authResult = await getUserFromRequest(req, res);
-    if ('error' in authResult) return;
+    if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
 
     const { user } = authResult;
     const { events } = req.body;
@@ -87,53 +87,39 @@ export async function trackEventsHandler(req, res) {
       return res.status(500).json({ error: 'Failed to track events' });
     }
 
-    // Increment events_since_compute for this user
-    const { data: existing } = await supabase
+    // Upsert user_click_profile in a single flow
+    const newViews = eventsToInsert
+      .filter((e) => e.event_type === 'view')
+      .map((e) => e.product_id);
+
+    const { data: profile } = await supabase
       .from('user_click_profile')
-      .select('user_id')
+      .select('user_id, events_since_compute, recent_impressions')
       .eq('user_id', user.id)
       .single();
 
-    if (existing) {
-      await supabase.rpc('increment_events_since_compute', { uid: user.id }).catch(() => {
-        // If RPC doesn't exist, do manual update
-        supabase
-          .from('user_click_profile')
-          .update({ events_since_compute: eventsToInsert.length })
-          .eq('user_id', user.id)
-          .then(() => {});
-      });
+    if (profile) {
+      const impressions = Array.isArray(profile.recent_impressions)
+        ? profile.recent_impressions
+        : [];
+      const updatePayload = {
+        events_since_compute: (profile.events_since_compute || 0) + eventsToInsert.length,
+      };
+      if (newViews.length > 0) {
+        updatePayload.recent_impressions = [...newViews, ...impressions].slice(0, 200);
+      }
+      await supabase
+        .from('user_click_profile')
+        .update(updatePayload)
+        .eq('user_id', user.id);
     } else {
-      // Create initial click profile
       await supabase
         .from('user_click_profile')
         .insert({
           user_id: user.id,
           events_since_compute: eventsToInsert.length,
+          recent_impressions: newViews.slice(0, 200),
         });
-    }
-
-    // Update recent_impressions for view events
-    const newViews = eventsToInsert
-      .filter((e) => e.event_type === 'view')
-      .map((e) => e.product_id);
-
-    if (newViews.length > 0 && existing) {
-      const { data: profile } = await supabase
-        .from('user_click_profile')
-        .select('recent_impressions')
-        .eq('user_id', user.id)
-        .single();
-
-      const impressions = Array.isArray(profile?.recent_impressions)
-        ? profile.recent_impressions
-        : [];
-      const updated = [...newViews, ...impressions].slice(0, 200);
-
-      await supabase
-        .from('user_click_profile')
-        .update({ recent_impressions: updated })
-        .eq('user_id', user.id);
     }
 
     return res.json({

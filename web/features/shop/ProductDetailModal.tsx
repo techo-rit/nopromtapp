@@ -134,17 +134,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] bg-[#141414] border border-[#2a2a2a] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
+      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] bg-surface border border-border rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a] shrink-0">
-          <h2 className="text-lg font-semibold text-[#f5f5f5] truncate">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+          <h2 className="text-lg font-semibold text-primary truncate">
             {product?.title || 'Product Details'}
           </h2>
           <div className="flex items-center gap-1">
             {onToggleWishlist && (
               <button
                 onClick={onToggleWishlist}
-                className="p-2 text-[#6b6b6b] hover:text-[#f5f5f5] transition-colors"
+                className="p-2 text-tertiary hover:text-primary transition-colors"
                 aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
               >
                 {isWishlisted ? (
@@ -156,7 +156,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             )}
             <button
               onClick={onClose}
-              className="p-2 -mr-2 text-[#6b6b6b] hover:text-[#f5f5f5] transition-colors"
+              className="p-2 -mr-2 text-tertiary hover:text-primary transition-colors"
               aria-label="Close"
             >
               <CloseIcon width={20} height={20} />
@@ -169,14 +169,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {loading && (
             <div className="flex flex-col items-center justify-center py-20">
               <Spinner />
-              <p className="text-[#6b6b6b] mt-4">Loading product...</p>
+              <p className="text-tertiary mt-4">Loading product...</p>
             </div>
           )}
 
           {error && !loading && (
             <div className="p-8 text-center">
               <p className="text-red-400">{error}</p>
-              <button onClick={onClose} className="mt-4 px-6 py-2 text-sm text-[#a0a0a0] border border-[#2a2a2a] rounded-lg hover:bg-[#1a1a1a]">
+              <button onClick={onClose} className="mt-4 px-6 py-2 text-sm text-secondary border border-border rounded-lg hover:bg-surface">
                 Close
               </button>
             </div>
@@ -185,7 +185,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {product && !loading && (
             <div className="pb-4">
               {/* Image Gallery */}
-              <div className="relative aspect-square bg-[#0a0a0a]">
+              <div className="relative aspect-square bg-base">
                 {product.images.length > 0 ? (
                   <img
                     src={product.images[activeImageIndex]?.url}
@@ -193,7 +193,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[#6b6b6b]">
+                  <div className="w-full h-full flex items-center justify-center text-tertiary">
                     No image available
                   </div>
                 )}
@@ -220,12 +220,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="flex items-baseline gap-3">
                   {selectedVariant && (
                     <>
-                      <span className="text-2xl font-bold text-[#f5f5f5]">
+                      <span className="text-2xl font-bold text-primary">
                         {formatPrice(selectedVariant.price)}
                       </span>
                       {selectedVariant.compareAtPrice &&
                         parseFloat(selectedVariant.compareAtPrice.amount) > parseFloat(selectedVariant.price.amount) && (
-                          <span className="text-base text-[#6b6b6b] line-through">
+                          <span className="text-base text-tertiary line-through">
                             {formatPrice(selectedVariant.compareAtPrice)}
                           </span>
                         )}
@@ -242,7 +242,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
 
                 {/* Vendor + Type */}
-                <div className="flex items-center gap-2 text-sm text-[#6b6b6b]">
+                <div className="flex items-center gap-2 text-sm text-tertiary">
                   <span>{product.vendor}</span>
                   {product.productType && (
                     <>
@@ -256,7 +256,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {Object.entries(optionGroups).map(([optName, values]) => (
                   values.length > 1 && (
                     <div key={optName}>
-                      <label className="block text-sm font-medium text-[#a0a0a0] mb-2">{optName}</label>
+                      <label className="block text-sm font-medium text-secondary mb-2">{optName}</label>
                       <div className="flex flex-wrap gap-2">
                         {values.map((val) => {
                           const isSelected = selectedVariant?.selectedOptions.some(
@@ -268,8 +268,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                               onClick={() => handleOptionChange(optName, val)}
                               className={`px-4 py-2 text-sm rounded-lg border transition-all ${
                                 isSelected
-                                  ? 'border-[#c9a962] text-[#c9a962] bg-[#c9a962]/10'
-                                  : 'border-[#2a2a2a] text-[#a0a0a0] hover:border-[#3a3a3a] hover:text-[#f5f5f5]'
+                                  ? 'border-gold text-gold bg-gold/10'
+                                  : 'border-border text-secondary hover:border-active hover:text-primary'
                               }`}
                             >
                               {val}
@@ -284,8 +284,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {/* Description */}
                 {product.description && (
                   <div>
-                    <h3 className="text-sm font-medium text-[#a0a0a0] mb-2">Description</h3>
-                    <p className="text-sm text-[#6b6b6b] leading-relaxed">{product.description}</p>
+                    <h3 className="text-sm font-medium text-secondary mb-2">Description</h3>
+                    <p className="text-sm text-tertiary leading-relaxed">{product.description}</p>
                   </div>
                 )}
 
@@ -293,7 +293,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {product.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {product.tags.slice(0, 8).map((tag) => (
-                      <span key={tag} className="text-xs px-2.5 py-1 bg-[#1a1a1a] text-[#6b6b6b] rounded-full border border-[#2a2a2a]">
+                      <span key={tag} className="text-xs px-2.5 py-1 bg-surface text-tertiary rounded-full border border-border">
                         {tag}
                       </span>
                     ))}
@@ -306,20 +306,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         {/* Footer Actions */}
         {product && !loading && (
-          <div className="shrink-0 px-5 py-4 border-t border-[#2a2a2a] space-y-3">
+          <div className="shrink-0 px-5 py-4 border-t border-border space-y-3">
             {/* Buy Now + Add to Cart */}
             <div className="flex gap-3">
               <button
                 onClick={handleBuyNow}
                 disabled={!selectedVariant?.availableForSale || addingToCart}
-                className="flex-1 py-3.5 text-sm font-semibold bg-[#c9a962] text-[#0a0a0a] rounded-xl hover:bg-[#d4b872] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 text-sm font-semibold bg-gold text-base rounded-xl hover:bg-gold-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {addingToCart ? 'Processing...' : 'Buy Now'}
               </button>
               <button
                 onClick={handleAddToCart}
                 disabled={!selectedVariant?.availableForSale || addingToCart}
-                className="flex-1 py-3.5 text-sm font-semibold border border-[#c9a962]/30 text-[#c9a962] rounded-xl hover:bg-[#c9a962]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 py-3.5 text-sm font-semibold border border-gold/30 text-gold rounded-xl hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {addedFeedback ? '✓ Added!' : addingToCart ? 'Adding...' : 'Add to Cart'}
               </button>
@@ -329,7 +329,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {onTryOn && (
               <button
                 onClick={() => { onClose(); onTryOn(); }}
-                className="w-full py-3 text-sm font-medium text-[#a0a0a0] border border-[#2a2a2a] rounded-xl hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors"
+                className="w-full py-3 text-sm font-medium text-secondary border border-border rounded-xl hover:bg-surface hover:text-primary transition-colors"
               >
                 Try On with AI
               </button>

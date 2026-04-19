@@ -114,8 +114,8 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
       const watermarkedBlob = await addWatermark(imageUrl, shareUrl);
 
       const shareText = productHandle
-        ? `I tried on ${productName} on Stiri! 👗✨\nShop it here: ${shareUrl}`
-        : `Check out my look on Stiri! ✨\n${shareUrl}`;
+        ? `I tried on ${productName} on Stiri!\nShop it here: ${shareUrl}`
+        : `Check out my look on Stiri!\n${shareUrl}`;
 
       if (navigator.share) {
         const file = new File([watermarkedBlob], 'tryon-stiri.jpg', { type: 'image/jpeg' });
@@ -148,15 +148,15 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a] pb-24">
+    <div className="w-full h-full overflow-y-auto scrollbar-hide bg-base pb-24">
       <div className="w-full max-w-lg mx-auto px-4 py-6">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-light text-[#f5f5f5]">Your Look</h2>
+          <h2 className="text-lg font-light text-primary">Your Look</h2>
           <button
             onClick={onTryAgain}
-            className="text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors"
+            className="text-sm text-gold hover:text-gold-hover transition-colors"
           >
             Try Again
           </button>
@@ -165,7 +165,7 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
         {/* Result images */}
         <div className="space-y-4 mb-8">
           {images.map((img, i) => (
-            <div key={i} className="relative rounded-2xl overflow-hidden bg-[#111]">
+            <div key={i} className="relative rounded-2xl overflow-hidden bg-surface">
               <img
                 src={img}
                 alt={`Try-on result ${i + 1}`}
@@ -203,7 +203,7 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
         {onViewProduct && productHandle && (
           <button
             onClick={onViewProduct}
-            className="w-full py-4 text-sm font-medium tracking-[0.1em] uppercase bg-[#f5f5f5] text-[#0a0a0a] hover:bg-white transition-colors rounded-xl mb-3"
+            className="w-full py-4 text-sm font-medium tracking-[0.1em] uppercase bg-primary text-base hover:bg-white transition-colors rounded-xl mb-3"
           >
             View Product
           </button>
@@ -211,7 +211,7 @@ export const TryOnResult: React.FC<TryOnResultProps> = ({
 
         <button
           onClick={onTryAgain}
-          className={`w-full py-3 text-sm font-medium rounded-xl transition-colors ${onViewProduct && productHandle ? 'text-[#a0a0a0] hover:text-[#f5f5f5] border border-[#2a2a2a] hover:border-[#3a3a3a]' : 'tracking-[0.1em] uppercase bg-[#f5f5f5] text-[#0a0a0a] hover:bg-white'}`}
+          className={`w-full py-3 text-sm font-medium rounded-xl transition-colors ${onViewProduct && productHandle ? 'text-secondary hover:text-primary border border-border hover:border-active' : 'tracking-[0.1em] uppercase bg-primary text-base hover:bg-white'}`}
         >
           Try Another Look
         </button>

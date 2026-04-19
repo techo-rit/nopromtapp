@@ -103,7 +103,7 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
         <button
           onClick={() => setShowCamera(true)}
           disabled={saving}
-          className="flex items-center gap-1.5 text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 text-sm text-gold hover:text-gold-hover transition-colors disabled:opacity-50"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -111,15 +111,15 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
           </svg>
           Take Selfie
         </button>
-        <span className="text-[#2a2a2a]">|</span>
+        <span className="text-tertiary">|</span>
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={saving}
-          className="text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors disabled:opacity-50"
+          className="text-sm text-gold hover:text-gold-hover transition-colors disabled:opacity-50"
         >
           Upload Photo
         </button>
-        {saving && <span className="text-xs text-[#6b6b6b] ml-1">Saving…</span>}
+        {saving && <span className="text-xs text-tertiary ml-1">Saving…</span>}
       </div>
 
       {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
@@ -128,16 +128,16 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
       {loading ? (
         <div className="grid grid-cols-3 gap-2">
           {[0,1,2].map(i => (
-            <div key={i} className="aspect-square rounded-xl bg-[#1a1a1a] animate-pulse" />
+            <div key={i} className="aspect-square rounded-xl bg-surface animate-pulse" />
           ))}
         </div>
       ) : selfies.length === 0 ? (
         <div className="py-8 flex flex-col items-center gap-2 text-center">
-          <svg className="w-10 h-10 text-[#2a2a2a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-10 h-10 text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <p className="text-sm text-[#4a4a4a]">No saved selfies yet</p>
-          <p className="text-xs text-[#3a3a3a]">Take a selfie or upload a photo to get started</p>
+          <p className="text-sm text-tertiary">No saved selfies yet</p>
+          <p className="text-xs text-tertiary">Take a selfie or upload a photo to get started</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
@@ -150,7 +150,7 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
                 <button
                   onClick={() => handleActivate(selfie)}
                   className="w-full h-full rounded-xl overflow-hidden transition-all"
-                  style={{ outline: isActive ? '2px solid #d4b872' : 'none', outlineOffset: '2px' }}
+                  style={{ outline: isActive ? '2px solid var(--color-gold-hover)' : 'none', outlineOffset: '2px' }}
                   disabled={isActivating}
                   title={isActive ? 'Active for try-on' : 'Tap to use for try-on'}
                 >
@@ -161,11 +161,11 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
                   />
                   {(isDeleting || isActivating) && (
                     <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-[#d4b872] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                   {isActive && !isDeleting && (
-                    <div className="absolute bottom-1.5 left-1.5 bg-[#d4b872] text-[#0a0a0a] text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded-full uppercase">
+                    <div className="absolute bottom-1.5 left-1.5 bg-gold text-base text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded-full uppercase">
                       Active
                     </div>
                   )}
@@ -177,7 +177,7 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
                   className="absolute top-1.5 right-1.5 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity"
                   aria-label="Delete selfie"
                 >
-                  <svg className="w-2.5 h-2.5 text-[#f5f5f5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <svg className="w-2.5 h-2.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
                 </button>
@@ -188,7 +188,7 @@ export const SavedSelfiesGallery: React.FC<SavedSelfiesGalleryProps> = ({
       )}
 
       {selfies.length > 0 && (
-        <p className="text-[11px] text-[#4a4a4a] mt-3">Tap a selfie to make it active for try-on</p>
+        <p className="text-[11px] text-tertiary mt-3">Tap a selfie to make it active for try-on</p>
       )}
 
       <input

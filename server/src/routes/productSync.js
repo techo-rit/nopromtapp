@@ -8,20 +8,9 @@
  * Reference: docs/PERSONALIZATION_MODEL.md §4, §15
  */
 
-import { createAdminClient } from '../lib/auth.js';
+import { createAdminClient, verifyAdmin } from '../lib/auth.js';
 import { syncAllTemplates, syncSingleTemplate } from '../lib/productSync.js';
 import { runNightlyCron } from '../lib/rankingCron.js';
-
-const ADMIN_KEY = process.env.ADMIN_PURGE_KEY || '';
-
-function verifyAdmin(req, res) {
-  const key = req.headers['x-admin-key'];
-  if (!ADMIN_KEY || key !== ADMIN_KEY) {
-    res.status(403).json({ error: 'Forbidden' });
-    return false;
-  }
-  return true;
-}
 
 /**
  * POST /api/admin/product-sync — Full catalog tag generation

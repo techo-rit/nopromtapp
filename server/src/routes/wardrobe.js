@@ -17,8 +17,9 @@ const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
 // ────────────────────────────────────────────────────────────────────
 
 export async function uploadGarmentHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   try {
     const { image, mimeType } = req.body;
@@ -114,8 +115,9 @@ export async function uploadGarmentHandler(req, res) {
 // ────────────────────────────────────────────────────────────────────
 
 export async function deleteGarmentHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: 'Garment ID required' });
@@ -167,8 +169,9 @@ export async function deleteGarmentHandler(req, res) {
 // ────────────────────────────────────────────────────────────────────
 
 export async function listGarmentsHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   try {
     const admin = createAdminClient();
@@ -209,8 +212,9 @@ export async function listGarmentsHandler(req, res) {
 // ────────────────────────────────────────────────────────────────────
 
 export async function syncWardrobeHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   // Set up SSE
   res.writeHead(200, {
@@ -219,6 +223,10 @@ export async function syncWardrobeHandler(req, res) {
     'Connection': 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
+
+  // Track client disconnect to abort work
+  let aborted = false;
+  req.on('close', () => { aborted = true; });
 
   try {
     const admin = createAdminClient();
@@ -230,10 +238,14 @@ export async function syncWardrobeHandler(req, res) {
       .eq('id', user.id)
       .single();
 
-    await runWardrobeSync(user.id, profile, res);
+    if (aborted) return res.end();
+
+    await runWardrobeSync(user.id, profile, res, () => aborted);
   } catch (err) {
-    logger.error(`Wardrobe sync error: ${err.message}`);
-    res.write(`data: ${JSON.stringify({ type: 'error', message: 'Sync failed' })}\n\n`);
+    if (!aborted) {
+      logger.error(`Wardrobe sync error: ${err.message}`);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Sync failed' })}\n\n`);
+    }
   } finally {
     res.end();
   }
@@ -245,8 +257,9 @@ export async function syncWardrobeHandler(req, res) {
 // ────────────────────────────────────────────────────────────────────
 
 export async function listOutfitsHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -311,8 +324,9 @@ export async function listOutfitsHandler(req, res) {
 // ────────────────────────────────────────────────────────────────────
 
 export async function chatHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   const { message, session_id, button_filter } = req.body;
 
@@ -416,8 +430,9 @@ export async function chatHandler(req, res) {
 // ────────────────────────────────────────────────────────────────────
 
 export async function gapsHandler(req, res) {
-  const user = await getUserFromRequest(req, res);
-  if (!user) return;
+  const authResult = await getUserFromRequest(req, res);
+  if ('error' in authResult) return res.status(authResult.status).json({ error: authResult.error });
+  const user = authResult.user;
 
   try {
     const admin = createAdminClient();

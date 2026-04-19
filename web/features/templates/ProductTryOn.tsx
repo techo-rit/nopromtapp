@@ -126,10 +126,10 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
 
   if (loadingTemplate) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-[#0a0a0a]">
+      <div className="w-full h-full flex items-center justify-center bg-base">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#c9a962] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[#6b6b6b]">Loading product...</p>
+          <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-tertiary">Loading product...</p>
         </div>
       </div>
     );
@@ -137,11 +137,11 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
 
   if (!template) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0a0a] px-6">
-        <p className="text-[#a0a0a0] text-sm mb-4">Product not found</p>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-base px-6">
+        <p className="text-secondary text-sm mb-4">Product not found</p>
         <button
           onClick={() => navigate('/')}
-          className="text-sm text-[#c9a962] hover:text-[#d4b872] transition-colors"
+          className="text-sm text-gold hover:text-gold-hover transition-colors"
         >
           Browse Products
         </button>
@@ -177,11 +177,11 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
 
   // Selfie capture phase
   return (
-    <div className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a] pb-24">
+    <div className="w-full h-full overflow-y-auto scrollbar-hide bg-base pb-24">
       <div className="w-full max-w-lg mx-auto px-4 py-6">
 
         {/* Product info */}
-        <div className="flex items-center gap-4 mb-8 p-4 bg-[#121212] border border-[#1a1a1a] rounded-2xl">
+        <div className="flex items-center gap-4 mb-8 p-4 bg-surface border border-border rounded-2xl">
           {template.imageUrl && (
             <img
               src={template.imageUrl}
@@ -190,17 +190,17 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-[#f5f5f5] truncate">{template.name}</p>
-            <p className="text-xs text-[#6b6b6b] mt-1">Virtual Try-On</p>
+            <p className="text-sm font-medium text-primary truncate">{template.name}</p>
+            <p className="text-xs text-tertiary mt-1">Virtual Try-On</p>
           </div>
         </div>
 
         {/* Selfie section */}
         <div className="mb-6">
-          <h2 className="text-lg font-light text-[#f5f5f5] mb-4">Your Selfie</h2>
+          <h2 className="text-lg font-light text-primary mb-4">Your Selfie</h2>
 
           {selfiePreview ? (
-            <div className="relative rounded-2xl overflow-hidden bg-[#111] mb-4">
+            <div className="relative rounded-2xl overflow-hidden bg-surface mb-4">
               <img
                 src={selfiePreview}
                 alt="Your selfie"
@@ -216,13 +216,13 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
           ) : (
             <button
               onClick={() => setShowCamera(true)}
-              className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-[#2a2a2a] bg-[#111] flex flex-col items-center justify-center gap-3 hover:border-[#c9a962]/50 transition-colors"
+              className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-border bg-surface flex flex-col items-center justify-center gap-3 hover:border-gold/50 transition-colors"
             >
-              <svg className="w-12 h-12 text-[#4a4a4a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg className="w-12 h-12 text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="text-sm text-[#6b6b6b]">Take a Selfie</span>
+              <span className="text-sm text-tertiary">Take a Selfie</span>
             </button>
           )}
         </div>
@@ -238,7 +238,7 @@ export const ProductTryOn: React.FC<ProductTryOnProps> = ({
         <button
           onClick={handleGenerate}
           disabled={!selfiePreview}
-          className="w-full py-4 text-sm font-medium tracking-[0.1em] uppercase bg-[#f5f5f5] text-[#0a0a0a] hover:bg-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed rounded-xl"
+          className="w-full py-4 text-sm font-medium tracking-[0.1em] uppercase bg-primary text-base hover:bg-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed rounded-xl"
         >
           Generate Try-On
         </button>
