@@ -7,23 +7,23 @@
 
 @theme {
   /* Backgrounds */
-  --color-base: #000000;
-  --color-surface: #1C1C1E;
-  --color-elevated: #2C2C2E;
+  --color-base: #0a0a0a;
+  --color-surface: #141414;
+  --color-elevated: #1a1a1a;
 
   /* Gold Accent */
-  --color-gold: #E8C37D;
-  --color-gold-hover: #D4AF37;
-  --color-gold-subtle: rgba(232, 195, 125, 0.15);
+  --color-gold: #c9a962;
+  --color-gold-hover: #d4b872;
+  --color-gold-subtle: rgba(201, 169, 98, 0.05);
 
   /* Text */
-  --color-primary: #F2F2F7;
-  --color-secondary: #AEAEB2;
-  --color-tertiary: #8E8E93;
+  --color-primary: #f5f5f5;
+  --color-secondary: #a0a0a0;
+  --color-tertiary: #6b6b6b;
 
   /* Borders */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-active: rgba(232, 195, 125, 0.3);
+  --color-border: #2a2a2a;
+  --color-border-active: rgba(201, 169, 98, 0.3);
 
   /* Semantic */
   --color-success: #30D158;
@@ -31,12 +31,12 @@
   --color-warning: #FFD60A;
 
   /* Glass */
-  --color-glass: rgba(28, 28, 30, 0.72);
-  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass: rgba(20, 20, 20, 0.85);
+  --color-glass-border: #2a2a2a;
 
   /* Typography */
-  --font-display: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
 
   /* Z-Index Scale */

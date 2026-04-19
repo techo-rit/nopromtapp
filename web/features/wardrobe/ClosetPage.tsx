@@ -124,7 +124,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
           <div className="flex items-center gap-2">
             {/* Concierge button */}
             <button
-              onClick={() => navigate('/chat')}
+              onClick={() => navigate('/search')}
               className="w-9 h-9 rounded-full bg-gold-subtle
                 border border-gold/30 flex items-center justify-center
                 hover:border-gold/60 transition-colors min-w-[44px] min-h-[44px]"

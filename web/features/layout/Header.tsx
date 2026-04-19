@@ -21,7 +21,7 @@ const NAV_LINKS = [
     { label: 'Home', path: '/' },
     { label: 'Closet', path: '/closet' },
     { label: 'Changing Room', path: '/changing-room' },
-    { label: 'Concierge', path: '/chat' },
+    { label: 'Concierge', path: '/search' },
 ];
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,9 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
     onCartClick,
 }) => {
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const [searchFocused, setSearchFocused] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
-    const searchInputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -153,38 +151,21 @@ export const Header: React.FC<HeaderProps> = ({
                         </nav>
                     </div>
 
-                    {/* Center: Search bar */}
+                    {/* Center: Search bar — navigates to /search */}
                     <div className="flex-1 max-w-md mx-6">
-                        <div className={`flex items-center gap-2.5 h-[42px] px-4 rounded-[var(--radius-pill)] border transition-all ${
-                            searchFocused ? 'border-gold/50 bg-elevated' : 'border-border hover:border-border-active bg-surface'
-                        }`}>
-                            {/* Magnifier icon */}
+                        <button
+                            onClick={() => navigate('/search')}
+                            className="w-full flex items-center gap-2.5 h-[42px] px-4 rounded-[var(--radius-pill)] border border-border hover:border-gold/40 hover:bg-elevated bg-surface transition-all cursor-pointer active:scale-[0.98]"
+                            aria-label="Open search"
+                        >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-tertiary">
                                 <circle cx="11" cy="11" r="8" />
                                 <path d="M21 21l-4.35-4.35" />
                             </svg>
-                            <input
-                                ref={searchInputRef}
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => onSearchChange(e.target.value)}
-                                onFocus={() => setSearchFocused(true)}
-                                onBlur={() => setSearchFocused(false)}
-                                placeholder="Search styles, looks, outfits..."
-                                className="flex-1 bg-transparent text-[14px] text-primary placeholder:text-tertiary outline-none"
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => onSearchChange('')}
-                                    className="p-0.5 text-tertiary hover:text-primary transition-colors"
-                                    aria-label="Clear search"
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                        <path d="M18 6L6 18M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            )}
-                        </div>
+                            <span className="flex-1 text-left text-[14px] text-tertiary">
+                                Search styles, looks, outfits...
+                            </span>
+                        </button>
                     </div>
 
                     {/* Right: Cart + User */}

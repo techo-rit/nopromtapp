@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 interface BottomNavProps {
     cartCount?: number;
     onCartClick?: () => void;
-    user?: { name?: string; avatarUrl?: string } | null;
+    user?: { name?: string; avatarUrl?: string | null } | null;
 }
 
 const tabs = [

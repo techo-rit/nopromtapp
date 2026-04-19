@@ -87,9 +87,16 @@ async function generateTagsWithGemini(ai, template) {
 
   // Include the product image for visual classification
   if (template.image) {
-    parts.push({
-      fileData: { fileUri: template.image, mimeType: 'image/jpeg' },
-    });
+    const imageUrl = template.image.startsWith('http')
+      ? template.image
+      : `https://stiri.in${template.image}`;
+    const imgRes = await fetch(imageUrl);
+    if (imgRes.ok) {
+      const buf = Buffer.from(await imgRes.arrayBuffer());
+      parts.push({
+        inlineData: { data: buf.toString('base64'), mimeType: 'image/webp' },
+      });
+    }
   }
 
   parts.push({

@@ -8,7 +8,6 @@
  */
 
 import { createAdminClient, getUserFromRequest } from '../lib/auth.js';
-import { createTtlCache } from '../lib/cache.js';
 import { feedCache } from '../lib/feedCache.js';
 import {
   rankProducts,

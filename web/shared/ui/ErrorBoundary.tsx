@@ -10,6 +10,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  resetKey?: string;
 }
 
 interface State {
@@ -27,8 +28,19 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  static getDerivedStateFromProps(props: Props, state: State): State | null {
+    // Intentionally left for subclass / resetKey usage below
+    return null;
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    // Auto-reset when resetKey changes (e.g. URL navigation)
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console (in production, send to error tracking service)
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 

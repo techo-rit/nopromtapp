@@ -22,6 +22,7 @@ const PaymentModal = React.lazy(() => import("./features/payments/PaymentModal")
 const OnboardingModal = React.lazy(() => import("./features/profile/OnboardingModal").then(m => ({ default: m.OnboardingModal })));
 
 // Services & Utils
+import { ErrorBoundary } from './shared/ui/ErrorBoundary';
 import { authService } from "./features/auth/authService";
 import { profileService } from "./features/profile/profileService";
 import { useTemplates } from "./shared/hooks/useTemplates";
@@ -373,6 +374,7 @@ const App: React.FC = () => {
       
       {/* MAIN CONTENT */}
       <main className="flex-1 relative w-full h-full overflow-hidden">
+        <ErrorBoundary resetKey={location.pathname}>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route 
@@ -458,7 +460,7 @@ const App: React.FC = () => {
             }
           />
           <Route
-            path="/chat"
+            path="/search"
             element={
               <AIConcierge
                 user={user}
@@ -469,6 +471,7 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* CART DRAWER */}
