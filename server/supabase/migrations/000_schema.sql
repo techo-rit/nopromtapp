@@ -778,7 +778,7 @@ CREATE TABLE IF NOT EXISTS public.click_events (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   product_id  text NOT NULL,
-  event_type  text NOT NULL CHECK (event_type IN ('view','try_on','wishlist','cart_add','cart_remove','purchase')),
+  event_type  text NOT NULL CHECK (event_type IN ('view','try_on','wishlist','cart_add','cart_remove','purchase','skip')),
   metadata    jsonb DEFAULT '{}',
   created_at  timestamptz NOT NULL DEFAULT now()
 );
@@ -940,3 +940,213 @@ DROP TRIGGER IF EXISTS trg_product_click_stats_updated_at ON public.product_clic
 CREATE TRIGGER trg_product_click_stats_updated_at
   BEFORE UPDATE ON public.product_click_stats
   FOR EACH ROW EXECUTE FUNCTION public.update_product_stats_updated_at();
+
+
+-- ==========================================
+-- WARDROBE FEATURE
+-- ==========================================
+
+-- wardrobe_garments — individual uploaded garments with Gemini-extracted attributes
+CREATE TABLE IF NOT EXISTS public.wardrobe_garments (
+  id                   uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id              uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  image_url            text        NOT NULL,
+  original_image_url   text,
+  storage_path         text        NOT NULL,
+  garment_type         text,
+  garment_category     text        CHECK (garment_category IN ('upperwear','lowerwear','fullbody','footwear','accessory','layer')),
+  primary_color_hex    text,
+  secondary_color_hex  text,
+  color_family         text,
+  color_temperature    text        CHECK (color_temperature IN ('warm','cool','neutral') OR color_temperature IS NULL),
+  color_intensity      text        CHECK (color_intensity IN ('pastel','muted','vibrant','neon','earth') OR color_intensity IS NULL),
+  fit                  text        CHECK (fit IN ('fitted','regular','relaxed','oversized') OR fit IS NULL),
+  length               text        CHECK (length IN ('crop','regular','long','ankle','floor') OR length IS NULL),
+  waist_position       text        CHECK (waist_position IN ('high','mid','low') OR waist_position IS NULL),
+  volume               text        CHECK (volume IN ('low','medium','high') OR volume IS NULL),
+  fabric               text,
+  texture              text,
+  weight               text        CHECK (weight IN ('lightweight','midweight','heavyweight') OR weight IS NULL),
+  stretch              boolean     DEFAULT false,
+  opacity              text        CHECK (opacity IN ('opaque','semi-sheer','sheer') OR opacity IS NULL),
+  pattern              text,
+  pattern_scale        text        CHECK (pattern_scale IN ('small','medium','large') OR pattern_scale IS NULL),
+  neckline             text,
+  sleeve_length        text,
+  embellishment        text,
+  hardware             boolean     DEFAULT false,
+  formality            decimal(3,2) DEFAULT 0.5,
+  occasion_tags        text[]      DEFAULT '{}',
+  aesthetic_tags        text[]      DEFAULT '{}',
+  season_tags          text[]      DEFAULT '{}',
+  perceived_quality    decimal(3,2) DEFAULT 0.5,
+  -- 30-dimension classification (aligned with templates)
+  style_tags           text[]      DEFAULT '{}',
+  body_type_fit        text[]      DEFAULT '{}',
+  skin_tone_complement text[]      DEFAULT '{}',
+  age_group            text[]      DEFAULT '{}',
+  trend_tag            text[]      DEFAULT '{}',
+  sustainability       text[]      DEFAULT '{}',
+  fit_silhouette       text,
+  price_tier           text,
+  gender               text,
+  brand_tier           text,
+  layering             text,
+  care_level           text,
+  origin_aesthetic     text,
+  versatility          text,
+  is_analyzed          boolean     NOT NULL DEFAULT false,
+  analysis_failed      boolean     NOT NULL DEFAULT false,
+  created_at           timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at           timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS public.wardrobe_outfits (
+  id                   uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id              uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  garment_ids          uuid[]      NOT NULL DEFAULT '{}',
+  harmony_score        decimal(5,2) DEFAULT 0,
+  color_harmony        decimal(4,3) DEFAULT 0,
+  silhouette_balance   decimal(4,3) DEFAULT 0,
+  occasion_fit         decimal(4,3) DEFAULT 0,
+  aesthetic_alignment  decimal(4,3) DEFAULT 0,
+  fabric_compatibility decimal(4,3) DEFAULT 0,
+  trend_factor         decimal(4,3) DEFAULT 0,
+  practicality         decimal(4,3) DEFAULT 0,
+  personalization_score decimal(5,2) DEFAULT 0,
+  display_score        decimal(5,2) DEFAULT 0,
+  composite_tags       jsonb       DEFAULT '{}'::jsonb,
+  vibe_title           text,
+  vibe_why             text,
+  vibe_occasions       text[]      DEFAULT '{}',
+  vibe_accessories     text[]      DEFAULT '{}',
+  vibe_match_pct       integer     DEFAULT 0,
+  is_stale             boolean     NOT NULL DEFAULT false,
+  created_at           timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at           timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS public.wardrobe_style_profile (
+  user_id              uuid        PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+  tag_affinities       jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  category_counts      jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  total_garments       integer     NOT NULL DEFAULT 0,
+  identified_gaps      jsonb       DEFAULT '[]'::jsonb,
+  updated_at           timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS public.wardrobe_chat_sessions (
+  id                   uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id              uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  active_filters       jsonb       DEFAULT '{}'::jsonb,
+  messages             jsonb       DEFAULT '[]'::jsonb,
+  created_at           timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at           timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_wardrobe_garments_user          ON public.wardrobe_garments(user_id);
+CREATE INDEX IF NOT EXISTS idx_wardrobe_garments_user_category ON public.wardrobe_garments(user_id, garment_category);
+CREATE INDEX IF NOT EXISTS idx_wardrobe_garments_analyzed      ON public.wardrobe_garments(user_id) WHERE is_analyzed = false AND analysis_failed = false;
+CREATE INDEX IF NOT EXISTS idx_wardrobe_outfits_user           ON public.wardrobe_outfits(user_id);
+CREATE INDEX IF NOT EXISTS idx_wardrobe_outfits_display        ON public.wardrobe_outfits(user_id, display_score DESC);
+CREATE INDEX IF NOT EXISTS idx_wardrobe_outfits_stale          ON public.wardrobe_outfits(user_id) WHERE is_stale = true;
+CREATE INDEX IF NOT EXISTS idx_wardrobe_chat_user              ON public.wardrobe_chat_sessions(user_id);
+
+ALTER TABLE public.wardrobe_garments      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wardrobe_outfits       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wardrobe_style_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wardrobe_chat_sessions ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_garments' AND policyname='wardrobe_garments_user_read') THEN
+    CREATE POLICY wardrobe_garments_user_read ON public.wardrobe_garments FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_garments' AND policyname='wardrobe_garments_service_write') THEN
+    CREATE POLICY wardrobe_garments_service_write ON public.wardrobe_garments FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_outfits' AND policyname='wardrobe_outfits_user_read') THEN
+    CREATE POLICY wardrobe_outfits_user_read ON public.wardrobe_outfits FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_outfits' AND policyname='wardrobe_outfits_service_write') THEN
+    CREATE POLICY wardrobe_outfits_service_write ON public.wardrobe_outfits FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_style_profile' AND policyname='wardrobe_style_profile_user_read') THEN
+    CREATE POLICY wardrobe_style_profile_user_read ON public.wardrobe_style_profile FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_style_profile' AND policyname='wardrobe_style_profile_service_write') THEN
+    CREATE POLICY wardrobe_style_profile_service_write ON public.wardrobe_style_profile FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_chat_sessions' AND policyname='wardrobe_chat_user_read') THEN
+    CREATE POLICY wardrobe_chat_user_read ON public.wardrobe_chat_sessions FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='wardrobe_chat_sessions' AND policyname='wardrobe_chat_service_write') THEN
+    CREATE POLICY wardrobe_chat_service_write ON public.wardrobe_chat_sessions FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+ALTER TABLE public.ranking_weights ADD COLUMN IF NOT EXISTS w_wardrobe decimal(4,3) DEFAULT 0;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('wardrobe-items', 'wardrobe-items', true, 524288, ARRAY['image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects'
+      AND policyname = 'wardrobe_items_public_read'
+  ) THEN
+    EXECUTE $pol$
+      CREATE POLICY wardrobe_items_public_read
+        ON storage.objects FOR SELECT TO public
+        USING (bucket_id = 'wardrobe-items')
+    $pol$;
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.update_wardrobe_garments_updated_at()
+RETURNS TRIGGER AS $$ BEGIN NEW.updated_at := timezone('utc', now()); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_wardrobe_garments_updated_at ON public.wardrobe_garments;
+CREATE TRIGGER trg_wardrobe_garments_updated_at
+  BEFORE UPDATE ON public.wardrobe_garments
+  FOR EACH ROW EXECUTE FUNCTION public.update_wardrobe_garments_updated_at();
+
+CREATE OR REPLACE FUNCTION public.update_wardrobe_outfits_updated_at()
+RETURNS TRIGGER AS $$ BEGIN NEW.updated_at := timezone('utc', now()); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_wardrobe_outfits_updated_at ON public.wardrobe_outfits;
+CREATE TRIGGER trg_wardrobe_outfits_updated_at
+  BEFORE UPDATE ON public.wardrobe_outfits
+  FOR EACH ROW EXECUTE FUNCTION public.update_wardrobe_outfits_updated_at();
+
+CREATE OR REPLACE FUNCTION public.update_wardrobe_chat_updated_at()
+RETURNS TRIGGER AS $$ BEGIN NEW.updated_at := timezone('utc', now()); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_wardrobe_chat_updated_at ON public.wardrobe_chat_sessions;
+CREATE TRIGGER trg_wardrobe_chat_updated_at
+  BEFORE UPDATE ON public.wardrobe_chat_sessions
+  FOR EACH ROW EXECUTE FUNCTION public.update_wardrobe_chat_updated_at();
+
+CREATE OR REPLACE FUNCTION public.update_wardrobe_style_profile_updated_at()
+RETURNS TRIGGER AS $$ BEGIN NEW.updated_at := timezone('utc', now()); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_wardrobe_style_profile_updated_at ON public.wardrobe_style_profile;
+CREATE TRIGGER trg_wardrobe_style_profile_updated_at
+  BEFORE UPDATE ON public.wardrobe_style_profile
+  FOR EACH ROW EXECUTE FUNCTION public.update_wardrobe_style_profile_updated_at();

@@ -309,7 +309,7 @@ export interface FeedResponse {
   hasMore: boolean;
 }
 
-export type EventType = 'view' | 'try_on' | 'wishlist' | 'cart_add' | 'cart_remove' | 'purchase';
+export type EventType = 'view' | 'try_on' | 'wishlist' | 'cart_add' | 'cart_remove' | 'purchase' | 'skip';
 
 export interface TrackEventPayload {
   events: {
@@ -317,4 +317,165 @@ export interface TrackEventPayload {
     event_type: EventType;
     metadata?: Record<string, unknown>;
   }[];
+}
+
+
+// ─── Wardrobe Types ─────────────────────────────────────────
+
+export interface WardrobeGarment {
+  id: string;
+  user_id: string;
+  image_url: string;
+  original_image_url?: string;
+  storage_path: string;
+  garment_type?: string;
+  garment_category?: 'upperwear' | 'lowerwear' | 'fullbody' | 'footwear' | 'accessory' | 'layer';
+  primary_color_hex?: string;
+  secondary_color_hex?: string;
+  color_family?: string;
+  color_temperature?: 'warm' | 'cool' | 'neutral';
+  color_intensity?: 'pastel' | 'muted' | 'vibrant' | 'neon' | 'earth';
+  fit?: 'fitted' | 'regular' | 'relaxed' | 'oversized';
+  length?: 'crop' | 'regular' | 'long' | 'ankle' | 'floor';
+  waist_position?: 'high' | 'mid' | 'low';
+  volume?: 'low' | 'medium' | 'high';
+  fabric?: string;
+  texture?: string;
+  weight?: 'lightweight' | 'midweight' | 'heavyweight';
+  stretch?: boolean;
+  opacity?: 'opaque' | 'semi-sheer' | 'sheer';
+  pattern?: string;
+  pattern_scale?: 'small' | 'medium' | 'large';
+  neckline?: string;
+  sleeve_length?: string;
+  embellishment?: string;
+  hardware?: boolean;
+  formality?: number;
+  occasion_tags?: string[];
+  aesthetic_tags?: string[];
+  season_tags?: string[];
+  perceived_quality?: number;
+  // 30-dimension classification (aligned with templates)
+  style_tags?: string[];
+  body_type_fit?: string[];
+  skin_tone_complement?: string[];
+  age_group?: string[];
+  trend_tag?: string[];
+  sustainability?: string[];
+  fit_silhouette?: string;
+  price_tier?: string;
+  gender?: string;
+  brand_tier?: string;
+  layering?: string;
+  care_level?: string;
+  origin_aesthetic?: string;
+  versatility?: string;
+  is_analyzed: boolean;
+  analysis_failed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WardrobeOutfit {
+  id: string;
+  user_id: string;
+  garment_ids: string[];
+  harmony_score: number;
+  color_harmony: number;
+  silhouette_balance: number;
+  occasion_fit: number;
+  aesthetic_alignment: number;
+  fabric_compatibility: number;
+  trend_factor: number;
+  practicality: number;
+  personalization_score: number;
+  display_score: number;
+  composite_tags: Record<string, unknown>;
+  vibe_title?: string;
+  vibe_why?: string;
+  vibe_occasions?: string[];
+  vibe_accessories?: string[];
+  vibe_match_pct?: number;
+  is_stale: boolean;
+  created_at: string;
+  garments?: WardrobeGarment[];
+}
+
+export interface WardrobeStyleProfile {
+  user_id: string;
+  tag_affinities: Record<string, number>;
+  category_counts: Record<string, number>;
+  total_garments: number;
+  identified_gaps: WardrobeGap[];
+  updated_at: string;
+}
+
+export interface WardrobeGap {
+  gap_type: 'occasion' | 'aesthetic' | 'season' | 'color_palette' | 'versatility';
+  severity: number;
+  headline: string;
+  description: string;
+  missing_occasions?: string[];
+  desired_aesthetic?: string;
+  missing_season?: string;
+  dominant_color?: string;
+  percentage?: number;
+  trigger_copy?: string;
+}
+
+export interface WardrobeChatSession {
+  id: string;
+  user_id: string;
+  active_filters: Record<string, unknown>;
+  messages: ConciergeMessage[];
+  created_at: string;
+}
+
+export interface ConciergeMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  outfits?: WardrobeOutfit[];
+  refinement_buttons?: RefinementButton[];
+  stiri_recommendation?: FeedItem;
+  timestamp: string;
+}
+
+export interface RefinementButton {
+  label: string;
+  emoji?: string;
+  filter_patch: Record<string, unknown>;
+}
+
+export interface WardrobeGarmentsResponse {
+  garments: WardrobeGarment[];
+  counts: Record<string, number>;
+  total: number;
+  cap: number;
+}
+
+export interface WardrobeOutfitsResponse {
+  outfits: WardrobeOutfit[];
+  total: number;
+  hasMore: boolean;
+}
+
+export interface WardrobeSyncEvent {
+  type: 'analyzing' | 'pairing' | 'ranking' | 'complete' | 'error';
+  progress?: number;
+  message?: string;
+  data?: unknown;
+}
+
+export interface WardrobeChatRequest {
+  message?: string;
+  session_id?: string;
+  button_filter?: Record<string, unknown>;
+}
+
+export interface WardrobeChatResponse {
+  session_id: string;
+  outfits: WardrobeOutfit[];
+  refinement_buttons: RefinementButton[];
+  stiri_recommendation?: FeedItem;
+  message: string;
 }

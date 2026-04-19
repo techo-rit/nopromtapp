@@ -172,7 +172,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
         (isFititStack ? !selfieImage || !wearableImage : !selfieImage);
 
     return (
-        <div className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a]">
+        <div className="w-full h-full overflow-y-auto scrollbar-hide bg-base">
             <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-12 pb-24">
             
 
@@ -233,17 +233,17 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                             onClick={handleRemix}
                             disabled={remixButtonDisabled}
                             className="group relative min-h-[56px] inline-flex items-center justify-center gap-3 px-12 py-5 
-                            bg-[#0a0a0a] text-[#E4C085] font-medium text-xl tracking-wide rounded-2xl 
-                            border border-[#E4C085]/30 
+                            bg-base text-gold font-medium text-xl tracking-wide rounded-2xl 
+                            border border-gold/30 
                             shadow-[0_0_15px_rgba(228,192,133,0.05)]
-                            hover:bg-[#141414] hover:border-[#E4C085]/60 hover:shadow-[0_0_30px_rgba(228,192,133,0.15)] hover:-translate-y-0.5
+                            hover:bg-surface hover:border-gold/60 hover:shadow-[0_0_30px_rgba(228,192,133,0.15)] hover:-translate-y-0.5
                             active:translate-y-0 active:shadow-none
                             transition-all duration-500 ease-out 
-                            disabled:bg-[#0a0a0a] disabled:text-[#6b6b6b] disabled:border-[#2a2a2a] disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0
+                            disabled:bg-base disabled:text-tertiary disabled:border-border disabled:shadow-none disabled:cursor-not-allowed disabled:translate-y-0
                             focus:outline-none focus-visible:ring-1 focus-visible:ring-[#E4C085]/50"
                         >
                             {/* Inner Ambient Gradient for depth */}
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#E4C085]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
                             
                             <span className="relative">Transform your soul</span>
@@ -252,14 +252,14 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                             <button
                                 onClick={onToggleWishlist}
                                 className="min-h-[56px] inline-flex items-center justify-center px-5 py-5
-                                rounded-2xl border border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-[#141414]
+                                rounded-2xl border border-border hover:border-active hover:bg-surface
                                 active:scale-95 transition-all duration-300"
                                 aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                             >
                                 {isWishlisted ? (
                                     <HeartFilledIcon width={22} height={22} className="text-white" />
                                 ) : (
-                                    <HeartIcon width={22} height={22} className="text-[#6b6b6b]" />
+                                    <HeartIcon width={22} height={22} className="text-tertiary" />
                                 )}
                             </button>
                         )}
@@ -268,7 +268,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                         <div className="flex justify-center mt-3">
                             <button
                                 onClick={() => onProductDetails(template.id)}
-                                className="text-sm text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors underline underline-offset-4 decoration-[#3a3a3a] hover:decoration-[#6b6b6b]"
+                                className="text-sm text-tertiary hover:text-secondary transition-colors underline underline-offset-4 decoration-border hover:decoration-secondary"
                             >
                                 View product details
                             </button>
@@ -278,12 +278,12 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
             )}
 
             {isLoading && (
-                <div className="flex flex-col items-center justify-center text-center p-16 bg-[#141414] rounded-2xl border border-[#2a2a2a]">
+                <div className="flex flex-col items-center justify-center text-center p-16 bg-surface rounded-2xl border border-border">
                     <Spinner />
-                    <h2 className="text-[28px] md:text-[40px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] leading-[1.2] md:leading-[1.1] text-[#f5f5f5] mt-6">
+                    <h2 className="text-[28px] md:text-[40px] font-semibold tracking-[0.005em] md:tracking-[-0.01em] leading-[1.2] md:leading-[1.1] text-primary mt-6">
                         Generating your images...
                     </h2>
-                    <p className="text-[#a0a0a0] mt-2 text-lg">
+                    <p className="text-secondary mt-2 text-lg">
                         This usually takes about 20-30 seconds. Please wait.
                     </p>
                 </div>
@@ -321,7 +321,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                         {generatedImages.map((imageSrc, index) => (
                             <div
                                 key={index}
-                                className="relative group border border-[#2a2a2a] rounded-2xl shadow-lg overflow-hidden bg-[#141414]"
+                                className="relative group border border-border rounded-2xl shadow-lg overflow-hidden bg-surface"
                             >
                                 <img
                                     src={imageSrc}
@@ -338,7 +338,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                                             )
                                         }
                                         aria-label={`Download image ${index + 1} as PNG`}
-                                        className="min-h-[44px] min-w-[44px] p-2 bg-[#141414]/90 backdrop-blur-sm rounded-full text-[#f5f5f5] hover:bg-[#1a1a1a] hover:text-[#c9a962] transition-colors shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962]/50"
+                                        className="min-h-[44px] min-w-[44px] p-2 bg-surface/90 backdrop-blur-sm rounded-full text-primary hover:bg-surface hover:text-gold transition-colors shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
                                     >
                                         <DownloadIcon />
                                     </button>
@@ -351,7 +351,7 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                                             )
                                         }
                                         aria-label={`Download image ${index + 1} as JPG`}
-                                        className="min-h-[44px] min-w-[44px] p-2 bg-[#141414]/90 backdrop-blur-sm rounded-full text-[#f5f5f5] hover:bg-[#1a1a1a] hover:text-[#c9a962] transition-colors shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962]/50"
+                                        className="min-h-[44px] min-w-[44px] p-2 bg-surface/90 backdrop-blur-sm rounded-full text-primary hover:bg-surface hover:text-gold transition-colors shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
                                     >
                                         JPG
                                     </button>
@@ -362,14 +362,14 @@ export const TemplateExecution: React.FC<TemplateExecutionProps> = ({
                     <div className="flex flex-wrap items-center justify-center gap-4">
                         <button
                             onClick={handleRemixAgain}
-                            className="min-h-[56px] inline-flex items-center gap-2 px-8 py-4 bg-[#1a1a1a] text-[#f5f5f5] font-semibold rounded-xl hover:bg-[#2a2a2a] transition-colors border border-[#2a2a2a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962]/50 text-lg"
+                            className="min-h-[56px] inline-flex items-center gap-2 px-8 py-4 bg-surface text-primary font-semibold rounded-xl hover:bg-elevated transition-colors border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 text-lg"
                         >
                             <RefreshIcon />
                             Start Over
                         </button>
                         <button
                             onClick={onBack}
-                            className="min-h-[56px] inline-flex items-center gap-2 px-8 py-4 bg-[#0a0a0a] text-[#a0a0a0] font-semibold rounded-xl hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors border border-[#2a2a2a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a962]/50 text-lg"
+                            className="min-h-[56px] inline-flex items-center gap-2 px-8 py-4 bg-base text-secondary font-semibold rounded-xl hover:bg-surface hover:text-primary transition-colors border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 text-lg"
                         >
                             Try Another Template
                         </button>

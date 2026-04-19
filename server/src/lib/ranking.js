@@ -37,12 +37,12 @@ const DIMENSION_WEIGHTS = {
   trend_tag: 0.5,
 };
 
-// ── Cold-start data maturity weights ───────────────────────────────
-// (events, days) → { style, user, pop } weight overrides
+// ── Cold-start data maturity weights (4-signal) ────────────────────
+// (events, days) → { style, user, pop, wardrobe } weight overrides
 const DATA_MATURITY_THRESHOLDS = [
-  { maxEvents: 5, style: 0.85, user: 0.05, pop: 0.10 },
-  { maxEvents: 20, style: 0.75, user: 0.10, pop: 0.15 },
-  { maxEvents: 50, style: 0.60, user: 0.20, pop: 0.20 },
+  { maxEvents: 5,  style: 0.85, user: 0.05, pop: 0.10, wardrobe: 0.00 },
+  { maxEvents: 20, style: 0.70, user: 0.10, pop: 0.10, wardrobe: 0.10 },
+  { maxEvents: 50, style: 0.50, user: 0.15, pop: 0.15, wardrobe: 0.20 },
   // Above 50 events: use self-tuned weights from ranking_weights table
 ];
 
@@ -286,16 +286,46 @@ export function fatiguePenalty(productId, recentImpressions) {
  * Determine effective weight overrides based on user's data maturity.
  *
  * @param {number} totalEvents - total events from user_click_profile
- * @returns {{ style: number, user: number, pop: number } | null}
+ * @returns {{ style: number, user: number, pop: number, wardrobe: number } | null}
  *   null means "use self-tuned weights"
  */
 export function dataMaturityWeights(totalEvents) {
   for (const t of DATA_MATURITY_THRESHOLDS) {
     if (totalEvents <= t.maxEvents) {
-      return { style: t.style, user: t.user, pop: t.pop };
+      return { style: t.style, user: t.user, pop: t.pop, wardrobe: t.wardrobe };
     }
   }
   return null; // Use self-tuned weights
+}
+
+
+// ────────────────────────────────────────────────────────────────────
+// §7b Wardrobe Affinity — S_wardrobe ∈ [0,1]
+// ────────────────────────────────────────────────────────────────────
+
+/**
+ * Compute affinity between a user's wardrobe style profile and a product.
+ * Uses tag_affinities from wardrobe_style_profile (computed during sync).
+ * Products that complement existing wardrobe items score higher.
+ *
+ * @param {object|null} wardrobeProfile - wardrobe_style_profile row
+ * @param {object} product - templates row with style dimensions
+ * @returns {number} score in [0,1]
+ */
+export function wardrobeAffinity(wardrobeProfile, product) {
+  if (!wardrobeProfile?.tag_affinities) return 0;
+
+  const affinities = wardrobeProfile.tag_affinities;
+  const productTags = collectProductTags(product);
+
+  if (productTags.length === 0) return 0;
+
+  let sum = 0;
+  for (const tag of productTags) {
+    sum += affinities[tag] || 0;
+  }
+
+  return Math.min(sum / productTags.length, 1);
 }
 
 
@@ -313,6 +343,7 @@ export function dataMaturityWeights(totalEvents) {
  * @param {object}      params.productStatsMap   - { product_id: product_click_stats row }
  * @param {object}      params.activeWeights     - ranking_weights row (is_active=true)
  * @param {object[]}    params.boosts            - admin_boost_queue active rows
+ * @param {object|null} params.wardrobeProfile   - wardrobe_style_profile row (null if no wardrobe)
  * @returns {{ product: object, score: number, isExploration: boolean }[]}
  */
 export function rankProducts({
@@ -322,6 +353,7 @@ export function rankProducts({
   productStatsMap,
   activeWeights,
   boosts,
+  wardrobeProfile,
 }) {
   const totalEvents = clickProfile
     ? (clickProfile.total_views || 0) + (clickProfile.total_try_ons || 0) +
@@ -334,6 +366,7 @@ export function rankProducts({
   const wStyle = maturity ? maturity.style : Number(activeWeights.w_style);
   const wUser = maturity ? maturity.user : Number(activeWeights.w_user_clicks);
   const wPop = maturity ? maturity.pop : Number(activeWeights.w_product_pop);
+  const wWardrobe = maturity ? maturity.wardrobe : Number(activeWeights.w_wardrobe || 0);
 
   const recentImpressions = clickProfile?.recent_impressions || [];
   const boostMap = new Map(boosts.map((b) => [b.product_id, b]));
@@ -343,6 +376,7 @@ export function rankProducts({
     const sStyle = styleDnaMatch(userProfile, product);
     const sUser = userClickAffinity(clickProfile, product);
     const sPop = productPopularity(productStatsMap[productId]);
+    const sWardrobe = wardrobeAffinity(wardrobeProfile, product);
     const bNew = newArrivalBoost(product);
     const bSeasonal = getSeasonalBoost(product);
     const pFatigue = fatiguePenalty(productId, recentImpressions);
@@ -358,6 +392,7 @@ export function rankProducts({
       wStyle * sStyle +
       wUser * sUser +
       wPop * sPop +
+      wWardrobe * sWardrobe +
       bNew +
       bSeasonal +
       bBoost -

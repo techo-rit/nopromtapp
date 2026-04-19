@@ -9,19 +9,9 @@
  * Reference: docs/PERSONALIZATION_MODEL.md §8.3
  */
 
-import { createAdminClient } from '../lib/auth.js';
+import { createAdminClient, verifyAdmin } from '../lib/auth.js';
 
-const ADMIN_KEY = process.env.ADMIN_PURGE_KEY || '';
 const MAX_ACTIVE_BOOSTS = 10;
-
-function verifyAdmin(req, res) {
-  const key = req.headers['x-admin-key'];
-  if (!ADMIN_KEY || key !== ADMIN_KEY) {
-    res.status(403).json({ error: 'Forbidden' });
-    return false;
-  }
-  return true;
-}
 
 export async function createBoostHandler(req, res) {
   try {

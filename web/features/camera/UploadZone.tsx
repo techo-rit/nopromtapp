@@ -66,7 +66,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
 
   return (
     <div className="w-full" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-        <p className="block text-xl font-semibold text-[#f5f5f5] mb-3">{title}</p>
+        <p className="block text-xl font-semibold text-primary mb-3">{title}</p>
         
         <div
           role="button"
@@ -76,7 +76,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           onDragOver={(e) => handleDrag(e, true)}
           onDragEnter={(e) => handleDrag(e, true)}
           onDragLeave={(e) => handleDrag(e, false)}
-          className={`relative block w-full aspect-square border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-300 outline-none caret-transparent ${isDragging ? 'border-[#c9a962] bg-[#c9a962]/10' : 'border-[#2a2a2a] bg-[#141414]'} focus-within:ring-2 focus-within:ring-[#c9a962]/50`}
+          className={`relative block w-full aspect-square border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-300 outline-none caret-transparent ${isDragging ? 'border-gold bg-gold/10' : 'border-border bg-surface'} focus-within:ring-2 focus-within:ring-gold/50`}
         >
           <input
             ref={inputRef}
@@ -89,7 +89,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           {preview ? (
             <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-2xl p-2 pointer-events-none" />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-[#6b6b6b] pointer-events-none select-none px-4">
+            <div className="flex flex-col items-center justify-center h-full text-tertiary pointer-events-none select-none px-4">
                 <UploadIcon />
                 <p className="mt-3 text-center text-lg">Drag and drop / paste / tap</p>
             </div>
@@ -99,7 +99,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowCamera(true); }}
-          className="mt-3 w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] font-medium hover:bg-[#2a2a2a] transition-all hover:cursor-pointer">
+          className="mt-3 w-full min-h-[48px] flex items-center justify-center gap-2 px-4 py-3 bg-surface border border-border rounded-xl text-primary font-medium hover:bg-elevated transition-all hover:cursor-pointer">
           <span>{captureMode === 'user' ? "Capture your face" : "Take a photo"}</span>
         </button>
 

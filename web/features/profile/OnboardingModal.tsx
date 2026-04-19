@@ -744,7 +744,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       {/* Modal */}
       <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-[#121212] w-full max-w-[480px] max-h-[90vh] rounded-3xl shadow-2xl border border-[#2a2a2a] overflow-hidden pointer-events-auto flex flex-col"
+          className="bg-surface w-full max-w-[480px] max-h-[90vh] rounded-3xl shadow-2xl border border-border overflow-hidden pointer-events-auto flex flex-col"
           role="dialog"
           aria-modal="true"
         >
@@ -753,23 +753,23 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {/* Top row: title + actions */}
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-[#f5f5f5] tracking-tight leading-tight">
+                <h2 className="text-xl font-semibold text-primary tracking-tight leading-tight">
                   Welcome to Stiri
                 </h2>
-                <p className="text-[#c9a962] text-xs mt-0.5 font-medium">Your personal fashion assistant</p>
+                <p className="text-gold text-xs mt-0.5 font-medium">Your personal fashion assistant</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
                 <button
                   onClick={handleRefresh}
                   disabled={isLoading}
-                  className="p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors disabled:opacity-50"
+                  className="p-2 rounded-full text-tertiary hover:text-primary hover:bg-elevated transition-colors disabled:opacity-50"
                   aria-label="Refresh"
                 >
                   <RefreshIcon />
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors"
+                  className="p-2 rounded-full text-tertiary hover:text-primary hover:bg-elevated transition-colors"
                   aria-label="Close"
                 >
                   <CloseIcon width={18} height={18} />
@@ -785,19 +785,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     key={s}
                     className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold transition-all ${
                       s < step
-                        ? 'bg-[#c9a962] text-[#0a0a0a]'
+                        ? 'bg-gold text-base'
                         : s === step
-                        ? 'bg-[#c9a962]/20 text-[#c9a962] ring-2 ring-[#c9a962]'
-                        : 'bg-[#1a1a1a] text-[#6b6b6b]'
+                        ? 'bg-gold-subtle text-gold ring-2 ring-gold'
+                        : 'bg-surface text-tertiary'
                     }`}
                   >
                     {s < step ? '✓' : s}
                   </div>
                 ))}
               </div>
-              <div className="w-full h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-surface rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#c9a962] to-[#d4b872] transition-all duration-500 rounded-full"
+                  className="h-full bg-gold transition-all duration-500 rounded-full"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -805,8 +805,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
             {/* Step title */}
             <div className="mt-3">
-              <h3 className="text-base font-medium text-[#f5f5f5]">{STEP_INFO[step - 1].title}</h3>
-              <p className="text-xs text-[#6b6b6b] mt-0.5">{STEP_INFO[step - 1].subtitle}</p>
+              <h3 className="text-base font-medium text-primary">{STEP_INFO[step - 1].title}</h3>
+              <p className="text-xs text-tertiary mt-0.5">{STEP_INFO[step - 1].subtitle}</p>
             </div>
           </div>
 
@@ -829,7 +829,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {step === 5 && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">
+                  <label className="text-xs font-medium text-secondary ml-1">
                     Full Name <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -837,12 +837,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full h-11 px-4 mt-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
+                    className="w-full h-11 px-4 mt-1 bg-base border border-border rounded-xl text-primary placeholder-tertiary focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">Generation <span className="text-[#525252]">(optional)</span></label>
+                  <label className="text-xs font-medium text-secondary ml-1">Generation <span className="text-tertiary">(optional)</span></label>
                   <div className="grid grid-cols-2 gap-3 mt-2">
                     {AGE_RANGES.map((age) => (
                       <button
@@ -850,8 +850,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={() => setAgeRange(ageRange === age.id ? null : age.id)}
                         className={`relative overflow-hidden rounded-xl border text-left transition-all ${
                           ageRange === age.id
-                            ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
-                            : 'border-[#2a2a2a] hover:border-[#3a3a3a]'
+                            ? 'border-gold ring-2 ring-gold/40'
+                            : 'border-border hover:border-active'
                         }`}
                       >
                         <img
@@ -861,11 +861,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                           loading="lazy"
                         />
                         <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                          <p className="font-medium text-xs text-[#f5f5f5]">{age.label}</p>
-                          <p className="text-[10px] text-[#d0d0d0]">{age.desc}</p>
+                          <p className="font-medium text-xs text-primary">{age.label}</p>
+                          <p className="text-[10px] text-secondary">{age.desc}</p>
                         </div>
                         {ageRange === age.id && (
-                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-gold text-base text-[10px] font-bold flex items-center justify-center">✓</span>
                         )}
                       </button>
                     ))}
@@ -878,17 +878,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {step === 1 && (
               <div className="space-y-5">
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">
-                    Favorite colors <span className="text-red-400">*</span> <span className="text-[#525252]">(pick up to 3)</span>
+                  <label className="text-xs font-medium text-secondary ml-1 mb-2 block">
+                    Favorite colors <span className="text-red-400">*</span> <span className="text-tertiary">(pick up to 3)</span>
                   </label>
                   <div className="relative mb-3">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#525252]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" /></svg>
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" strokeLinecap="round" /></svg>
                     <input
                       type="text"
                       value={colorSearch}
                       onChange={(e) => setColorSearch(e.target.value)}
                       placeholder="Search colors..."
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] text-sm text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#3a3a3a]"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-base text-sm text-primary placeholder-tertiary focus:outline-none focus:border-active"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -902,10 +902,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                           disabled={isDisabled}
                           className={`relative overflow-hidden rounded-xl border transition-all ${
                             isSelected
-                              ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
+                              ? 'border-gold ring-2 ring-gold/40'
                               : isDisabled
-                              ? 'border-[#1a1a1a] opacity-40 cursor-not-allowed'
-                              : 'border-[#2a2a2a] hover:border-[#3a3a3a] hover:-translate-y-0.5'
+                              ? 'border-border opacity-40 cursor-not-allowed'
+                              : 'border-border hover:border-active hover:-translate-y-0.5'
                           }`}
                         >
                           <img
@@ -915,17 +915,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                             loading="lazy"
                           />
                           <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                            <span className="text-xs font-medium text-[#f5f5f5]">{color.label}</span>
+                            <span className="text-xs font-medium text-primary">{color.label}</span>
                           </div>
                           {isSelected && (
-                            <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                            <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-gold text-base text-[10px] font-bold flex items-center justify-center">✓</span>
                           )}
                         </button>
                       );
                     })}
                   </div>
                   {selectedColors.length > 0 && (
-                    <p className="text-[11px] text-[#c9a962] mt-2 ml-1">{selectedColors.length}/3 selected</p>
+                    <p className="text-[11px] text-gold mt-2 ml-1">{selectedColors.length}/3 selected</p>
                   )}
                 </div>
               </div>
@@ -943,8 +943,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={() => toggleStyle(style.id)}
                         className={`relative overflow-hidden rounded-xl border transition-all text-left ${
                           isSelected
-                            ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a] hover:-translate-y-0.5'
+                            ? 'border-gold ring-2 ring-gold/40'
+                            : 'border-border bg-base hover:border-active hover:-translate-y-0.5'
                         }`}
                       >
                         <img
@@ -954,17 +954,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                           loading="lazy"
                         />
                         <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                          <span className="text-sm font-medium text-[#f5f5f5]">{style.label}</span>
+                          <span className="text-sm font-medium text-primary">{style.label}</span>
                         </div>
                         {isSelected && (
-                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-gold text-base text-[10px] font-bold flex items-center justify-center">✓</span>
                         )}
                       </button>
                     );
                   })}
                 </div>
                 {selectedStyles.length > 0 && (
-                  <p className="text-[11px] text-[#c9a962] mt-3 ml-1">{selectedStyles.length} style{selectedStyles.length > 1 ? 's' : ''} selected</p>
+                  <p className="text-[11px] text-gold mt-3 ml-1">{selectedStyles.length} style{selectedStyles.length > 1 ? 's' : ''} selected</p>
                 )}
               </div>
             )}
@@ -982,8 +982,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={() => handleUnitToggle(u)}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           measurementUnit === u
-                            ? 'bg-[#c9a962]/15 text-[#c9a962] border border-[#c9a962]/40'
-                            : 'bg-[#0a0a0a] text-[#6b6b6b] border border-[#2a2a2a] hover:border-[#3a3a3a]'
+                            ? 'bg-gold-subtle text-gold border border-gold/40'
+                            : 'bg-base text-tertiary border border-border hover:border-active'
                         }`}
                       >
                         {u}
@@ -992,10 +992,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   </div>
 
                   {/* Bust */}
-                  <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                  <div className="flex items-center gap-3 bg-base border border-border rounded-xl p-3 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
                     <img src="/images/onboarding/measurements/bust.webp" alt="Bust measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
                     <div className="flex-1">
-                      <label className="text-[11px] text-[#6b6b6b]">Bust</label>
+                      <label className="text-[11px] text-tertiary">Bust</label>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1004,17 +1004,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onFocus={() => setFocusedMeasurement('bust')}
                         onBlur={() => setFocusedMeasurement(null)}
                         placeholder={measurementUnit === 'in' ? 'e.g. 36' : 'e.g. 91'}
-                        className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                        className="w-full bg-transparent text-primary placeholder-tertiary focus:outline-none text-sm"
                       />
                     </div>
-                    <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+                    <span className="text-[10px] text-tertiary shrink-0">{measurementUnit}</span>
                   </div>
 
                   {/* Waist */}
-                  <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                  <div className="flex items-center gap-3 bg-base border border-border rounded-xl p-3 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
                     <img src="/images/onboarding/measurements/waist.webp" alt="Waist measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
                     <div className="flex-1">
-                      <label className="text-[11px] text-[#6b6b6b]">Waist</label>
+                      <label className="text-[11px] text-tertiary">Waist</label>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1023,17 +1023,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onFocus={() => setFocusedMeasurement('waist')}
                         onBlur={() => setFocusedMeasurement(null)}
                         placeholder={measurementUnit === 'in' ? 'e.g. 30' : 'e.g. 76'}
-                        className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                        className="w-full bg-transparent text-primary placeholder-tertiary focus:outline-none text-sm"
                       />
                     </div>
-                    <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+                    <span className="text-[10px] text-tertiary shrink-0">{measurementUnit}</span>
                   </div>
 
                   {/* Hip */}
-                  <div className="flex items-center gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 transition-colors focus-within:border-[#c9a962] focus-within:ring-1 focus-within:ring-[#c9a962]">
+                  <div className="flex items-center gap-3 bg-base border border-border rounded-xl p-3 transition-colors focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
                     <img src="/images/onboarding/measurements/hip.webp" alt="Hip measurement" className="w-14 h-14 rounded-lg object-cover shrink-0" loading="lazy" />
                     <div className="flex-1">
-                      <label className="text-[11px] text-[#6b6b6b]">Hip</label>
+                      <label className="text-[11px] text-tertiary">Hip</label>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1042,22 +1042,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onFocus={() => setFocusedMeasurement('hip')}
                         onBlur={() => setFocusedMeasurement(null)}
                         placeholder={measurementUnit === 'in' ? 'e.g. 40' : 'e.g. 102'}
-                        className="w-full bg-transparent text-[#f5f5f5] placeholder-[#404040] focus:outline-none text-sm"
+                        className="w-full bg-transparent text-primary placeholder-tertiary focus:outline-none text-sm"
                       />
                     </div>
-                    <span className="text-[10px] text-[#525252] shrink-0">{measurementUnit}</span>
+                    <span className="text-[10px] text-tertiary shrink-0">{measurementUnit}</span>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-[#525252] ml-1">Measurements are optional — you can pick a size and skip them.</p>
+                <p className="text-[10px] text-tertiary ml-1">Measurements are optional — you can pick a size and skip them.</p>
 
                 {/* Separator */}
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#2a2a2a]" />
+                    <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-[#121212] px-3 text-[#525252]">or pick your size</span>
+                    <span className="bg-surface px-3 text-tertiary">or pick your size</span>
                   </div>
                 </div>
 
@@ -1071,12 +1071,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={() => handleSizeClick(size.id)}
                         className={`rounded-xl border p-3 text-left transition-all ${
                           fit === size.id
-                            ? 'border-[#c9a962] bg-[#c9a962]/10'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a]'
+                            ? 'border-gold bg-gold/10'
+                            : 'border-border bg-base hover:border-active'
                         }`}
                       >
-                        <span className={`block text-sm font-semibold mb-1 ${fit === size.id ? 'text-[#c9a962]' : 'text-[#e0e0e0]'}`}>{size.label}</span>
-                        <div className={`text-[10px] leading-relaxed ${fit === size.id ? 'text-[#c9a962]/70' : 'text-[#606060]'}`}>
+                        <span className={`block text-sm font-semibold mb-1 ${fit === size.id ? 'text-gold' : 'text-primary'}`}>{size.label}</span>
+                        <div className={`text-[10px] leading-relaxed ${fit === size.id ? 'text-gold/70' : 'text-tertiary'}`}>
                           <span>B {ranges.bust[0]}-{ranges.bust[1]}</span>{' · '}
                           <span>W {ranges.waist[0]}-{ranges.waist[1]}</span>{' · '}
                           <span>H {ranges.hip[0]}-{ranges.hip[1]}</span>
@@ -1092,7 +1092,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             {step === 4 && (
               <div className="space-y-5">
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-secondary ml-1 mb-2 block">Body type <span className="text-red-400">*</span></label>
                   <div className="grid grid-cols-3 gap-3">
                     {BODY_TYPES.map((bt) => (
                       <button
@@ -1100,8 +1100,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={() => setBodyType(bodyType === bt.id ? null : bt.id)}
                         className={`relative overflow-hidden rounded-xl border transition-all ${
                           bodyType === bt.id
-                            ? 'border-[#c9a962] ring-2 ring-[#c9a962]/40'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#3a3a3a] hover:-translate-y-0.5'
+                            ? 'border-gold ring-2 ring-gold/40'
+                            : 'border-border bg-base hover:border-active hover:-translate-y-0.5'
                         }`}
                       >
                         <img
@@ -1111,10 +1111,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                           loading="lazy"
                         />
                         <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                          <span className="text-xs font-medium text-[#f5f5f5]">{bt.label}</span>
+                          <span className="text-xs font-medium text-primary">{bt.label}</span>
                         </div>
                         {bodyType === bt.id && (
-                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold flex items-center justify-center">✓</span>
+                          <span className="absolute top-2 right-2 h-5 min-w-5 px-1 rounded-full bg-gold text-base text-[10px] font-bold flex items-center justify-center">✓</span>
                         )}
                       </button>
                     ))}
@@ -1122,7 +1122,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1 mb-2 block">Skin tone <span className="text-red-400">*</span></label>
+                  <label className="text-xs font-medium text-secondary ml-1 mb-2 block">Skin tone <span className="text-red-400">*</span></label>
                   <div className="grid grid-cols-3 gap-2">
                     {SKIN_TONES.map((tone) => (
                       <button
@@ -1130,8 +1130,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                         onClick={() => setSkinTone(skinTone === tone.id ? null : tone.id)}
                         className={`h-11 rounded-xl border font-semibold text-sm transition-all ${
                           skinTone === tone.id
-                            ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
-                            : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a0a0a0] hover:border-[#3a3a3a]'
+                            ? 'border-gold bg-gold/10 text-gold'
+                            : 'border-border bg-base text-secondary hover:border-active'
                         }`}
                       >
                         {tone.label}
@@ -1148,34 +1148,34 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <button
                   onClick={handleGetLocation}
                   disabled={locationLoading}
-                  className="w-full p-4 rounded-xl border border-[#2a2a2a] bg-[#0a0a0a] hover:border-[#c9a962]/50 transition-all flex items-center justify-center gap-3"
+                  className="w-full p-4 rounded-xl border border-border bg-base hover:border-gold/50 transition-all flex items-center justify-center gap-3"
                 >
                   {locationLoading ? (
-                    <svg className="animate-spin h-5 w-5 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                    <svg className="animate-spin h-5 w-5 text-gold" viewBox="0 0 24 24" fill="none">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
                   ) : (
-                    <svg className="w-5 h-5 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                    <svg className="w-5 h-5 text-gold" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                     </svg>
                   )}
-                  <span className="text-sm font-medium text-[#a0a0a0]">
+                  <span className="text-sm font-medium text-secondary">
                     {locationLoading ? 'Fetching location...' : 'Use my current location'}
                   </span>
                 </button>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#2a2a2a]" />
+                    <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-[#121212] px-3 text-[#525252]">or enter manually</span>
+                    <span className="bg-surface px-3 text-tertiary">or enter manually</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">Address</label>
+                  <label className="text-xs font-medium text-secondary ml-1">Address</label>
                   <div className="relative mt-1">
                     <input
                       type="text"
@@ -1184,26 +1184,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       onFocus={() => { if (placeSuggestions.length > 0) setShowSuggestions(true); }}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                       placeholder="Search your address or locality"
-                      className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-sm"
+                      className="w-full px-4 py-3 bg-base border border-border rounded-xl text-primary placeholder-tertiary focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors text-sm"
                     />
                     {suggestionsLoading && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <svg className="animate-spin h-4 w-4 text-[#c9a962]" viewBox="0 0 24 24" fill="none">
+                        <svg className="animate-spin h-4 w-4 text-gold" viewBox="0 0 24 24" fill="none">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
                       </div>
                     )}
                     {showSuggestions && placeSuggestions.length > 0 && (
-                      <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-xl">
+                      <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-border rounded-xl overflow-hidden shadow-xl">
                         {placeSuggestions.map((s) => (
                           <li key={s.place_id}>
                             <button
                               type="button"
                               onMouseDown={() => handleSelectSuggestion(s)}
-                              className="w-full text-left px-4 py-3 text-sm text-[#d0d0d0] hover:bg-[#252525] flex items-start gap-3 transition-colors border-b border-[#1e1e1e] last:border-0"
+                              className="w-full text-left px-4 py-3 text-sm text-secondary hover:bg-elevated flex items-start gap-3 transition-colors border-b border-border last:border-0"
                             >
-                              <svg className="w-4 h-4 mt-0.5 shrink-0 text-[#c9a962]" viewBox="0 0 24 24" fill="currentColor">
+                              <svg className="w-4 h-4 mt-0.5 shrink-0 text-gold" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                               </svg>
                               <span className="leading-snug">{s.description}</span>
@@ -1216,8 +1216,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
 
                 {address && (
-                  <div className="p-3 bg-[#c9a962]/5 border border-[#c9a962]/20 rounded-xl">
-                    <p className="text-xs text-[#c9a962] flex items-center gap-2">
+                  <div className="p-3 bg-gold/5 border border-gold/20 rounded-xl">
+                    <p className="text-xs text-gold flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                       </svg>
@@ -1230,12 +1230,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="px-6 py-4 border-t border-[#1a1a1a] shrink-0">
+          <div className="px-6 py-4 border-t border-border shrink-0">
             <div className="flex gap-3">
               {step > 1 && (
                 <button
                   onClick={handleBack}
-                  className="h-11 px-5 rounded-xl border border-[#2a2a2a] text-[#a0a0a0] text-sm font-medium hover:bg-[#1a1a1a] transition-all active:scale-[0.98]"
+                  className="h-11 px-5 rounded-xl border border-border text-secondary text-sm font-medium hover:bg-surface transition-all active:scale-[0.98]"
                 >
                   Back
                 </button>
@@ -1244,7 +1244,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {canSkip && (
                 <button
                   onClick={handleSkip}
-                  className="h-11 px-4 text-sm text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors"
+                  className="h-11 px-4 text-sm text-tertiary hover:text-secondary transition-colors"
                 >
                   Skip
                 </button>
@@ -1253,7 +1253,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <button
                 onClick={handleNext}
                 disabled={continueDisabled}
-                className="flex-1 h-11 bg-[#c9a962] text-[#0a0a0a] font-semibold text-sm rounded-xl hover:bg-[#d4b872] active:scale-[0.98] disabled:opacity-50 transition-all shadow-[0_0_20px_-5px_rgba(201,169,98,0.3)]"
+                className="flex-1 h-11 bg-gold text-base font-semibold text-sm rounded-xl hover:bg-gold-hover active:scale-[0.98] disabled:opacity-50 transition-all shadow-[0_0_20px_-5px_rgba(201,169,98,0.3)]"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">

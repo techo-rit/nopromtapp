@@ -4,10 +4,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createAdminClient, createAnonClient, setSessionCookies, storeSessionForAccount, ensureUserProfile, fetchUserProfile, mapUser } from '../lib/auth.js';
 
-// OTP storage — in-memory for simplicity, could use Redis (Upstash) for production
+// OTP storage — in-memory with automatic cleanup
 const otpStore = new Map(); // key: phone, value: { code, expiresAt, attempts }
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_ATTEMPTS = 5;
+const OTP_CLEANUP_INTERVAL = 60 * 1000; // Clean expired entries every 60s
+
+// Periodic cleanup to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of otpStore) {
+    if (entry.expiresAt < now) otpStore.delete(key);
+  }
+}, OTP_CLEANUP_INTERVAL).unref();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -247,7 +256,10 @@ export async function verifyOtpHandler(req, res) {
 
     stored.attempts++;
 
-    if (stored.code !== code.trim()) {
+    // Timing-safe comparison to prevent timing attacks
+    const codeBuffer = Buffer.from(stored.code.padEnd(6, '0'));
+    const inputBuffer = Buffer.from(code.trim().padEnd(6, '0'));
+    if (codeBuffer.length !== inputBuffer.length || !crypto.timingSafeEqual(codeBuffer, inputBuffer)) {
       return res.status(400).json({ success: false, error: 'Invalid OTP' });
     }
 
@@ -340,6 +352,10 @@ export function whatsappWebhookVerify(req, res) {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
+
+  if (!verifyToken) {
+    return res.status(503).send('Webhook not configured');
+  }
 
   if (mode === 'subscribe' && token === verifyToken) {
     return res.status(200).send(challenge);

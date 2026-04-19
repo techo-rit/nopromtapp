@@ -36,7 +36,9 @@ export async function webhookHandler(req, res) {
       .update(rawBody)
       .digest('hex');
 
-    if (signature !== expectedSignature) {
+    // Timing-safe comparison to prevent timing attacks on signature
+    if (signature.length !== expectedSignature.length ||
+        !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
       console.error('Invalid webhook signature');
       return res.status(400).json({ error: 'Invalid signature' });
     }

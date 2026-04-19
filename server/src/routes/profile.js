@@ -1,6 +1,6 @@
 import { createAdminClient, getUserFromRequest, ensureUserProfile } from '../lib/auth.js';
 import { createTtlCache } from '../lib/cache.js';
-import { feedCache } from './feed.js';
+import { feedCache } from '../lib/feedCache.js';
 
 const CACHE_TTL_MS = Number(process.env.SERVER_CACHE_TTL_MS || 60000);
 const GALLERY_CACHE_TTL_MS = Number(process.env.GALLERY_CACHE_TTL_MS || 120000); // 2 min

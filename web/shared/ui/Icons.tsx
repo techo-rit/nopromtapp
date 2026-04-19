@@ -19,7 +19,7 @@ export const ArrowLeftIcon: React.FC = () => (
 export const UploadIcon: React.FC = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className="h-12 w-12 text-[#E4C085] cursor-pointer"
+    className="h-12 w-12 text-gold cursor-pointer"
     fill="none"
     viewBox="0 0 24 24"
     stroke="currentColor"

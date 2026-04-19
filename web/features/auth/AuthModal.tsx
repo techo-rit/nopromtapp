@@ -25,6 +25,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [otpCode, setOtpCode] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -47,6 +48,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null;
 
   const handleSendOtp = async () => {
+    if (isSendingOtp) return;
     setLocalError(null);
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
@@ -54,12 +56,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     const fullPhone = `91${cleanPhone.slice(-10)}`;
+    setIsSendingOtp(true);
     try {
       await onSendOtp(fullPhone);
       setView('otp');
       setCountdown(30);
     } catch (err: any) {
       setLocalError(err.message || 'Failed to send OTP');
+    } finally {
+      setIsSendingOtp(false);
     }
   };
 
@@ -89,62 +94,66 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <>
-      {/* Backdrop with Blur */}
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] transition-all duration-300"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-all duration-300"
+        style={{ zIndex: 'var(--z-modal)' as unknown as number }}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal Container */}
-      <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
+      {/* Modal */}
+      <div
+        className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 pointer-events-none"
+        style={{ zIndex: 'calc(var(--z-modal) + 1)' as unknown as number }}
+      >
         <div
-          className="bg-[#121212] w-full max-w-[420px] rounded-3xl shadow-2xl border border-[#2a2a2a] overflow-hidden pointer-events-auto transform transition-all duration-300 scale-100 opacity-100"
+          className="bg-surface w-full max-w-[420px] rounded-[var(--radius-sheet)] shadow-[0_24px_80px_rgba(0,0,0,0.6)] border border-border overflow-hidden pointer-events-auto"
           role="dialog"
           aria-modal="true"
         >
-          {/* Header Section */}
+          {/* Header */}
           <div className="px-8 pt-8 pb-6 text-center relative">
             <button
               onClick={onClose}
-              className="absolute right-6 top-6 p-2 rounded-full text-[#6b6b6b] hover:text-[#f5f5f5] hover:bg-[#2a2a2a] transition-colors"
+              className="absolute right-5 top-5 p-2 rounded-full text-tertiary hover:text-primary hover:bg-elevated transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Close"
             >
               <CloseIcon width={20} height={20} />
             </button>
 
-            <h2 className="text-3xl font-semibold text-[#f5f5f5] mb-2 tracking-tight">
+            <h2 className="text-[28px] font-bold text-primary mb-2 tracking-tight font-display">
               {view === 'otp' ? 'Verify OTP' : 'Sign In'}
             </h2>
-            <p className="text-[#a0a0a0] text-sm">
+            <p className="text-secondary text-sm leading-relaxed">
               {view === 'phone' && 'Enter your mobile number to get started'}
               {view === 'otp' && `We sent a 6-digit code to your WhatsApp on +91 ${phone.replace(/\D/g, '').slice(-10)}`}
             </p>
           </div>
 
-          {/* Form Section */}
+          {/* Form */}
           <div className="px-8 pb-8">
             {displayError && (
-              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                <p className="text-sm text-red-400 font-medium">{displayError}</p>
+              <div className="mb-6 p-3 bg-error/10 border border-error/20 rounded-[var(--radius-input)] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-error" />
+                <p className="text-sm text-error font-medium">{displayError}</p>
               </div>
             )}
 
-            {/* Phone Input View */}
+            {/* Phone Input */}
             {view === 'phone' && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">Mobile Number</label>
+                  <label className="text-xs font-medium text-secondary ml-1">Mobile Number</label>
                   <div className="flex gap-2">
-                    <span className="h-12 px-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#6b6b6b] flex items-center text-sm shrink-0 font-medium">+91</span>
+                    <span className="h-12 px-3 bg-base border border-border rounded-[var(--radius-input)] text-tertiary flex items-center text-sm shrink-0 font-medium">+91</span>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading && phone.replace(/\D/g, '').length >= 10) handleSendOtp(); }}
                       placeholder="Enter 10-digit number"
-                      className="w-full h-12 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-lg tracking-wider"
+                      className="w-full h-12 px-4 bg-base border border-border rounded-[var(--radius-input)] text-primary placeholder-tertiary focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors text-lg tracking-wider"
                       disabled={isLoading}
                       autoFocus
                     />
@@ -153,14 +162,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                 <button
                   onClick={handleSendOtp}
-                  disabled={isLoading || phone.replace(/\D/g, '').length < 10}
-                  className="w-full h-12 bg-[#c9a962] text-black font-semibold rounded-xl hover:bg-[#d4b872] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_-5px_rgba(201,169,98,0.3)]"
+                  disabled={isLoading || isSendingOtp || phone.replace(/\D/g, '').length < 10}
+                  className="w-full h-12 bg-gold text-base font-semibold rounded-[var(--radius-input)] hover:bg-gold-hover active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_24px_-4px_rgba(232,195,125,0.25)]"
+                  style={{ transitionTimingFunction: 'var(--ease-spring)' }}
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-4 w-4 text-black" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg className="animate-spin h-4 w-4 text-[--color-base]" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                       Sending OTP
                     </span>
@@ -177,11 +187,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
-            {/* OTP Verification View */}
+            {/* OTP Verification */}
             {view === 'otp' && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[#a0a0a0] ml-1">6-Digit OTP</label>
+                  <label className="text-xs font-medium text-secondary ml-1">6-Digit OTP</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -189,7 +199,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading && otpCode.length === 6) handleVerifyOtp(); }}
                     placeholder="- - - - - -"
-                    className="w-full h-14 px-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-[#f5f5f5] placeholder-[#404040] focus:outline-none focus:border-[#c9a962] focus:ring-1 focus:ring-[#c9a962] transition-colors text-2xl tracking-[0.5em] text-center font-mono"
+                    className="w-full h-14 px-4 bg-base border border-border rounded-[var(--radius-input)] text-primary placeholder-tertiary focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-colors text-2xl tracking-[0.5em] text-center font-mono"
                     disabled={isLoading}
                     autoFocus
                     maxLength={6}
@@ -199,13 +209,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <button
                   onClick={handleVerifyOtp}
                   disabled={isLoading || otpCode.length !== 6}
-                  className="w-full h-12 bg-[#c9a962] text-black font-semibold rounded-xl hover:bg-[#d4b872] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_-5px_rgba(201,169,98,0.3)]"
+                  className="w-full h-12 bg-gold text-base font-semibold rounded-[var(--radius-input)] hover:bg-gold-hover active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_24px_-4px_rgba(232,195,125,0.25)]"
+                  style={{ transitionTimingFunction: 'var(--ease-spring)' }}
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-4 w-4 text-black" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg className="animate-spin h-4 w-4 text-[--color-base]" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                       Verifying
                     </span>
@@ -215,14 +226,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="flex items-center justify-between mt-2">
                   <button
                     onClick={() => { setView('phone'); setOtpCode(''); setLocalError(null); }}
-                    className="text-sm text-[#6b6b6b] hover:text-[#a0a0a0] transition-colors"
+                    className="text-sm text-tertiary hover:text-secondary transition-colors"
                   >
                     Change number
                   </button>
                   <button
                     onClick={handleResendOtp}
                     disabled={countdown > 0 || isLoading}
-                    className="text-sm text-[#c9a962] hover:text-[#d4b872] disabled:text-[#525252] disabled:cursor-not-allowed transition-colors"
+                    className="text-sm text-gold hover:text-gold-hover disabled:text-tertiary disabled:cursor-not-allowed transition-colors"
                   >
                     {countdown > 0 ? `Resend in ${countdown}s` : 'Resend OTP'}
                   </button>
@@ -230,11 +241,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
-            <p className="mt-6 text-xs text-[#525252] text-center px-4 leading-relaxed">
+            <p className="mt-6 text-xs text-tertiary text-center px-4 leading-relaxed">
               By continuing, you agree to our{' '}
-              <button className="text-[#808080] hover:text-[#c9a962] transition-colors">Terms of Service</button>
+              <button className="text-secondary hover:text-gold transition-colors">Terms of Service</button>
               {' '}and{' '}
-              <button className="text-[#808080] hover:text-[#c9a962] transition-colors">Privacy Policy</button>.
+              <button className="text-secondary hover:text-gold transition-colors">Privacy Policy</button>.
             </p>
           </div>
         </div>

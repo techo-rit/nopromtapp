@@ -67,10 +67,10 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
                 /* STYLE */
                 relative rounded-[24px] overflow-hidden cursor-pointer 
                 transition-all duration-300 ease-out 
-                border border-[#2a2a2a]
+                border border-border
 
                 /* FOCUS */
-                ${isFocused ? 'scale-[1.02] shadow-2xl border-[#c9a962]/50' : 'scale-95 opacity-80'}
+                ${isFocused ? 'scale-[1.02] shadow-2xl border-gold/50' : 'scale-95 opacity-80'}
               `}
               onClick={() => {
                 if (!isComingSoon) onSelectStack(stack);
@@ -87,7 +87,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
                     {stack.name}
                   </h3>
                   {isComingSoon && (
-                    <p className="mt-2 text-[#c9a962] text-sm font-medium">(coming soon...)</p>
+                    <p className="mt-2 text-gold text-sm font-medium">(coming soon...)</p>
                   )}
                 </div>
               </div>
@@ -103,7 +103,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
           return (
           <div
             key={stack.id}
-            className="relative aspect-[4/3] rounded-2xl overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] border border-[#2a2a2a]"
+            className="relative aspect-[4/3] rounded-2xl overflow-hidden group cursor-pointer transition-all hover:scale-[1.02] border border-border"
             onClick={() => {
               if (!isComingSoon) onSelectStack(stack);
             }}
@@ -114,7 +114,7 @@ export const StackGrid: React.FC<StackGridProps> = ({ stacks, onSelectStack, fir
               <div className="text-center">
                 <h3 className="text-white text-3xl font-bold">{stack.name}</h3>
                 {isComingSoon && (
-                  <p className="mt-2 text-[#c9a962] text-sm font-medium">(coming soon...)</p>
+                  <p className="mt-2 text-gold text-sm font-medium">(coming soon...)</p>
                 )}
               </div>
             </div>

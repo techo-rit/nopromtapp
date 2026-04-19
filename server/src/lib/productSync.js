@@ -11,7 +11,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { shopifyFetch } from './shopify.js';
 
-const TAG_MODEL = 'gemini-2.5-flash';
+const TAG_MODEL = 'gemini-3.1-flash-image-preview';
 
 // Fields stored as arrays on the templates table
 const ARRAY_FIELDS = new Set([
@@ -28,9 +28,14 @@ const SCALAR_FIELDS = [
   'transparency', 'versatility',
 ];
 
-const TAG_PROMPT = `You are a fashion product tagging expert for an Indian fashion marketplace. Given a fashion item's details, generate structured tags for personalization.
+const TAG_PROMPT = `You are a fashion product tagging expert for an Indian fashion marketplace. Analyze the product image carefully and generate structured metadata for personalization.
 
 Return ONLY a valid JSON object with these exact keys.
+
+**Product metadata** (generated from the image):
+- title: A concise, appealing product title (e.g. "Emerald Silk Palazzo Set")
+- description: A 1-2 sentence product description highlighting key visual features, fabric feel, and styling appeal
+- tags: string array of 3-8 searchable keywords (e.g. ["palazzo","silk","green","party wear","ethnic"])
 
 **Array fields** (string arrays, 1-5 values each):
 - color_family: primary/secondary colors, e.g. ["red","maroon"]
@@ -74,24 +79,43 @@ Return ONLY a valid JSON object with these exact keys.
 
 /**
  * Use Gemini to classify a template into 30 style dimensions.
+ * Sends the product image to the vision model; Gemini returns
+ * title, description, tags, and all classification dimensions.
  */
 async function generateTagsWithGemini(ai, template) {
-  const productInfo = [
-    `Title: ${template.title}`,
-    template.description ? `Description: ${template.description}` : null,
-    template.tags?.length ? `Existing tags: ${template.tags.join(', ')}` : null,
-    template.prompt ? `Visual description: ${template.prompt}` : null,
-    `Created: ${template.created_at || 'unknown'}`,
-  ].filter(Boolean).join('\n');
+  const parts = [];
+
+  // Include the product image for visual classification
+  if (template.image) {
+    const imageUrl = template.image.startsWith('http')
+      ? template.image
+      : `https://stiri.in${template.image}`;
+    const imgRes = await fetch(imageUrl);
+    if (imgRes.ok) {
+      const buf = Buffer.from(await imgRes.arrayBuffer());
+      parts.push({
+        inlineData: { data: buf.toString('base64'), mimeType: 'image/webp' },
+      });
+    }
+  }
+
+  parts.push({
+    text: TAG_PROMPT + `\n\nCreated: ${template.created_at || 'unknown'}`,
+  });
 
   const response = await ai.models.generateContent({
     model: TAG_MODEL,
-    contents: TAG_PROMPT + '\n\nProduct:\n' + productInfo,
+    contents: [{ role: 'user', parts }],
     config: { responseMimeType: 'application/json' },
   });
 
   const tags = JSON.parse(response.text);
   const result = {};
+
+  // Product metadata from Gemini
+  if (tags.title) result.title = String(tags.title);
+  if (tags.description) result.description = String(tags.description);
+  if (Array.isArray(tags.tags)) result.tags = tags.tags.map(String).slice(0, 8);
 
   for (const field of ARRAY_FIELDS) {
     result[field] = Array.isArray(tags[field])

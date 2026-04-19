@@ -1,15 +1,15 @@
 import React from 'react';
 
-const shimmer = 'animate-pulse bg-[#1a1a1a]';
+const shimmer = 'skeleton rounded';
 
 export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`rounded-2xl overflow-hidden border border-[#1f1f1f] ${className}`}>
+  <div className={`rounded-[var(--radius-card)] overflow-hidden border border-border ${className}`}>
     <div className={`aspect-[3/4] ${shimmer}`} />
-    <div className="p-3 space-y-2 bg-[#141414]">
-      <div className={`h-4 w-3/4 rounded ${shimmer}`} />
+    <div className="p-3 space-y-2 bg-surface">
+      <div className={`h-4 w-3/4 ${shimmer}`} />
       <div className="flex items-center gap-2">
-        <div className={`h-4 w-16 rounded ${shimmer}`} />
-        <div className={`h-3 w-12 rounded ${shimmer}`} />
+        <div className={`h-4 w-16 ${shimmer}`} />
+        <div className={`h-3 w-12 ${shimmer}`} />
       </div>
     </div>
   </div>
@@ -21,7 +21,7 @@ export const SkeletonCarousel: React.FC = () => (
       {[0, 1].map((i) => (
         <div
           key={i}
-          className={`shrink-0 w-[85vw] md:w-[85vw] max-w-[1600px] aspect-[4/5] md:aspect-[16/9] rounded-[24px] md:rounded-[40px] border border-[#1f1f1f] ${shimmer}`}
+          className={`shrink-0 w-[85vw] md:w-[85vw] max-w-[1600px] aspect-[4/5] md:aspect-[16/9] rounded-[24px] md:rounded-[40px] border border-border ${shimmer}`}
         />
       ))}
     </div>
@@ -37,8 +37,7 @@ export const SkeletonProductGrid: React.FC<{ count?: number }> = ({ count = 4 })
 );
 
 export const SkeletonProductPage: React.FC = () => (
-  <div className="w-full h-full overflow-y-auto bg-[#0a0a0a]">
-    {/* Hero image */}
+  <div className="w-full h-full overflow-y-auto bg-base">
     <div className={`w-full aspect-[3/4] md:aspect-[4/3] ${shimmer}`} />
     {/* Content */}
     <div className="px-5 py-6 space-y-4">

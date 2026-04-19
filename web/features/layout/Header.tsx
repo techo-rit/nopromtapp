@@ -1,14 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { RemixLogoIcon, ArrowLeftIcon } from "../../shared/ui/Icons";
 import type { User } from "../../types";
-
-const MobileProfileIcon: React.FC = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-    </svg>
-);
 
 interface HeaderProps {
     user: User | null;
@@ -24,24 +17,12 @@ interface HeaderProps {
     onCartClick?: () => void;
 }
 
-const SearchIcon: React.FC = () => (
-    <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="shrink-0 cursor-pointer"
-    >
-        <circle cx="11" cy="11" r="8" stroke="#6b6b6b" strokeWidth="2" />
-        <path
-            d="M21 21l-4.35-4.35"
-            stroke="#6b6b6b"
-            strokeWidth="2"
-            strokeLinecap="round"
-        />
-    </svg>
-);
+const NAV_LINKS = [
+    { label: 'Home', path: '/' },
+    { label: 'Closet', path: '/closet' },
+    { label: 'Changing Room', path: '/changing-room' },
+    { label: 'Concierge', path: '/search' },
+];
 
 export const Header: React.FC<HeaderProps> = ({
     user,
@@ -55,19 +36,11 @@ export const Header: React.FC<HeaderProps> = ({
     cartCount = 0,
     onCartClick,
 }) => {
-    const navItems: string[] = [];
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
-    const [mobileHeaderVisible, setMobileHeaderVisible] = useState(true);
-    const lastScrollY = useRef(0);
     const userMenuRef = useRef<HTMLDivElement>(null);
-    const mobileMenuRef = useRef<HTMLDivElement>(null);
-    const desktopSearchRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
+    const location = useLocation();
 
-    const commonTextClasses =
-        "text-[15px] font-normal leading-none text-[#f5f5f5]";
-    const inputClasses = `${commonTextClasses} bg-transparent placeholder-[#E4C085]/70 italic focus:outline-none w-[11ch] text-center`;
     const accountLabel = user?.accountType ? user.accountType.charAt(0).toUpperCase() + user.accountType.slice(1) : "Free";
     const creationsLeft = user?.creationsLeft ?? 0;
     const isUltimate = user?.accountType === 'ultimate';
@@ -75,70 +48,74 @@ export const Header: React.FC<HeaderProps> = ({
 
     useEffect(() => {
         if (!showUserMenu) return;
-        const onDocumentClick = (event: MouseEvent) => {
-            if (!userMenuRef.current) return;
-            if (!userMenuRef.current.contains(event.target as Node)) {
+        const close = (e: MouseEvent) => {
+            if (showUserMenu && userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
                 setShowUserMenu(false);
             }
         };
-        document.addEventListener("mousedown", onDocumentClick);
-        return () => document.removeEventListener("mousedown", onDocumentClick);
+        document.addEventListener("mousedown", close);
+        return () => document.removeEventListener("mousedown", close);
     }, [showUserMenu]);
 
-    useEffect(() => {
-        if (!showMobileMenu) return;
-        const onDocumentClick = (event: MouseEvent) => {
-            if (!mobileMenuRef.current) return;
-            if (!mobileMenuRef.current.contains(event.target as Node)) {
-                setShowMobileMenu(false);
-            }
-        };
-        document.addEventListener("mousedown", onDocumentClick);
-        return () => document.removeEventListener("mousedown", onDocumentClick);
-    }, [showMobileMenu]);
-
-    useEffect(() => {
-        const el = document.querySelector('[data-home-scroll="true"]') as HTMLElement | null;
-        if (!el) return;
-        const onScroll = () => {
-            const current = el.scrollTop;
-            if (current < 10) {
-                setMobileHeaderVisible(true);
-            } else if (current > lastScrollY.current + 6) {
-                setMobileHeaderVisible(false);
-            } else if (current < lastScrollY.current - 6) {
-                setMobileHeaderVisible(true);
-            }
-            lastScrollY.current = current;
-        };
-        el.addEventListener('scroll', onScroll, { passive: true });
-        return () => el.removeEventListener('scroll', onScroll);
-    }, []);
+    const DropdownMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+        <div className="absolute right-0 mt-2 w-56 bg-surface border border-border rounded-[var(--radius-card)] shadow-[0_8px_32px_rgba(0,0,0,0.5)] py-2">
+            <div className="px-4 py-3 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    {user?.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover border border-border" referrerPolicy="no-referrer" />
+                    ) : (
+                        <div className="w-9 h-9 bg-gold rounded-full flex items-center justify-center text-base font-medium text-sm shrink-0">
+                            {user?.name?.charAt(0)?.toUpperCase()}
+                        </div>
+                    )}
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium text-primary truncate">{user?.name}</p>
+                        <p className="text-[11px] text-tertiary mt-0.5">{accountLabel} / {creationsLeft} left</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                {pillIsClickable && (
+                    <button
+                        onClick={() => { onUpgrade!(); onClose(); }}
+                        className="w-full text-left px-4 py-3 text-sm text-gold hover:bg-gold-subtle transition-colors flex items-center gap-3 cursor-pointer"
+                    >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 2l3.5 8L21 5l-2 11H5zm0 2h14v2H5v-2z" /></svg>
+                        Upgrade
+                    </button>
+                )}
+                <button
+                    onClick={() => { navigate('/profile'); onClose(); }}
+                    className="w-full text-left px-4 py-3 text-sm text-secondary hover:bg-elevated hover:text-primary transition-colors flex items-center gap-3 cursor-pointer"
+                >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" /><circle cx="12" cy="7" r="4" /></svg>
+                    View Profile
+                </button>
+                <button
+                    onClick={() => { onLogout(); onClose(); }}
+                    className="w-full text-left px-4 py-3 text-sm text-error hover:bg-error/5 transition-colors flex items-center gap-3 cursor-pointer"
+                >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" /><path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 12H9" strokeLinecap="round" /></svg>
+                    Log Out
+                </button>
+            </div>
+        </div>
+    );
 
     return (
         <>
-            {/* ── Mobile ── */}
-            <div
-                className="md:hidden"
-                style={{
-                    height: mobileHeaderVisible ? 56 : 0,
-                    overflow: 'hidden',
-                    transition: 'height 300ms ease-in-out',
-                    willChange: 'height',
-                    flexShrink: 0,
-                }}
-            >
+            {/* Desktop only — no mobile header at all */}
             <header
-                className="w-full h-[56px] bg-[#0a0a0a] border-b border-[#2a2a2a] z-50 transition-transform duration-300 ease-in-out"
-                style={{ transform: mobileHeaderVisible ? 'translateY(0)' : 'translateY(-100%)' }}
+                className="hidden md:block fixed top-0 left-0 right-0 glass"
+                style={{ zIndex: 'var(--z-nav)' as unknown as number }}
             >
-                <div className="w-full h-full px-4 flex items-center justify-between">
-                    {/* Left: back + logo */}
-                    <div className="flex items-center gap-2">
+                <div className="w-full max-w-[1440px] mx-auto px-8 h-[72px] flex items-center justify-between">
+                    {/* Left: Logo + Nav */}
+                    <div className="flex items-center gap-8">
                         {isSecondaryPage && (
                             <button
                                 onClick={onBack}
-                                className="p-1.5 -ml-1 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors shrink-0"
+                                className="p-2 -ml-2 text-secondary hover:text-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                 aria-label="Go back"
                             >
                                 <ArrowLeftIcon />
@@ -146,141 +123,66 @@ export const Header: React.FC<HeaderProps> = ({
                         )}
                         <button
                             onClick={() => navigate('/')}
-                            className="flex items-center gap-1.5 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            className="flex items-center gap-2 text-xl font-bold tracking-tight text-primary font-display cursor-pointer hover:opacity-80 transition-opacity"
                             aria-label="Go to home"
                         >
                             <RemixLogoIcon />
-                            <span className="text-[15px] font-bold tracking-tight text-[#f5f5f5]">stiri.in</span>
-                        </button>
-                    </div>
-
-                    {/* Right: profile icon */}
-                    <div className="relative" ref={mobileMenuRef}>
-                        <button
-                            onClick={() => user ? setShowMobileMenu(v => !v) : onSignIn()}
-                            className="flex items-center justify-center w-9 h-9 rounded-full transition-colors active:scale-95"
-                            aria-label="Profile"
-                        >
-                            {user?.avatarUrl ? (
-                                <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
-                            ) : user ? (
-                                <div className="w-8 h-8 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm">
-                                    {user.name?.charAt(0)?.toUpperCase()}
-                                </div>
-                            ) : (
-                                <span className="text-[#a0a0a0]"><MobileProfileIcon /></span>
-                            )}
+                            <span>stiri</span>
                         </button>
 
-                        {showMobileMenu && user && (
-                            <div className="absolute right-0 mt-2 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-xl py-2 z-50">
-                                <div className="px-4 py-3 border-b border-[#2a2a2a]">
-                                    <div className="flex items-center gap-2.5">
-                                        {user.avatarUrl ? (
-                                            <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
-                                        ) : (
-                                            <div className="w-9 h-9 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm shrink-0">
-                                                {user.name?.charAt(0)?.toUpperCase()}
-                                            </div>
-                                        )}
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium text-[#f5f5f5] truncate">{user.name}</p>
-                                            <p className="text-[11px] text-[#6b6b6b] mt-0.5">{accountLabel} · {creationsLeft} left</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    {pillIsClickable && (
-                                        <button
-                                            onClick={() => { onUpgrade!(); setShowMobileMenu(false); }}
-                                            className="w-full text-left px-4 py-3 text-sm text-[#c9a962] hover:bg-[#c9a962]/5 transition-colors flex items-center gap-3 cursor-pointer"
-                                        >
-                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 2l3.5 8L21 5l-2 11H5zm0 2h14v2H5v-2z" /></svg>
-                                            Upgrade
-                                        </button>
-                                    )}
+                        {/* Nav Links */}
+                        <nav className="flex items-center gap-1">
+                            {NAV_LINKS.map((link) => {
+                                const isActive = location.pathname === link.path;
+                                return (
                                     <button
-                                        onClick={() => { navigate('/profile'); setShowMobileMenu(false); }}
-                                        className="w-full text-left px-4 py-3 text-sm text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors flex items-center gap-3 cursor-pointer"
+                                        key={link.path}
+                                        onClick={() => navigate(link.path)}
+                                        className={`px-3.5 py-2 rounded-[var(--radius-pill)] text-[13px] font-medium tracking-wide transition-all cursor-pointer ${
+                                            isActive
+                                                ? 'text-gold bg-gold-subtle'
+                                                : 'text-secondary hover:text-primary hover:bg-elevated'
+                                        }`}
                                     >
-                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" /><circle cx="12" cy="7" r="4" /></svg>
-                                        View Profile
+                                        {link.label}
                                     </button>
-                                    <button
-                                        onClick={() => { onLogout(); setShowMobileMenu(false); }}
-                                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-400/5 transition-colors flex items-center gap-3 cursor-pointer"
-                                    >
-                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" /><path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 12H9" strokeLinecap="round" /></svg>
-                                        Log Out
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
-            </div>
-
-            {/* ── Desktop ── */}
-            <header className="hidden md:block relative w-full bg-[#0a0a0a] border-b border-[#2a2a2a] z-50">
-                <div className="w-full max-w-[1440px] mx-auto px-8 h-[80px] flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        {isSecondaryPage && (
-                            <button
-                                onClick={onBack}
-                                className="p-2 -ml-2 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors shrink-0"
-                                aria-label="Go back"
-                            >
-                                <ArrowLeftIcon />
-                            </button>
-                        )}
-                        <div className="flex items-center gap-12">
-                            <button
-                                onClick={() => navigate('/')}
-                                className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5] cursor-pointer hover:opacity-80 transition-opacity"
-                                aria-label="Go to home"
-                            >
-                                <RemixLogoIcon />
-                                <span>stiri.in</span>
-                            </button>
-                        </div>
+                                );
+                            })}
+                        </nav>
                     </div>
 
-                    <div className="w-[45%] mx-auto flex items-center gap-1.5 h-[40px] px-4 rounded-full border border-[#2a2a2a] hover:border-[#3a3a3a] transition-colors">
-                        <SearchIcon />
-                        <input
-                            ref={desktopSearchRef}
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="desire for..."
-                            className={`${inputClasses} flex-1 min-w-0 w-auto`}
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-4">
+                    {/* Center: Search bar — navigates to /search */}
+                    <div className="flex-1 max-w-md mx-6">
                         <button
-                            onClick={() => navigate('/changing-room')}
-                            className="p-2 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors"
-                            aria-label="Changing Room"
+                            onClick={() => navigate('/search')}
+                            className="w-full flex items-center gap-2.5 h-[42px] px-4 rounded-[var(--radius-pill)] border border-border hover:border-gold/40 hover:bg-elevated bg-surface transition-all cursor-pointer active:scale-[0.98]"
+                            aria-label="Open search"
                         >
-                            <svg width="22" height="22" viewBox="0 0 512.026 512.026" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M417.758,108.407c-1.212-3.874-13.918-37.538-93.483-55.543V29.901v-5.41c0-8.124-5.794-14.916-13.901-16.427c-35.567-10.752-73.156-10.752-108.723,0c-8.107,1.51-13.909,8.303-13.909,16.427v5.41v22.963c-79.556,18.005-92.262,51.669-93.474,55.543c-0.657,2.108-0.469,4.386,0.512,6.366l14.242,28.493c12.425,24.841,18.987,52.651,18.987,80.427v262.733c0,14.114,11.486,25.6,25.6,25.6h93.867V68.292c0-0.094,0.051-0.162,0.051-0.247c-16.316-0.862-31.514-4.147-42.718-9.216V43.042c14.532,5.265,32.461,8.183,51.2,8.183c18.748,0,36.676-2.918,51.2-8.183v15.787c-11.196,5.069-26.394,8.354-42.709,9.216c0,0.085,0.043,0.154,0.043,0.247v443.733h93.867c14.123,0,25.6-11.486,25.6-25.6V223.693c0-27.776,6.571-55.586,18.995-80.427l14.242-28.493C418.227,112.794,418.415,110.515,417.758,108.407z M204.117,378.854l-25.6,59.733c-1.382,3.234-4.531,5.18-7.842,5.18c-1.118,0-2.261-0.23-3.354-0.7c-4.335-1.852-6.34-6.869-4.48-11.204l25.6-59.733c1.843-4.335,6.904-6.332,11.196-4.48C203.972,369.502,205.978,374.519,204.117,378.854z M307.209,24.602c-13.286,6.084-31.582,9.557-51.2,9.557c-19.439,0-37.598-3.405-50.859-9.395c0.316-0.06,0.64-0.119,0.947-0.205c32.666-9.984,67.166-9.984,99.831,0c0.085,0.017,0.179,0.026,0.256,0.026c0.341,0,0.683-0.162,1.024-0.094V24.602z M344.704,443.068c-1.092,0.469-2.236,0.7-3.362,0.7c-3.302,0-6.451-1.946-7.834-5.18l-25.6-59.733c-1.86-4.335,0.145-9.353,4.48-11.204c4.292-1.86,9.344,0.145,11.196,4.48l25.6,59.733C351.044,436.198,349.039,441.216,344.704,443.068z" />
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-tertiary">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="M21 21l-4.35-4.35" />
                             </svg>
+                            <span className="flex-1 text-left text-[14px] text-tertiary">
+                                Search styles, looks, outfits...
+                            </span>
                         </button>
+                    </div>
+
+                    {/* Right: Cart + User */}
+                    <div className="flex items-center gap-3">
                         {onCartClick && (
                             <button
                                 onClick={onCartClick}
-                                className="relative p-2 text-[#a0a0a0] hover:text-[#f5f5f5] transition-colors"
+                                className="relative p-2 text-secondary hover:text-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                 aria-label="Open cart"
                             >
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
                                     <line x1="3" y1="6" x2="21" y2="6" />
                                     <path d="M16 10a4 4 0 01-8 0" />
                                 </svg>
                                 {cartCount > 0 && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-[#c9a962] text-[#0a0a0a] text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] bg-gold text-base text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
                                         {cartCount > 9 ? '9+' : cartCount}
                                     </span>
                                 )}
@@ -289,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
                         {!user ? (
                             <button
                                 onClick={onSignIn}
-                                className="min-h-[44px] px-6 py-2.5 bg-[#1a1a1a] text-[#f5f5f5] rounded-full border border-[#3a3a3a] hover:cursor-pointer hover:border-[#c9a962]/30 transition-all"
+                                className="h-[44px] px-6 bg-primary text-base rounded-[var(--radius-pill)] font-semibold text-[15px] hover:shadow-[0_4px_20px_rgba(242,242,247,0.15)] active:scale-[0.97] transition-all cursor-pointer"
                             >
                                 Sign In
                             </button>
@@ -297,82 +199,21 @@ export const Header: React.FC<HeaderProps> = ({
                             <div className="relative" ref={userMenuRef}>
                                 <button
                                     onClick={() => setShowUserMenu(!showUserMenu)}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-[#1a1a1a] transition-all"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-elevated transition-colors cursor-pointer"
                                 >
                                     {user?.avatarUrl ? (
-                                        <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
+                                        <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-border" referrerPolicy="no-referrer" />
                                     ) : (
-                                        <div className="w-8 h-8 bg-[#c9a962] rounded-full flex items-center justify-center text-[#0a0a0a] font-medium text-sm">
+                                        <div className="w-8 h-8 bg-gold rounded-full flex items-center justify-center text-base font-medium text-sm">
                                             {user?.name?.charAt(0)?.toUpperCase()}
                                         </div>
                                     )}
-                                    <span className="text-sm font-medium text-[#a0a0a0] hidden lg:block">
+                                    <span className="text-sm font-medium text-secondary hidden lg:block">
                                         {user?.name?.split(" ")[0]}
                                     </span>
                                 </button>
                                 {showUserMenu && (
-                                    <div className="absolute right-0 mt-2 w-56 bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-lg py-2 z-50">
-                                        <div className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                {user.avatarUrl ? (
-                                                    <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-[#2a2a2a]" referrerPolicy="no-referrer" />
-                                                ) : null}
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium text-[#f5f5f5] truncate">
-                                                        {user.name}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="border-t border-[#2a2a2a]">
-                                            <div className="px-4 py-3 text-xs text-[#6b6b6b]">
-                                                Account: <span className="text-[#f5f5f5]">{accountLabel}</span>
-                                                <span className="text-[#3a3a3a]"> • </span>
-                                                {creationsLeft} left
-                                            </div>
-                                            {pillIsClickable && (
-                                                <button
-                                                    onClick={() => {
-                                                        onUpgrade!();
-                                                        setShowUserMenu(false);
-                                                    }}
-                                                    className="w-full text-left px-4 py-3 text-sm text-[#c9a962] hover:bg-[#1a1a1a] transition-colors flex items-center gap-3 cursor-pointer"
-                                                >
-                                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                                    </svg>
-                                                    Upgrade Account
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => {
-                                                    navigate('/profile');
-                                                    setShowUserMenu(false);
-                                                }}
-                                                className="w-full text-left px-4 py-3 text-sm text-[#a0a0a0] hover:bg-[#1a1a1a] hover:text-[#f5f5f5] transition-colors flex items-center gap-3 cursor-pointer"
-                                            >
-                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" />
-                                                    <circle cx="12" cy="7" r="4" />
-                                                </svg>
-                                                View Profile
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    onLogout();
-                                                    setShowUserMenu(false);
-                                                }}
-                                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-400/5 transition-colors flex items-center gap-3 cursor-pointer"
-                                            >
-                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeLinecap="round" />
-                                                    <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                                                    <path d="M21 12H9" strokeLinecap="round" />
-                                                </svg>
-                                                Log Out
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <DropdownMenu onClose={() => setShowUserMenu(false)} />
                                 )}
                             </div>
                         )}
