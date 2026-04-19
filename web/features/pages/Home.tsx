@@ -253,104 +253,152 @@ export const Home: React.FC<HomeProps> = ({
         />
       )}
 
-      {/* ═══ CATEGORY STACKS — horizontal scroll groups ═══ */}
+      {/* ═══ CATEGORY GRID — editorial tiles by occasion ═══ */}
       {categoryGroups.length > 0 && (
-        <section className="mt-10 md:mt-14">
-          {categoryGroups.map(([occasion, items]) => {
-            const label = OCCASION_LABELS[occasion] || occasion.replace(/_/g, " ");
-            return (
-              <div key={occasion} className="mb-10">
-                <div className="px-6 md:px-[7.5vw] mb-4 flex items-center justify-between">
-                  <h3
-                    className="text-[15px] md:text-[17px] font-medium text-[#a0a0a0] capitalize"
-                    style={{ fontFamily: "var(--font-serif)" }}
-                  >
-                    {label}
-                  </h3>
-                  <span className="text-[11px] text-[#6b6b6b] tabular-nums">{items.length} looks</span>
-                </div>
+        <section className="mt-10 md:mt-14 px-4 md:px-[7.5vw]">
+          <div className="flex items-baseline justify-between mb-5 md:mb-6">
+            <h2
+              className="text-[18px] md:text-[22px] font-light text-[#f5f5f5] tracking-[-0.01em]"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              Shop by <span className="text-[#c9a962] italic">occasion</span>
+            </h2>
+            <span className="text-[10px] tracking-[0.15em] uppercase text-[#6b6b6b]">{categoryGroups.length} collections</span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            {categoryGroups.map(([occasion, items], idx) => {
+              const label = OCCASION_LABELS[occasion] || occasion.replace(/_/g, " ");
+              const heroItem = items[0];
+              // First two on mobile get taller treatment
+              const isFeature = idx < 2;
+
+              return (
                 <div
-                  className="flex overflow-x-hidden md:overflow-x-auto gap-3 px-6 md:px-[7.5vw] md:snap-x md:snap-mandatory scrollbar-hide pb-2"
-                  style={{ overscrollBehavior: 'none', touchAction: 'pan-y' }}
-                  ref={(el) => {
-                    if (!el || (el as any)._touchBound) return;
-                    (el as any)._touchBound = true;
-                    let sX = 0, sY = 0, lk = '', sLeft = 0;
-                    el.addEventListener('touchstart', (e: TouchEvent) => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; sLeft = el.scrollLeft; lk = ''; }, { passive: true });
-                    el.addEventListener('touchmove', (e: TouchEvent) => {
-                      const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
-                      if (!lk && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) lk = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
-                      if (lk === 'h') { e.preventDefault(); el.scrollLeft = sLeft - dx; }
-                    }, { passive: false });
-                    el.addEventListener('touchend', () => { lk = ''; }, { passive: true });
-                  }}
-                  onWheel={(e) => {
-                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                      const page = e.currentTarget.closest('[data-home-scroll]');
-                      if (page) page.scrollTop += e.deltaY;
-                      e.preventDefault();
-                    }
-                  }}
+                  key={occasion}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => heroItem && handleProductClick(heroItem.product_id)}
+                  className={`
+                    relative rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer group
+                    ${isFeature ? 'aspect-[3/4]' : 'aspect-[4/5]'}
+                  `}
                 >
-                  {items.map((item) => (
-                    <div
-                      key={item.product_id}
-                      ref={observeCard}
-                      data-pid={item.product_id}
-                      className="snap-start shrink-0 w-[45vw] md:w-[220px]"
+                  {heroItem?.image ? (
+                    <img
+                      src={heroItem.image}
+                      alt={label}
+                      className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a]" />
+                  )}
+
+                  {/* Dark vignette */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" />
+
+                  {/* Category label */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                    <p
+                      className="text-[14px] md:text-[16px] font-medium text-white tracking-wide capitalize leading-tight"
+                      style={{ fontFamily: "var(--font-serif)" }}
                     >
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleProductClick(item.product_id)}
-                        className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#141414] border border-[#2a2a2a] cursor-pointer hover:border-[#3a3a3a] transition-colors"
-                      >
-                        {item.image ? (
-                          <img src={item.image} alt={item.title} className="w-full h-full object-cover object-top" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-[#141414] to-[#0a0a0a]" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                          <h4 className="text-[13px] font-semibold text-white leading-tight line-clamp-2 mb-1">{item.title}</h4>
-                          {item.min_price != null && (
-                            <span className="text-[11px] text-white/50 tabular-nums">₹{Math.round(item.min_price / 100)}</span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleTryOn(item.product_id)}
-                        className="w-full mt-2 py-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-[#c9a962] border border-[#c9a962]/30 rounded-lg hover:bg-[#c9a962]/5 transition-all active:scale-[0.97] cursor-pointer"
-                      >
-                        Try-on
-                      </button>
-                    </div>
-                  ))}
+                      {label}
+                    </p>
+                    <span className="text-[10px] text-white/40 tracking-[0.1em] uppercase mt-1 block">
+                      {items.length} {items.length === 1 ? 'look' : 'looks'}
+                    </span>
+                  </div>
+
+                  {/* Subtle gold corner accent on hover */}
+                  <div className="absolute top-3 right-3 w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <svg viewBox="0 0 20 20" fill="none" className="w-full h-full">
+                      <path d="M6 2h12v12" stroke="#c9a962" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </section>
       )}
 
-      {/* ═══ FULL FEED — snap-scroll editorial cards ═══ */}
+      {/* ═══ RANKED PRODUCT GRID — full personalized feed ═══ */}
       {displayItems.length > 5 && (
-        <section className="pb-32">
-          <div className="px-6 md:px-[7.5vw] py-8">
-            <p className="text-[10px] tracking-[0.25em] uppercase text-[#6b6b6b]" style={{ fontFamily: "var(--font-serif)" }}>
-              Keep exploring
-            </p>
+        <section className="mt-12 md:mt-16 px-4 md:px-[7.5vw] pb-32">
+          {/* Section header */}
+          <div className="flex items-baseline justify-between mb-6 md:mb-8">
+            <div>
+              <h2
+                className="text-[18px] md:text-[22px] font-light text-[#f5f5f5] tracking-[-0.01em]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Curated <span className="text-[#c9a962] italic">for you</span>
+              </h2>
+              <p className="text-[10px] md:text-[11px] tracking-[0.15em] uppercase text-[#6b6b6b] mt-1">
+                Ranked by your style profile
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col items-center">
+
+          {/* Product grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
             {displayItems.slice(5).map((item, i) => (
-              <FeedCard
+              <div
                 key={item.product_id}
-                item={item}
-                index={i}
-                onTryOn={() => handleTryOn(item.product_id)}
-                onClick={() => handleProductClick(item.product_id)}
-                observeRef={observeCard}
-              />
+                ref={observeCard}
+                data-pid={item.product_id}
+                className="group"
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleProductClick(item.product_id)}
+                  className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#0a0a0a] cursor-pointer"
+                >
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#141414] to-[#0a0a0a]" />
+                  )}
+
+                  {/* Bottom gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+
+                  {/* Occasion tag */}
+                  {item.occasion?.[0] && (
+                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 text-[9px] tracking-[0.12em] uppercase font-medium text-[#c9a962] bg-black/60 backdrop-blur-sm rounded-full">
+                      {OCCASION_LABELS[item.occasion[0]] || item.occasion[0].replace(/_/g, " ")}
+                    </span>
+                  )}
+
+                  {/* Try-on quick action — appears on hover */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleTryOn(item.product_id); }}
+                    className="absolute bottom-3 left-3 right-3 py-2.5 text-[10px] font-semibold tracking-[0.1em] uppercase text-center text-[#0a0a0a] bg-white rounded-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 active:scale-[0.97] cursor-pointer"
+                  >
+                    Step into
+                  </button>
+                </div>
+
+                {/* Product info */}
+                <div className="mt-2.5 px-0.5">
+                  <h4 className="text-[12px] md:text-[13px] font-medium text-[#e0e0e0] leading-snug line-clamp-2">
+                    {item.title}
+                  </h4>
+                  {item.min_price != null && (
+                    <p className="text-[12px] text-[#c9a962]/70 font-medium tabular-nums mt-0.5">
+                      ₹{Math.round(item.min_price / 100)}
+                    </p>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </section>
@@ -503,8 +551,8 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
 
         <div
           ref={scrollRef}
-          className="flex gap-4 md:gap-6 overflow-x-hidden md:overflow-x-auto md:snap-x md:snap-mandatory scrollbar-hide items-center px-[7.5vw]"
-          style={{ overscrollBehavior: 'none', touchAction: 'pan-y' }}
+          className="flex gap-4 md:gap-6 overflow-hidden md:overflow-x-auto md:overflow-y-hidden md:snap-x md:snap-mandatory scrollbar-hide items-center px-[7.5vw]"
+          style={{ touchAction: 'pan-y' }}
           onWheel={(e) => {
             if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
               const page = e.currentTarget.closest('[data-home-scroll]');
@@ -530,15 +578,16 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                   onClick={() => onClick(item.product_id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(item.product_id); } }}
                   className={`
-                    w-[78vw] md:w-[78vw] max-w-[1400px]
+                    w-[78vw] md:w-[60vw] max-w-[1100px]
                     aspect-[3/4] md:aspect-[16/9]
-                    rounded-[24px] md:rounded-[40px] overflow-hidden
+                    max-h-[65svh] md:max-h-[70vh]
+                    rounded-[24px] md:rounded-[32px] overflow-hidden
                     relative cursor-pointer group
                     transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-                    bg-[#141414] border
+                    bg-[#0a0a0a]
                     ${isFocused
-                      ? "scale-[1.02] md:scale-[1.01] border-white/10"
-                      : "scale-100 opacity-85 border-white/5"
+                      ? "scale-[1.02] md:scale-[1.01]"
+                      : "scale-100 opacity-85"
                     }
                   `}
                 >
@@ -648,10 +697,10 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, index, onTryOn, onClick, obse
           rounded-[24px] md:rounded-[40px] overflow-hidden
           relative cursor-pointer group
           transform transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]
-          bg-[#141414] border
+          bg-[#0a0a0a]
           ${isFocused
-            ? "scale-100 opacity-100 border-[#c9a962]/30"
-            : "scale-[0.96] opacity-60 border-white/5"
+            ? "scale-100 opacity-100"
+            : "scale-[0.96] opacity-60"
           }
         `}
         style={{ aspectRatio: "3/4", maxHeight: "80svh" }}
