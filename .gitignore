@@ -24,7 +24,7 @@ yarn-error.log*
 
 # Environment variables
 .env
-admin_commands.py
+*.py
 
 # OS
 .DS_Store
@@ -40,3 +40,5 @@ coverage/
 
 # Miscellaneous
 server/public/
+acc*
+test*
