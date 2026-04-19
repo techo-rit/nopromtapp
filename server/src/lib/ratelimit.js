@@ -41,9 +41,6 @@ function inMemoryRateCheck(identifier, maxRequests, windowMs) {
   };
 }
 
-let redisClient = null;
-let isRedisConfigured = false;
-
 function getRedis() {
   if (!redisClient && !isRedisConfigured) {
     const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
