@@ -1,37 +1,37 @@
 @import "tailwindcss";
 
 /* ============================================================
-   OBSIDIAN GOLD — Design Tokens
-   Single source of truth. All Tailwind utilities reference these.
+   Stiri — Design Tokens (original nopromt.ai aesthetic)
+   Flat blacks, warm matte gold, Playfair Display + system sans
    ============================================================ */
 
 @theme {
-  /* Backgrounds */
+  /* Backgrounds — flat, no glass */
   --color-base: #0a0a0a;
   --color-surface: #141414;
   --color-elevated: #1a1a1a;
 
-  /* Gold Accent */
+  /* Gold Accent — matte, warm, understated */
   --color-gold: #c9a962;
   --color-gold-hover: #d4b872;
-  --color-gold-subtle: rgba(201, 169, 98, 0.05);
+  --color-gold-subtle: rgba(201, 169, 98, 0.08);
 
-  /* Text */
+  /* Text — high contrast primary, muted secondary */
   --color-primary: #f5f5f5;
   --color-secondary: #a0a0a0;
   --color-tertiary: #6b6b6b;
 
-  /* Borders */
+  /* Borders — solid, subtle */
   --color-border: #2a2a2a;
-  --color-border-active: rgba(201, 169, 98, 0.3);
+  --color-border-active: rgba(201, 169, 98, 0.4);
 
   /* Semantic */
   --color-success: #30D158;
   --color-error: #FF453A;
   --color-warning: #FFD60A;
 
-  /* Glass */
-  --color-glass: rgba(20, 20, 20, 0.85);
+  /* Glass — flat dark */
+  --color-glass: rgba(10, 10, 10, 0.95);
   --color-glass-border: #2a2a2a;
 
   /* Typography */
@@ -39,13 +39,13 @@
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
 
-  /* Z-Index Scale */
+  /* Z-Index */
   --z-nav: 50;
   --z-sheet: 60;
   --z-modal: 70;
   --z-toast: 80;
 
-  /* Transition Curves */
+  /* Curves */
   --ease-spring: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -57,19 +57,19 @@
   --radius-input: 12px;
 }
 
-/* Legacy token aliases — keeps existing Tailwind classes working during migration */
+/* Legacy :root aliases */
 :root {
-  --color-bg: #000000;
-  --color-surface: #1C1C1E;
-  --color-surface-elevated: #2C2C2E;
-  --color-text-primary: #F2F2F7;
-  --color-text-secondary: #AEAEB2;
-  --color-text-muted: #8E8E93;
-  --color-accent: #E8C37D;
-  --color-accent-hover: #D4AF37;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --font-serif: 'SF Pro Display', 'Inter', -apple-system, sans-serif;
-  --font-sans: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-elevated: #1a1a1a;
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #6b6b6b;
+  --color-accent: #c9a962;
+  --color-accent-hover: #d4b872;
+  --color-border: #2a2a2a;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
@@ -87,16 +87,16 @@ html {
 }
 
 body {
-  font-family: var(--font-body), "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-family: var(--font-sans), "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
-  background-color: var(--color-base);
-  color: var(--color-primary);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   padding-top: var(--safe-area-top);
   padding-bottom: var(--safe-area-bottom);
   padding-left: var(--safe-area-left);
   padding-right: var(--safe-area-right);
+  overscroll-behavior-y: none;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
@@ -110,43 +110,25 @@ input, textarea {
 }
 
 /* ============================================================
-   Typography Utilities
+   Typography
    ============================================================ */
 
-.font-display {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
-}
-
-.font-body {
-  font-family: var(--font-body);
-  letter-spacing: -0.01em;
-}
-
-.font-mono {
-  font-family: var(--font-mono);
-  letter-spacing: 0;
-}
-
-/* Legacy alias */
-.font-serif {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
-}
+.font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
+.font-body { font-family: var(--font-body); }
+.font-mono { font-family: var(--font-mono); }
+.font-serif { font-family: var(--font-serif); }
 
 /* ============================================================
-   Glass Utility
+   Glass — flat dark background, no blur
    ============================================================ */
 
 .glass {
   background: var(--color-glass);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--color-glass-border);
 }
 
 /* ============================================================
-   Shimmer / Skeleton Animation
+   Shimmer / Skeleton
    ============================================================ */
 
 @keyframes shimmer {
@@ -155,71 +137,23 @@ input, textarea {
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface) 25%,
-    var(--color-elevated) 50%,
-    var(--color-surface) 75%
-  );
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-elevated) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
 }
 
 /* ============================================================
-   Safe Area Utilities
+   Safe Area
    ============================================================ */
 
-.safe-area-top {
-  padding-top: var(--safe-area-top);
-}
-
-.safe-area-bottom {
-  padding-bottom: var(--safe-area-bottom);
-}
+.safe-area-top { padding-top: var(--safe-area-top); }
+.safe-area-bottom { padding-bottom: var(--safe-area-bottom); }
 
 /* ============================================================
    Scrollbar & Touch
    ============================================================ */
 
-* {
-  -webkit-touch-callout: none;
-}
-
-img, a, button {
-  -webkit-user-drag: none;
-  user-select: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* ============================================================
-   Scroll Snap Utilities
-   ============================================================ */
-
-.snap-y-mandatory {
-  scroll-snap-type: y mandatory;
-  overflow-y: scroll;
-}
-
-.snap-start {
-  scroll-snap-align: start;
-}
-
-/* ============================================================
-   Gradient Scrim (for text over images)
-   ============================================================ */
-
-.scrim-bottom {
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.4) 50%,
-    transparent 100%
-  );
-}
+* { -webkit-touch-callout: none; }
+img, a, button { -webkit-user-drag: none; user-select: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

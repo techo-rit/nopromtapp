@@ -34,43 +34,38 @@ export const FloatingSearch: React.FC<FloatingSearchProps> = () => {
             style={{ bottom: `calc(60px + env(safe-area-inset-bottom) + 10px)`, left: 0, right: 0, pointerEvents: 'none' }}
         >
             {!collapsed ? (
-                /* ── Bar: tappable search row ── */
+                /* ── Bar: "Manifesting desire for..." search row ── */
                 <button
                     onClick={goToSearch}
-                    className="mx-4 flex items-center gap-2.5 h-[48px] px-4 rounded-[var(--radius-pill)] border border-gold/30 w-full max-w-md text-left active:scale-[0.98]"
+                    className="mx-4 flex items-center gap-3 h-[44px] px-5 rounded-full border border-[#2a2a2a] w-full max-w-md text-left active:scale-[0.98]"
                     style={{
-                        background: 'rgba(28,28,30,0.85)',
-                        backdropFilter: 'blur(16px) saturate(180%)',
-                        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 12px rgba(232,195,125,0.1)',
+                        background: '#0a0a0a',
                         pointerEvents: 'auto',
                         transition: 'transform 100ms ease',
                     }}
                     aria-label="Open search"
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-gold)" strokeWidth="2" strokeLinecap="round" className="shrink-0">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
+                    <span className="text-[#c9a962] text-[13px] font-medium whitespace-nowrap">Manifesting</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                        <circle cx="11" cy="11" r="8" stroke="#6b6b6b" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="#6b6b6b" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <span className="flex-1 text-[14px] text-tertiary">Search styles...</span>
+                    <span className="flex-1 text-[14px] text-[#c9a962]/60 italic">desire for...</span>
                 </button>
             ) : (
-                /* ── Collapsed: magnifier pill ── */
+                /* ── Collapsed: gold accent pill ── */
                 <button
                     onClick={goToSearch}
-                    className="w-12 h-12 rounded-full flex items-center justify-center active:scale-90"
+                    className="w-11 h-11 rounded-full flex items-center justify-center active:scale-90"
                     style={{
-                        background: 'rgba(28,28,30,0.85)',
-                        backdropFilter: 'blur(12px)',
-                        WebkitBackdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(232,195,125,0.3)',
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 12px rgba(232,195,125,0.15)',
+                        background: '#141414',
+                        border: '1px solid #2a2a2a',
                         pointerEvents: 'auto',
                         transition: 'transform 100ms ease',
                     }}
                     aria-label="Open search"
                 >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-gold)" strokeWidth="2" strokeLinecap="round">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a962" strokeWidth="2" strokeLinecap="round">
                         <circle cx="11" cy="11" r="8" />
                         <path d="M21 21l-4.35-4.35" />
                     </svg>

@@ -307,9 +307,9 @@ const App: React.FC = () => {
 
   return (
     <ToastProvider>
-    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-base text-primary font-body overflow-hidden">
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col bg-[#0a0a0a] text-[#f5f5f5] overflow-hidden">
       
-      {/* HEADER — fixed glassmorphism overlay, no layout push */}
+      {/* HEADER — desktop only, no mobile header */}
       <Header
           user={user}
           onSignIn={openAuthModal}
@@ -489,7 +489,7 @@ const App: React.FC = () => {
       {/* FLOATING SEARCH (mobile only, home page) */}
       <FloatingSearch searchQuery={searchQuery} onSearchChange={handleSearchChange} />
 
-      {/* BOTTOM NAV — fixed glassmorphism overlay */}
+      {/* BOTTOM NAV — mobile only, flat dark bg */}
       <BottomNav
           cartCount={user ? cartCount : 0}
           onCartClick={user ? openCartDrawer : undefined}
