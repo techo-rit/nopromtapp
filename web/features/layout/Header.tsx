@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
 
     // Main header — desktop only, NO mobile header
     return (
-        <header className="hidden md:block relative w-full bg-[#0a0a0a] z-50">
+        <header className="hidden md:block relative w-full bg-[#0a0a0a] border-b border-[#1a1a1a] z-50">
             {/* Top row: Logo + Nav + User */}
             <div className="w-full max-w-[1440px] mx-auto px-8 h-[80px] flex items-center justify-between">
                 <div className="flex items-center gap-12">
@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#f5f5f5] hover:cursor-pointer hover:opacity-80 transition-opacity"
                     >
                         <RemixLogoIcon />
-                        <span>stiri</span>
+                        <span>stiri.in</span>
                     </button>
                     <nav className="flex items-center gap-1">
                         {[

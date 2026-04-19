@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useNavigate } from "react-router-dom";
 import { fetchFeed } from "../feed/feedService";
 import { trackEvent } from "../tracking/trackingService";
-import { ChevronLeftIcon, ChevronRightIcon } from "../../shared/ui/Icons";
+import { ChevronLeftIcon, ChevronRightIcon, RemixLogoIcon } from "../../shared/ui/Icons";
 import type { FeedItem, Template, User } from "../../types";
 
 /* ── Label helpers ─── */
@@ -62,6 +62,25 @@ export const Home: React.FC<HomeProps> = ({
   const viewedRef = useRef<Set<string>>(new Set());
   const clickedRef = useRef<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const homeScrollRef = useRef<HTMLDivElement | null>(null);
+  const [mobileNavVisible, setMobileNavVisible] = useState(true);
+
+  // Reset scroll to top on mount so page starts at first card
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // Mobile top nav: hide on scroll down, show on scroll up
+  useEffect(() => {
+    const el = homeScrollRef.current;
+    if (!el) return;
+    let lastY = 0;
+    const onScroll = () => {
+      const y = el.scrollTop;
+      setMobileNavVisible(y < 30 || y < lastY);
+      lastY = y;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   const displayItems = useMemo(() => {
     if (feedItems.length > 0) return feedItems;
@@ -168,15 +187,40 @@ export const Home: React.FC<HomeProps> = ({
   }
 
   return (
-    <div data-home-scroll="true" className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a]">
+    <div ref={homeScrollRef} data-home-scroll="true" className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a]">
 
-      {/* ═══ HEADER — "Choose your form" ═══ */}
-      <header className="pt-6 pb-3 md:pt-10 md:pb-6 px-5 md:px-[7.5vw]">
+      {/* ═══ MOBILE TOP NAV — premium brand bar, hides on scroll ═══ */}
+      <div
+        className={`md:hidden sticky top-0 z-40 flex items-center justify-center h-[52px] bg-[#0a0a0a]/90 backdrop-blur-md border-b border-[#1a1a1a]/60 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+          mobileNavVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <img src="/ico/favicon.svg" alt="Stiri" width="28" height="28" className="block" />
+          <span
+            className="text-[18px] font-light tracking-[0.08em] text-[#f5f5f5]"
+            style={{ fontFamily: "var(--font-serif)" }}
+          >
+            stiri
+          </span>
+          <span className="w-[3px] h-[3px] rounded-full bg-[#c9a962]/60" />
+          <span className="text-[10px] tracking-[0.2em] uppercase text-[#c9a962]/60 font-medium">in</span>
+        </div>
+      </div>
+
+      {/* ═══ HERO — entry point ═══ */}
+      <header className="pt-5 pb-4 md:pt-8 md:pb-6 px-5 md:px-[7.5vw]">
+        <p className="text-[10px] md:text-[11px] tracking-[0.2em] uppercase text-[#c9a962]/70 font-medium mb-2 md:hidden" style={{ fontFamily: "var(--font-serif)" }}>
+          fashion, personalized
+        </p>
+        <p className="text-[11px] tracking-[0.2em] uppercase text-[#c9a962]/70 font-medium mb-2 hidden md:block" style={{ fontFamily: "var(--font-serif)" }}>
+          Stiri &mdash; fashion, personalized
+        </p>
         <h1
-          className="text-[22px] md:text-[40px] font-light text-[#f5f5f5] tracking-[-0.02em] leading-[1.15]"
+          className="text-[26px] md:text-[42px] font-light text-[#f5f5f5] tracking-[-0.02em] leading-[1.2]"
           style={{ fontFamily: "var(--font-serif)" }}
         >
-          Choose your <span className="text-[#c9a962] italic font-normal">form</span>
+          Looks crafted <span className="text-[#c9a962] italic font-normal">only for you</span>
         </h1>
 
         {/* Onboarding progress */}
@@ -201,19 +245,12 @@ export const Home: React.FC<HomeProps> = ({
 
       {/* ═══ TRENDING CAROUSEL ═══ */}
       {topPicks.length > 0 && (
-        <>
-        <div className="px-5 md:px-[7.5vw] mb-3">
-          <h2 className="text-[13px] tracking-[0.15em] uppercase text-[#c9a962]/80 font-medium" style={{ fontFamily: "var(--font-serif)" }}>
-            Only For You
-          </h2>
-        </div>
         <TrendingCarousel
           items={topPicks}
           onTryOn={handleTryOn}
           onClick={handleProductClick}
           observeCard={observeCard}
         />
-        </>
       )}
 
       {/* ═══ CATEGORY STACKS — horizontal scroll groups ═══ */}
@@ -232,7 +269,29 @@ export const Home: React.FC<HomeProps> = ({
                   </h3>
                   <span className="text-[11px] text-[#6b6b6b] tabular-nums">{items.length} looks</span>
                 </div>
-                <div className="flex overflow-x-auto gap-3 px-6 md:px-[7.5vw] snap-x snap-mandatory scrollbar-hide pb-2">
+                <div
+                  className="flex overflow-x-hidden md:overflow-x-auto gap-3 px-6 md:px-[7.5vw] md:snap-x md:snap-mandatory scrollbar-hide pb-2"
+                  style={{ overscrollBehavior: 'none', touchAction: 'pan-y' }}
+                  ref={(el) => {
+                    if (!el || (el as any)._touchBound) return;
+                    (el as any)._touchBound = true;
+                    let sX = 0, sY = 0, lk = '', sLeft = 0;
+                    el.addEventListener('touchstart', (e: TouchEvent) => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; sLeft = el.scrollLeft; lk = ''; }, { passive: true });
+                    el.addEventListener('touchmove', (e: TouchEvent) => {
+                      const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
+                      if (!lk && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) lk = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
+                      if (lk === 'h') { e.preventDefault(); el.scrollLeft = sLeft - dx; }
+                    }, { passive: false });
+                    el.addEventListener('touchend', () => { lk = ''; }, { passive: true });
+                  }}
+                  onWheel={(e) => {
+                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                      const page = e.currentTarget.closest('[data-home-scroll]');
+                      if (page) page.scrollTop += e.deltaY;
+                      e.preventDefault();
+                    }
+                  }}
+                >
                   {items.map((item) => (
                     <div
                       key={item.product_id}
@@ -263,7 +322,7 @@ export const Home: React.FC<HomeProps> = ({
                         onClick={() => handleTryOn(item.product_id)}
                         className="w-full mt-2 py-2 text-[11px] font-semibold tracking-[0.08em] uppercase text-[#c9a962] border border-[#c9a962]/30 rounded-lg hover:bg-[#c9a962]/5 transition-all active:scale-[0.97] cursor-pointer"
                       >
-                        Step into
+                        Try-on
                       </button>
                     </div>
                   ))}
@@ -324,32 +383,95 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) cardRefs.current.set(id, el);
     else cardRefs.current.delete(id);
   }, []);
 
+  // Mobile: JS-driven horizontal swipe (no overflow-x, no scroll hijacking)
   useEffect(() => {
+    if (!isMobile) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let startX = 0, startY = 0, locked = '', dragging = false, startScrollLeft = 0;
+
+    const onStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startScrollLeft = el.scrollLeft;
+      locked = '';
+      dragging = false;
+    };
+    const onMove = (e: TouchEvent) => {
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!locked && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        locked = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
+      }
+      if (locked === 'h') {
+        e.preventDefault();
+        dragging = true;
+        el.scrollLeft = startScrollLeft - dx;
+      }
+      // 'v' = don't interfere, page scrolls normally
+    };
+    const onEnd = () => {
+      if (dragging) {
+        // Snap to nearest card
+        const cardW = el.querySelector('[data-card-id]');
+        if (cardW) {
+          const gap = 16;
+          const w = (cardW as HTMLElement).clientWidth + gap;
+          const idx = Math.round(el.scrollLeft / w);
+          el.scrollTo({ left: idx * w, behavior: 'smooth' });
+          setActiveIndex(Math.max(0, Math.min(idx, items.length - 1)));
+        }
+      }
+      locked = '';
+      dragging = false;
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, [isMobile, items.length]);
+
+  // Desktop: intersection observer for focus state
+  useEffect(() => {
+    if (isMobile) {
+      // On mobile, use activeIndex for focus
+      if (items[activeIndex]) setFocusedId(items[activeIndex].product_id);
+      return;
+    }
     const container = scrollRef.current;
     if (!container) return;
     const obs = new IntersectionObserver(
       (entries) => {
-        let best: { id: string; ratio: number } | null = null;
+        let bestId: string | null = null;
+        let bestRatio = 0;
         entries.forEach((entry) => {
           const cid = entry.target.getAttribute("data-card-id");
           if (!cid) return;
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            if (!best || entry.intersectionRatio > best.ratio) best = { id: cid, ratio: entry.intersectionRatio };
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5 && entry.intersectionRatio > bestRatio) {
+            bestId = cid;
+            bestRatio = entry.intersectionRatio;
           }
         });
-        if (best) setFocusedId(best.id);
+        if (bestId) setFocusedId(bestId);
       },
       { root: container, rootMargin: "-15% 0px -15% 0px", threshold: [0.5, 0.6, 0.7, 0.8] },
     );
     cardRefs.current.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, [items]);
+  }, [items, isMobile, activeIndex]);
 
   const scroll = (dir: "left" | "right") => {
     const c = scrollRef.current;
@@ -381,13 +503,13 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
 
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto gap-4 md:gap-6 snap-x snap-mandatory scroll-smooth scrollbar-hide items-center px-[7.5vw]"
-          style={{ overscrollBehaviorX: 'contain' }}
+          className="flex gap-4 md:gap-6 overflow-x-hidden md:overflow-x-auto md:snap-x md:snap-mandatory scrollbar-hide items-center px-[7.5vw]"
+          style={{ overscrollBehavior: 'none', touchAction: 'pan-y' }}
           onWheel={(e) => {
-            // Let vertical scrolling pass through to the page
             if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-              e.currentTarget.style.overflowX = 'hidden';
-              requestAnimationFrame(() => { if (scrollRef.current) scrollRef.current.style.overflowX = 'auto'; });
+              const page = e.currentTarget.closest('[data-home-scroll]');
+              if (page) page.scrollTop += e.deltaY;
+              e.preventDefault();
             }
           }}
         >
@@ -400,7 +522,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                 ref={(el) => { setCardRef(item.product_id, el); observeCard(el); }}
                 data-card-id={item.product_id}
                 data-pid={item.product_id}
-                className="snap-center snap-always shrink-0 flex justify-center"
+                className="md:snap-center md:snap-always shrink-0 flex justify-center"
               >
                 <div
                   role="button"
@@ -445,7 +567,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                       className="relative overflow-hidden group/button bg-white rounded-full font-bold tracking-wide flex items-center justify-center w-fit mb-4 px-6 py-2.5 text-sm md:px-10 md:py-4 md:text-base active:scale-95 transition-all duration-300 cursor-pointer"
                     >
                       <span className="relative z-10 text-[#0a0a0a] group-hover/button:text-white transition-colors duration-[600ms] ease-out">
-                        Step into
+                        Try-on
                       </span>
                       <div className="absolute inset-0 z-0 bg-[#c9a962] translate-y-[101%] group-hover/button:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
                     </button>
@@ -559,7 +681,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, index, onTryOn, onClick, obse
             className="relative overflow-hidden group/button bg-white rounded-full font-bold tracking-wide flex items-center justify-center w-fit mb-4 px-6 py-2.5 text-sm md:px-8 md:py-3 md:text-base active:scale-95 transition-all duration-300 cursor-pointer"
           >
             <span className="relative z-10 text-[#0a0a0a] group-hover/button:text-white transition-colors duration-[600ms] ease-out">
-              Step into
+              Try-on
             </span>
             <div className="absolute inset-0 z-0 bg-[#c9a962] translate-y-[101%] group-hover/button:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
           </button>

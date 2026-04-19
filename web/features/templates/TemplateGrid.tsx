@@ -164,7 +164,7 @@ export const TemplateGrid: React.FC<TemplateGridProps> = ({ templates, onSelectT
                   active:scale-95 transition-all duration-300
               `}>
                   <span className="relative z-10 text-base group-hover/button:text-white transition-colors duration-[600ms] ease-out">
-                      Step into
+                      Try-on
                   </span>
                   <div className="absolute inset-0 z-0 bg-gold-hover translate-y-[101%] group-hover/button:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
               </button>

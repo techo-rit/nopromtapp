@@ -463,7 +463,7 @@ const ErrorView: React.FC<ErrorViewProps> = ({ errorMessage, onRetry, onClose })
       <p className="mt-8 text-sm text-tertiary">
         Need help?{' '}
         <a 
-          href="mailto:support@stiri.in" 
+          href="mailto:founder@stiri.in" 
           className="text-gold hover:underline"
         >
           Contact Support
