@@ -12,6 +12,7 @@ export async function fetchFeed(limit = 20, offset = 0): Promise<FeedResponse> {
 
   const res = await fetch(`${BASE}/api/feed/for-you?${params}`, {
     credentials: 'include',
+    cache: 'no-store',
   });
 
   if (!res.ok) {

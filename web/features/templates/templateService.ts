@@ -27,7 +27,7 @@ function normalizeTemplate(row: Record<string, any>): Template {
 /** Fetch all active templates */
 export async function fetchTemplates(): Promise<Template[]> {
   const url = `${BASE}/api/templates`;
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Failed to fetch templates: ${res.status}`);
   const { templates } = await res.json();
   return (templates || []).map(normalizeTemplate);
@@ -35,7 +35,7 @@ export async function fetchTemplates(): Promise<Template[]> {
 
 /** Fetch only trending templates (in order) */
 export async function fetchTrendingTemplates(): Promise<Template[]> {
-  const res = await fetch(`${BASE}/api/templates/trending`);
+  const res = await fetch(`${BASE}/api/templates/trending`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Failed to fetch trending templates: ${res.status}`);
   const { templates } = await res.json();
   return (templates || []).map(normalizeTemplate);
@@ -43,7 +43,7 @@ export async function fetchTrendingTemplates(): Promise<Template[]> {
 
 /** Fetch a single template by ID */
 export async function fetchTemplateById(id: string): Promise<Template | null> {
-  const res = await fetch(`${BASE}/api/templates/${encodeURIComponent(id)}`);
+  const res = await fetch(`${BASE}/api/templates/${encodeURIComponent(id)}`, { cache: 'no-store' });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch template: ${res.status}`);
   const row = await res.json();

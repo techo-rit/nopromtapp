@@ -5,7 +5,7 @@ import type { ShopifyProduct, ShopifyCart } from '../../types';
 const BASE = CONFIG.API.BASE_URL;
 
 async function shopifyGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { credentials: 'include' });
+  const res = await fetch(`${BASE}${path}`, { credentials: 'include', cache: 'no-store' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Shopify API error: ${res.status}`);

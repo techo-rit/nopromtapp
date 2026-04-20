@@ -13,10 +13,16 @@ interface UseTemplatesResult {
   error: string | null;
 }
 
-// Module-level cache so re-mounts don't re-fetch
+// Module-level cache so re-mounts don't re-fetch (60s TTL)
+const CACHE_TTL = 60_000;
 let _cachedTemplates: Template[] | null = null;
 let _cachedTrending: Template[] | null = null;
 let _fetchPromise: Promise<void> | null = null;
+let _cacheTime = 0;
+
+function isCacheValid(): boolean {
+  return _cachedTemplates !== null && _cachedTrending !== null && (Date.now() - _cacheTime) < CACHE_TTL;
+}
 
 function doFetch(): Promise<void> {
   if (!_fetchPromise) {
@@ -26,6 +32,7 @@ function doFetch(): Promise<void> {
     ]).then(([all, trending]) => {
       _cachedTemplates = all;
       _cachedTrending = trending;
+      _cacheTime = Date.now();
       _fetchPromise = null;
     }).catch((err) => {
       _fetchPromise = null;
@@ -49,10 +56,15 @@ export function useTemplates(): UseTemplatesResult {
 
   // Initial fetch
   useEffect(() => {
-    if (_cachedTemplates && _cachedTrending) {
+    if (isCacheValid()) {
       applyCache();
       return;
     }
+
+    // Cache expired or empty — force re-fetch
+    _cachedTemplates = null;
+    _cachedTrending = null;
+    _fetchPromise = null;
 
     let mounted = true;
     doFetch()
@@ -78,6 +90,7 @@ export function useTemplates(): UseTemplatesResult {
             _cachedTemplates = null;
             _cachedTrending = null;
             _fetchPromise = null;
+            _cacheTime = 0;
             doFetch()
               .then(() => {
                 setTemplates(_cachedTemplates || []);

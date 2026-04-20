@@ -223,10 +223,34 @@ export async function cachePurgeHandler(req, res) {
     return res.status(403).json({ success: false, error: 'Invalid admin key' });
   }
 
+  const cleared = [];
   if (scope === 'products' || scope === 'all') {
     productCache.clear();
+    cleared.push('shopify-products');
+  }
+  if (scope === 'templates' || scope === 'all') {
+    try {
+      const { templatesCache } = await import('./templates.js');
+      templatesCache.clear();
+      cleared.push('templates');
+    } catch { /* templates cache not available */ }
+  }
+  if (scope === 'feed' || scope === 'all') {
+    try {
+      const { feedCache } = await import('../lib/feedCache.js');
+      feedCache.clear();
+      cleared.push('feed');
+    } catch { /* feed cache not available */ }
   }
 
-  console.log(`[admin] Cache purged: scope=${scope}`);
-  res.json({ success: true, purged: scope, timestamp: new Date().toISOString() });
+  console.log(`[admin] Cache purged: scope=${scope}, cleared=[${cleared.join(',')}]`);
+
+  // Broadcast SSE to all connected clients so they invalidate their client-side cache
+  try {
+    const { broadcastTemplateUpdate } = await import('./templates.js');
+    broadcastTemplateUpdate();
+    cleared.push('client-sse');
+  } catch { /* SSE broadcast not available */ }
+
+  res.json({ success: true, purged: scope, cleared, timestamp: new Date().toISOString() });
 }

@@ -12,7 +12,7 @@ function templateToFeedItem(t: Template): FeedItem {
     image: t.imageUrl,
     score: 0,
     isExploration: false,
-    min_price: t.price ? parseFloat(t.price.amount) : undefined,
+    min_price: t.price ? Math.round(parseFloat(t.price.amount) * 100) : undefined,
   };
 }
 

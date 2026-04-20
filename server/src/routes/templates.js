@@ -2,8 +2,11 @@ import { createAdminClient } from '../lib/auth.js';
 import { createTtlCache } from '../lib/cache.js';
 import { getProductsByHandles, getProductByHandle } from '../lib/shopify.js';
 
-const TEMPLATES_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const TEMPLATES_CACHE_TTL = 60 * 1000; // 60 seconds — keep in sync with feed cache
 const cache = createTtlCache(TEMPLATES_CACHE_TTL);
+
+// Expose for admin cache purge
+export { cache as templatesCache };
 
 /**
  * Enrich templates with Shopify price data (server-side join).
@@ -76,7 +79,7 @@ async function enrichTemplateWithProduct(template) {
 const sseClients = new Set();
 let _realtimeChannel = null;
 
-function broadcastTemplateUpdate() {
+export function broadcastTemplateUpdate() {
   cache.clear();
   const msg = `data: ${JSON.stringify({ type: 'update', ts: Date.now() })}\n\n`;
   for (const res of sseClients) {

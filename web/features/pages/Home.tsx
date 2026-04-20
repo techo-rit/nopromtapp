@@ -42,7 +42,7 @@ function templateToFeedItem(t: Template): FeedItem {
     image: t.imageUrl,
     score: 0,
     isExploration: false,
-    min_price: t.price ? parseFloat(t.price.amount) : undefined,
+    min_price: t.price ? Math.round(parseFloat(t.price.amount) * 100) : undefined,
   };
 }
 
@@ -66,7 +66,15 @@ export const Home: React.FC<HomeProps> = ({
   const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   // Reset scroll to top on mount so page starts at first card
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (homeScrollRef.current) homeScrollRef.current.scrollTop = 0;
+  }, []);
+
+  // When feed data swaps in, reset scroll to prevent snap jumping to wrong card
+  useEffect(() => {
+    if (homeScrollRef.current) homeScrollRef.current.scrollTop = 0;
+  }, [feedItems]);
 
   // Callback ref: attach scroll listener immediately when scroll container mounts.
   // Uses direct DOM manipulation (no React state) so the animation is instant + reliable.
