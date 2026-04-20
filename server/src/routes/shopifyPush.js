@@ -34,6 +34,9 @@ const PRODUCT_CREATE_MUTATION = `
         handle
         title
         status
+        variants(first: 1) {
+          nodes { id }
+        }
       }
       userErrors {
         field
@@ -135,10 +138,10 @@ async function pushTemplateToShopify(template) {
   const media = templateToMedia(template);
 
   if (existing) {
-    // Update existing product
+    // Update existing product (skip media — already uploaded, avoids duplicates)
     product.id = existing.id;
     delete product.handle; // can't update handle
-    const result = await shopifyAdminFetch(PRODUCT_UPDATE_MUTATION, { product, media });
+    const result = await shopifyAdminFetch(PRODUCT_UPDATE_MUTATION, { product });
     const errors = result?.productUpdate?.userErrors || [];
     if (errors.length > 0) {
       return { handle, action: 'update', success: false, errors };
@@ -171,11 +174,27 @@ async function pushTemplateToShopify(template) {
     if (errors.length > 0) {
       return { handle, action: 'create', success: false, errors };
     }
+
+    // Set variant price on newly created product
+    const newProduct = result.productCreate.product;
+    const variantId = newProduct.variants?.nodes?.[0]?.id;
+    if (variantId && template.min_price != null) {
+      const priceRupees = (template.min_price / 100).toFixed(2);
+      try {
+        await shopifyAdminFetch(VARIANT_UPDATE_MUTATION, {
+          productId: newProduct.id,
+          variants: [{ id: variantId, price: priceRupees }],
+        });
+      } catch (err) {
+        console.warn(`[shopify-push] Variant price set failed for ${handle}:`, err.message);
+      }
+    }
+
     return {
       handle,
       action: 'create',
       success: true,
-      shopifyId: result.productCreate.product.id,
+      shopifyId: newProduct.id,
     };
   }
 }
