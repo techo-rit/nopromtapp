@@ -1,8 +1,8 @@
 /**
- * Product Sync Route — Admin-triggered tag generation + cron
+ * Shopify Pull Route — Pull Shopify data → Supabase + Gemini AI tags
  *
- * POST /api/admin/product-sync              — Full sync: all templates → Gemini → cache
- * POST /api/admin/product-sync/:templateId  — Sync a single template
+ * POST /api/admin/shopify-pull              — Full pull: all templates → Gemini → cache
+ * POST /api/admin/shopify-pull/:templateId  — Pull a single template
  * POST /api/admin/cron/personalization       — Trigger nightly cron (admin key)
  *
  * Reference: docs/PERSONALIZATION_MODEL.md §4, §15

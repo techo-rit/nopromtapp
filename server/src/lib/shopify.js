@@ -1,8 +1,10 @@
-// server/src/lib/shopify.js — Shopify Storefront API GraphQL client (DRY)
+// server/src/lib/shopify.js — Shopify Storefront + Admin API GraphQL client (DRY)
 import { createTtlCache } from './cache.js';
 
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 const SHOPIFY_STOREFRONT_TOKEN = process.env.SHOPIFY_STOREFRONT_TOKEN;
+const SHOPIFY_CLIENT_ID = process.env.SHOPIFY_CLIENT_ID;
+const SHOPIFY_CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET;
 const API_VERSION = '2025-01';
 
 const productCache = createTtlCache(5 * 60 * 1000); // 5 min — purge via /api/admin/cache/purge
@@ -36,6 +38,82 @@ export async function shopifyFetch(query, variables = {}) {
   const json = await res.json();
   if (json.errors) {
     throw new Error(`Shopify GraphQL errors: ${JSON.stringify(json.errors)}`);
+  }
+
+  return json.data;
+}
+
+// ─── Admin API: Client Credentials OAuth token (24h, auto-refresh) ───
+
+let _adminToken = null;
+let _adminTokenExpiresAt = 0;
+
+async function getAdminToken() {
+  // Return cached token if still valid (refresh 60s before expiry)
+  if (_adminToken && Date.now() < _adminTokenExpiresAt - 60_000) return _adminToken;
+
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_CLIENT_ID || !SHOPIFY_CLIENT_SECRET) {
+    throw new Error('Shopify Admin API not configured (SHOPIFY_CLIENT_ID / SHOPIFY_CLIENT_SECRET missing)');
+  }
+
+  const shop = SHOPIFY_STORE_DOMAIN.replace('.myshopify.com', '');
+  const res = await fetch(
+    `https://${SHOPIFY_STORE_DOMAIN}/admin/oauth/access_token`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: SHOPIFY_CLIENT_ID,
+        client_secret: SHOPIFY_CLIENT_SECRET,
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Shopify Admin token exchange failed ${res.status}: ${text}`);
+  }
+
+  const data = await res.json();
+  _adminToken = data.access_token;
+  // Shopify tokens expire in 24h; use expires_in if provided, else default 24h
+  const expiresInMs = (data.expires_in || 86400) * 1000;
+  _adminTokenExpiresAt = Date.now() + expiresInMs;
+
+  console.log('[shopify] Admin API token obtained, expires in', Math.round(expiresInMs / 3600000), 'h');
+  return _adminToken;
+}
+
+// ─── Admin API fetch (for product mutations) ─────────────────
+
+export async function shopifyAdminFetch(query, variables = {}) {
+  const token = await getAdminToken();
+
+  const url = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${API_VERSION}/graphql.json`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': token,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    // If 401, clear cached token so next call re-authenticates
+    if (res.status === 401) {
+      _adminToken = null;
+      _adminTokenExpiresAt = 0;
+    }
+    throw new Error(`Shopify Admin API error ${res.status}: ${text}`);
+  }
+
+  const json = await res.json();
+  if (json.errors) {
+    throw new Error(`Shopify Admin GraphQL errors: ${JSON.stringify(json.errors)}`);
   }
 
   return json.data;

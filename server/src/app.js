@@ -23,6 +23,7 @@ import { trackEventsHandler } from './routes/events.js';
 import { feedHandler } from './routes/feed.js';
 import { createBoostHandler, listBoostsHandler, deleteBoostHandler } from './routes/adminBoost.js';
 import { getWeightsHandler, tuneWeightsHandler } from './routes/adminWeights.js';
+import { pushAllHandler, pushSingleHandler } from './routes/shopifyPush.js';
 import { getMetricsHandler } from './routes/adminMetrics.js';
 import { fullSyncHandler, singleSyncHandler, cronHandler } from './routes/productSync.js';
 import { uploadGarmentHandler, deleteGarmentHandler, listGarmentsHandler, syncWardrobeHandler, listOutfitsHandler, chatHandler, gapsHandler } from './routes/wardrobe.js';
@@ -169,10 +170,14 @@ export function createApp() {
   // Personalization: Admin metrics
   app.get('/api/admin/metrics', getMetricsHandler);
 
-  // Personalization: Product sync (Gemini AI tag generation)
-  app.post('/api/admin/product-sync', fullSyncHandler);
-  app.post('/api/admin/product-sync/:templateId', singleSyncHandler);
+  // Shopify Pull (Shopify → Supabase, Gemini AI tag generation)
+  app.post('/api/admin/shopify-pull', fullSyncHandler);
+  app.post('/api/admin/shopify-pull/:templateId', singleSyncHandler);
   app.post('/api/admin/cron/personalization', cronHandler);
+
+  // Shopify Push (Supabase → Shopify)
+  app.post('/api/admin/shopify-push', pushAllHandler);
+  app.post('/api/admin/shopify-push/:id', pushSingleHandler);
 
   // Wardrobe
   app.post('/api/wardrobe/garments/upload', uploadGarmentHandler);
