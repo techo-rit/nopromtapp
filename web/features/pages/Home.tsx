@@ -63,23 +63,29 @@ export const Home: React.FC<HomeProps> = ({
   const clickedRef = useRef<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const homeScrollRef = useRef<HTMLDivElement | null>(null);
-  const [mobileNavVisible, setMobileNavVisible] = useState(true);
+  const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   // Reset scroll to top on mount so page starts at first card
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
-  // Mobile top nav: hide on scroll down, show on scroll up
-  useEffect(() => {
-    const el = homeScrollRef.current;
+  // Callback ref: attach scroll listener immediately when scroll container mounts.
+  // Uses direct DOM manipulation (no React state) so the animation is instant + reliable.
+  const homeScrollCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    homeScrollRef.current = el;
     if (!el) return;
     let lastY = 0;
+    const setNavVisible = (visible: boolean) => {
+      const nav = mobileNavRef.current;
+      if (!nav) return;
+      nav.style.transform = visible ? 'translateY(0)' : 'translateY(-100%)';
+      nav.style.opacity = visible ? '1' : '0';
+    };
     const onScroll = () => {
       const y = el.scrollTop;
-      setMobileNavVisible(y < 30 || y < lastY);
+      setNavVisible(y < 30 || y < lastY);
       lastY = y;
     };
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
   const displayItems = useMemo(() => {
@@ -89,18 +95,18 @@ export const Home: React.FC<HomeProps> = ({
 
   const topPicks = useMemo(() => displayItems.slice(0, 5), [displayItems]);
 
-  /* ── Group items by occasion for stack sections ── */
+  /* ── Group items by occasion for category grid ── */
   const categoryGroups = useMemo(() => {
     const groups = new Map<string, FeedItem[]>();
-    for (const item of displayItems.slice(5)) {
+    for (const item of displayItems) {
       const occ = item.occasion?.[0] || "trending";
       if (!groups.has(occ)) groups.set(occ, []);
       const arr = groups.get(occ)!;
       if (arr.length < 6) arr.push(item);
     }
     return Array.from(groups.entries())
-      .filter(([, items]) => items.length >= 2)
-      .slice(0, 4);
+      .filter(([, items]) => items.length >= 1)
+      .slice(0, 6);
   }, [displayItems]);
 
   const loadFeed = useCallback(async (startOffset: number, append: boolean) => {
@@ -187,13 +193,13 @@ export const Home: React.FC<HomeProps> = ({
   }
 
   return (
-    <div ref={homeScrollRef} data-home-scroll="true" className="w-full h-full overflow-y-auto scrollbar-hide bg-[#0a0a0a]">
+    <div ref={homeScrollCallbackRef} data-home-scroll="true" className="w-full h-full overflow-y-scroll snap-y snap-proximity overscroll-y-contain scrollbar-hide bg-[#0a0a0a]" style={{ scrollPaddingBottom: '56px' }}>
 
       {/* ═══ MOBILE TOP NAV — premium brand bar, hides on scroll ═══ */}
       <div
-        className={`md:hidden sticky top-0 z-40 flex items-center justify-center h-[52px] bg-[#0a0a0a]/90 backdrop-blur-md border-b border-[#1a1a1a]/60 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-          mobileNavVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
-        }`}
+        ref={mobileNavRef}
+        className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-start h-[52px] px-4 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-[#1a1a1a]/60"
+        style={{ transform: 'translateY(0)', opacity: '1', transition: 'transform 400ms cubic-bezier(0.25,1,0.5,1), opacity 400ms cubic-bezier(0.25,1,0.5,1)' }}
       >
         <div className="flex items-center gap-2">
           <img src="/ico/favicon.svg" alt="Stiri" width="28" height="28" className="block" />
@@ -209,7 +215,7 @@ export const Home: React.FC<HomeProps> = ({
       </div>
 
       {/* ═══ HERO — entry point ═══ */}
-      <header className="pt-5 pb-4 md:pt-8 md:pb-6 px-5 md:px-[7.5vw]">
+      <header className="snap-start snap-always pt-[60px] md:pt-8 pb-4 md:pb-6 px-5 md:px-[7.5vw]">
         <p className="text-[10px] md:text-[11px] tracking-[0.2em] uppercase text-[#c9a962]/70 font-medium mb-2 md:hidden" style={{ fontFamily: "var(--font-serif)" }}>
           fashion, personalized
         </p>
@@ -246,6 +252,7 @@ export const Home: React.FC<HomeProps> = ({
       {/* ═══ TRENDING CAROUSEL ═══ */}
       {topPicks.length > 0 && (
         <TrendingCarousel
+          className="snap-start snap-always"
           items={topPicks}
           onTryOn={handleTryOn}
           onClick={handleProductClick}
@@ -255,7 +262,7 @@ export const Home: React.FC<HomeProps> = ({
 
       {/* ═══ CATEGORY GRID — editorial tiles by occasion ═══ */}
       {categoryGroups.length > 0 && (
-        <section className="mt-10 md:mt-14 px-4 md:px-[7.5vw]">
+        <section className="snap-start snap-always mt-10 md:mt-14 px-4 md:px-[7.5vw]">
           <div className="flex items-baseline justify-between mb-5 md:mb-6">
             <h2
               className="text-[18px] md:text-[22px] font-light text-[#f5f5f5] tracking-[-0.01em]"
@@ -324,84 +331,33 @@ export const Home: React.FC<HomeProps> = ({
         </section>
       )}
 
-      {/* ═══ RANKED PRODUCT GRID — full personalized feed ═══ */}
-      {displayItems.length > 5 && (
-        <section className="mt-12 md:mt-16 px-4 md:px-[7.5vw] pb-32">
-          {/* Section header */}
-          <div className="flex items-baseline justify-between mb-6 md:mb-8">
-            <div>
-              <h2
-                className="text-[18px] md:text-[22px] font-light text-[#f5f5f5] tracking-[-0.01em]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                Curated <span className="text-[#c9a962] italic">for you</span>
-              </h2>
-              <p className="text-[10px] md:text-[11px] tracking-[0.15em] uppercase text-[#6b6b6b] mt-1">
-                Ranked by your style profile
-              </p>
-            </div>
+      {/* ═══ CURATED FEED — snap-scroll cards, one per screen ═══ */}
+      {displayItems.length > 0 && (
+        <>
+          {/* Section label — inline, not a snap point */}
+          <div className="px-5 md:px-[7.5vw] pt-12 md:pt-16 pb-4">
+            <h2
+              className="text-[22px] md:text-[28px] font-light text-[#f5f5f5] tracking-[-0.01em]"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              Curated <span className="text-[#c9a962] italic">for you</span>
+            </h2>
+            <p className="text-[10px] md:text-[11px] tracking-[0.2em] uppercase text-[#6b6b6b] mt-2">
+              Ranked by your style profile
+            </p>
           </div>
 
-          {/* Product grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
-            {displayItems.slice(5).map((item, i) => (
-              <div
-                key={item.product_id}
-                ref={observeCard}
-                data-pid={item.product_id}
-                className="group"
-              >
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleProductClick(item.product_id)}
-                  className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#0a0a0a] cursor-pointer"
-                >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#141414] to-[#0a0a0a]" />
-                  )}
-
-                  {/* Bottom gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-
-                  {/* Occasion tag */}
-                  {item.occasion?.[0] && (
-                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 text-[9px] tracking-[0.12em] uppercase font-medium text-[#c9a962] bg-black/60 backdrop-blur-sm rounded-full">
-                      {OCCASION_LABELS[item.occasion[0]] || item.occasion[0].replace(/_/g, " ")}
-                    </span>
-                  )}
-
-                  {/* Try-on quick action — appears on hover */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleTryOn(item.product_id); }}
-                    className="absolute bottom-3 left-3 right-3 py-2.5 text-[10px] font-semibold tracking-[0.1em] uppercase text-center text-[#0a0a0a] bg-white rounded-xl opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 active:scale-[0.97] cursor-pointer"
-                  >
-                    Step into
-                  </button>
-                </div>
-
-                {/* Product info */}
-                <div className="mt-2.5 px-0.5">
-                  <h4 className="text-[12px] md:text-[13px] font-medium text-[#e0e0e0] leading-snug line-clamp-2">
-                    {item.title}
-                  </h4>
-                  {item.min_price != null && (
-                    <p className="text-[12px] text-[#c9a962]/70 font-medium tabular-nums mt-0.5">
-                      ₹{Math.round(item.min_price / 100)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+          {displayItems.map((item) => (
+            <CuratedCard
+              key={item.product_id}
+              item={item}
+              onTryOn={handleTryOn}
+              onClick={handleProductClick}
+              observeRef={observeCard}
+              scrollRoot={homeScrollRef}
+            />
+          ))}
+        </>
       )}
 
       <div ref={sentinelRef} className="h-1" />
@@ -417,7 +373,7 @@ export const Home: React.FC<HomeProps> = ({
 
 /* ═══════════════════════════════════════════════════════════════════
    TRENDING CAROUSEL — 85vw hero snap cards (original nopromt.ai)
-   Gold quote, "Step into" CTA with hover fill, intersection focus
+   Gold quote, "Try-on" CTA with hover fill, intersection focus
    ═══════════════════════════════════════════════════════════════════ */
 
 interface TrendingCarouselProps {
@@ -425,9 +381,10 @@ interface TrendingCarouselProps {
   onTryOn: (productId: string) => void;
   onClick: (productId: string) => void;
   observeCard: (el: HTMLDivElement | null) => void;
+  className?: string;
 }
 
-const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onClick, observeCard }) => {
+const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onClick, observeCard, className }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -441,8 +398,9 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
 
   // Mobile: JS-driven horizontal swipe (no overflow-x, no scroll hijacking)
   useEffect(() => {
-    if (!isMobile) return;
     const el = scrollRef.current;
+    if (el) el.scrollLeft = 0;
+    if (!isMobile) return;
     if (!el) return;
     let startX = 0, startY = 0, locked = '', dragging = false, startScrollLeft = 0;
 
@@ -531,7 +489,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
   };
 
   return (
-    <section className="relative overflow-hidden">
+    <section className={`relative overflow-hidden ${className || ''}`}>
       <div className="w-full relative">
         {/* Scroll arrows — transparent, appear on hover */}
         <button
@@ -552,14 +510,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
         <div
           ref={scrollRef}
           className="flex gap-4 md:gap-6 overflow-hidden md:overflow-x-auto md:overflow-y-hidden md:snap-x md:snap-mandatory scrollbar-hide items-center px-[7.5vw]"
-          style={{ touchAction: 'pan-y' }}
-          onWheel={(e) => {
-            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-              const page = e.currentTarget.closest('[data-home-scroll]');
-              if (page) page.scrollTop += e.deltaY;
-              e.preventDefault();
-            }
-          }}
+          style={{ touchAction: 'pan-y', scrollPaddingLeft: '7.5vw' }}
         >
           {items.map((item, i) => {
             const isFocused = focusedId === item.product_id;
@@ -570,7 +521,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
                 ref={(el) => { setCardRef(item.product_id, el); observeCard(el); }}
                 data-card-id={item.product_id}
                 data-pid={item.product_id}
-                className="md:snap-center md:snap-always shrink-0 flex justify-center"
+                className="md:snap-center md:snap-always shrink-0 flex justify-center first:scroll-ml-0"
               >
                 <div
                   role="button"
@@ -610,7 +561,7 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
 
                   {/* Bottom content */}
                   <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
-                    {/* "Step into" CTA with gold hover fill */}
+                    {/* "Try-on" CTA with gold hover fill */}
                     <button
                       onClick={(e) => { e.stopPropagation(); onTryOn(item.product_id); }}
                       className="relative overflow-hidden group/button bg-white rounded-full font-bold tracking-wide flex items-center justify-center w-fit mb-4 px-6 py-2.5 text-sm md:px-10 md:py-4 md:text-base active:scale-95 transition-all duration-300 cursor-pointer"
@@ -649,8 +600,117 @@ const TrendingCarousel: React.FC<TrendingCarouselProps> = ({ items, onTryOn, onC
 
 
 /* ═══════════════════════════════════════════════════════════════════
+   CURATED CARD — Reels-style snap card for the ranked feed
+   Uses page-level snap-y snap-mandatory (on homeScrollRef)
+   ═══════════════════════════════════════════════════════════════════ */
+
+interface CuratedCardProps {
+  item: FeedItem;
+  onTryOn: (productId: string) => void;
+  onClick: (productId: string) => void;
+  observeRef: (el: HTMLDivElement | null) => void;
+  scrollRoot: React.RefObject<HTMLDivElement | null>;
+}
+
+const CuratedCard: React.FC<CuratedCardProps> = ({ item, onTryOn, onClick, observeRef, scrollRoot }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        setIsFocused(entry.isIntersecting && entry.intersectionRatio >= 0.5);
+      },
+      { root: scrollRoot.current, rootMargin: "-10% 0px -10% 0px", threshold: [0, 0.3, 0.5, 0.7] },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [scrollRoot]);
+
+  return (
+    <div
+      ref={(el) => { cardRef.current = el; observeRef(el); }}
+      data-pid={item.product_id}
+      className="snap-center snap-always shrink-0 w-full px-4 md:px-[7.5vw] flex items-center justify-center"
+      style={{ minHeight: 'calc(100svh - 56px)', paddingTop: '2vh', paddingBottom: 'calc(2vh + 56px)' }}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onClick(item.product_id)}
+        className={`
+          w-full max-w-[1000px] md:max-w-[1400px]
+          rounded-[24px] md:rounded-[40px] overflow-hidden
+          relative cursor-pointer group
+          transform transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]
+          bg-[#0a0a0a]
+          ${isFocused
+            ? 'scale-100 opacity-100'
+            : 'scale-[0.96] opacity-60'
+          }
+        `}
+        style={{ aspectRatio: '3/4', maxHeight: '80svh' }}
+      >
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.title}
+            decoding="async"
+            className={`w-full h-full object-cover object-top transition-transform duration-[1.5s] ease-out ${isFocused ? "scale-105" : "scale-100"}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#141414] to-[#0a0a0a]" />
+        )}
+
+        {/* Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+        {/* Occasion tag */}
+        {item.occasion?.[0] && (
+          <span className="absolute top-3 left-3 px-2.5 py-1 text-[9px] tracking-[0.12em] uppercase font-medium text-[#c9a962] bg-black/60 backdrop-blur-sm rounded-full">
+            {OCCASION_LABELS[item.occasion[0]] || item.occasion[0].replace(/_/g, " ")}
+          </span>
+        )}
+
+        {/* Bottom content */}
+        <div className={`absolute bottom-0 left-0 right-0 p-6 md:p-10 transition-all duration-700 ${isFocused ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-40'}`}>
+          {/* Try-on CTA */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onTryOn(item.product_id); }}
+            className="relative overflow-hidden bg-white rounded-full font-bold tracking-wide flex items-center justify-center w-fit mb-4 px-6 py-2.5 text-sm md:px-10 md:py-4 md:text-base active:scale-95 transition-all duration-300 cursor-pointer group/btn"
+          >
+            <span className="relative z-10 text-[#0a0a0a] group-hover/btn:text-white transition-colors duration-[600ms] ease-out">
+              Try-on
+            </span>
+            <div className="absolute inset-0 z-0 bg-[#c9a962] translate-y-[101%] group-hover/btn:translate-y-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)]" />
+          </button>
+
+          {/* Title */}
+          <h3 className="text-white text-[24px] md:text-[36px] lg:text-[48px] font-bold uppercase tracking-tight leading-[1.0] mb-2 md:mb-4 max-w-[90%]">
+            {item.title}
+          </h3>
+
+          {/* Price */}
+          {item.min_price != null && (
+            <p className="text-white/50 text-[14px] md:text-[16px] font-medium tabular-nums">
+              ₹{Math.round(item.min_price / 100)}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+/* ═══════════════════════════════════════════════════════════════════
    FEED CARD — Full-width snap card for the main feed stream
-   (old TemplateGrid style — vertical snap, "Step into" CTA)
+   (old TemplateGrid style — vertical snap, "Try-on" CTA)
    ═══════════════════════════════════════════════════════════════════ */
 
 interface FeedCardProps {
@@ -724,7 +784,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ item, index, onTryOn, onClick, obse
 
         {/* Bottom content */}
         <div className={`absolute bottom-0 left-0 right-0 p-6 md:p-10 transition-all duration-700 ${isFocused ? "translate-y-0 opacity-100" : "translate-y-2 opacity-40"}`}>
-          {/* "Step into" CTA */}
+          {/* "Try-on" CTA */}
           <button
             onClick={(e) => { e.stopPropagation(); onTryOn(); }}
             className="relative overflow-hidden group/button bg-white rounded-full font-bold tracking-wide flex items-center justify-center w-fit mb-4 px-6 py-2.5 text-sm md:px-8 md:py-3 md:text-base active:scale-95 transition-all duration-300 cursor-pointer"

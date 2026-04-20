@@ -71,7 +71,7 @@ These are **parallel paths, not sequential**. A user might try on first then buy
 ### UX — Dual Buttons Everywhere
 
 **TrendingCarousel (Home.tsx):**
-- Current: Single "Step into" button
+- Current: Single "Try-on" button
 - New: **"Try On"** button + **"Product Details"** button, side by side
 - "Try On" → navigates to TemplateExecution (AI generation)
 - "Product Details" → opens ProductDetailModal (Shopify: images, variants, price, Buy Now / Add to Cart / Wishlist)
@@ -275,7 +275,7 @@ The `shopifyHandle` field on each template (in `constants.ts` now, `templates` t
 | File | Change |
 |------|--------|
 | `web/features/templates/TemplateExecution.tsx` | Add **"Product Details"** button alongside generate button (always present) → opens `ProductDetailModal` for the linked Shopify product |
-| `web/features/templates/TrendingCarousel.tsx` | Rename "Step into" → **"Try On"**. Add **"Product Details"** button next to it. Each trending card gets dual buttons. |
+| `web/features/templates/TrendingCarousel.tsx` | Rename "Try-on" → **"Try On"**. Add **"Product Details"** button next to it. Each trending card gets dual buttons. |
 | `web/features/pages/Home.tsx` | Trending templates fetched with Shopify product data. Stack grid cards also get dual actions. |
 | `web/types/index.ts` | Add `ShopifyProduct`, `ShopifyCart`, `CartLine` types. Add `shopifyHandle` to `Template` interface. |
 | `web/data/constants.ts` | Add `shopifyHandle: string` to each template object (Phase 1). |
