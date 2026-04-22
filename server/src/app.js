@@ -24,6 +24,7 @@ import { feedHandler } from './routes/feed.js';
 import { createBoostHandler, listBoostsHandler, deleteBoostHandler } from './routes/adminBoost.js';
 import { getWeightsHandler, tuneWeightsHandler } from './routes/adminWeights.js';
 import { pushAllHandler, pushSingleHandler } from './routes/shopifyPush.js';
+import { seedImagesHandler } from './routes/adminSeedImages.js';
 import { getMetricsHandler } from './routes/adminMetrics.js';
 import { fullSyncHandler, singleSyncHandler, cronHandler } from './routes/productSync.js';
 import { uploadGarmentHandler, deleteGarmentHandler, listGarmentsHandler, syncWardrobeHandler, listOutfitsHandler, chatHandler, gapsHandler } from './routes/wardrobe.js';
@@ -178,6 +179,9 @@ export function createApp() {
   // Shopify Push (Supabase → Shopify)
   app.post('/api/admin/shopify-push', pushAllHandler);
   app.post('/api/admin/shopify-push/:id', pushSingleHandler);
+
+  // Seed product images → templates table
+  app.post('/api/admin/seed-images', seedImagesHandler);
 
   // Wardrobe
   app.post('/api/wardrobe/garments/upload', uploadGarmentHandler);
