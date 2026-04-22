@@ -118,39 +118,54 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   return (
     <div className="min-h-screen bg-base pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-40 glass border-b border-border">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <h1 className="font-display text-xl text-primary">My Closet</h1>
+      <div className="sticky top-0 z-40 bg-base/80 backdrop-blur-xl border-b border-white/5">
+        <div className="pl-4 pr-3 pt-4 pb-2 flex items-center justify-between">
+          <h1 className="font-display text-[22px] tracking-wide text-gold">CLOSET</h1>
           <div className="flex items-center gap-2">
-            {/* Concierge button */}
             <button
-              onClick={() => navigate('/search')}
-              className="w-9 h-9 rounded-full bg-gold-subtle
-                border border-gold/30 flex items-center justify-center
-                hover:border-gold/60 transition-colors min-w-[44px] min-h-[44px]"
+              onClick={() => navigate('/wishlist')}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-text-primary text-base font-medium text-[11px] tracking-wide"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--color-gold)"><path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              WISHLIST
             </button>
-
-            {/* Gaps button */}
-            {gaps.length > 0 && (
-              <button
-                onClick={() => setShowGaps(!showGaps)}
-                className="relative w-9 h-9 rounded-full bg-surface border border-border
-                  flex items-center justify-center hover:border-gold/40 transition-colors min-w-[44px] min-h-[44px]"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-secondary)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold rounded-full text-[9px] font-bold text-base flex items-center justify-center">
-                  {gaps.length}
-                </span>
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Sync bar */}
+        {/* Action Row */}
+        <div className="px-4 py-2 flex items-center gap-3">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-11 h-11 rounded-full bg-text-primary flex items-center justify-center text-base active:scale-95 transition-transform"
+          >
+            {uploading ? (
+              <div className="w-4 h-4 border-2 border-base border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-2.5 h-11 px-5 rounded-full bg-text-primary text-base font-medium text-[13px] active:scale-95 transition-transform"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            {syncing ? 'SYNCING...' : 'BUCKET'}
+          </button>
+        </div>
+
+        {/* Sync Progress Bar */}
         {syncing && (
-          <div className="px-4 pb-3">
+          <div className="px-4 pb-2">
             <div className="flex items-center gap-3">
               <div className="flex-1 h-1 bg-surface rounded-full overflow-hidden">
                 <div
@@ -158,43 +173,44 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
                   style={{ width: `${syncProgress}%` }}
                 />
               </div>
-              <span className="text-[11px] text-tertiary shrink-0">{syncMessage}</span>
+              <span className="text-[10px] text-tertiary shrink-0 uppercase tracking-wider">{syncMessage}</span>
             </div>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex px-4 gap-6">
-          {(['sets', 'all'] as Tab[]).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-2.5 text-[13px] font-semibold tracking-wide transition-colors border-b-2 ${
-                activeTab === tab
-                  ? 'text-gold border-gold'
-                  : 'text-tertiary border-transparent hover:text-secondary'
-              }`}
-            >
-              {tab === 'sets' ? 'Sets' : 'All Items'}
-            </button>
-          ))}
-
-          {/* Sync button in tab bar */}
+        {/* Tabs - horizontal scrolling */}
+        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="ml-auto pb-2.5 text-[12px] font-semibold tracking-wide text-gold
-              hover:text-gold-hover disabled:opacity-40 transition-colors flex items-center gap-1.5"
+            onClick={() => setActiveTab('sets')}
+            className={`whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold transition-colors duration-200 ${
+              activeTab === 'sets'
+                ? 'bg-gold text-base'
+                : 'bg-surface-elevated border border-white/5 text-tertiary hover:text-secondary'
+            }`}
           >
-            <svg
-              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-              className={syncing ? 'animate-spin' : ''}
-            >
-              <polyline points="23,4 23,10 17,10" />
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-            </svg>
-            Sync Pairs
+            ALL OUTFITS
+          </button>
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold transition-colors duration-200 ${
+              activeTab === 'all'
+                ? 'bg-gold text-base'
+                : 'bg-surface-elevated border border-white/5 text-tertiary hover:text-secondary'
+            }`}
+          >
+            ALL ITEMS
+          </button>
+          <button
+            disabled
+            className="whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold bg-surface-elevated border border-white/5 text-tertiary opacity-50"
+          >
+            OUTERWEAR
+          </button>
+          <button
+            disabled
+            className="whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold bg-surface-elevated border border-white/5 text-tertiary opacity-50"
+          >
+            EVENING
           </button>
         </div>
       </div>
@@ -212,30 +228,11 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
       {/* Tab content */}
       <div className="pt-4">
         {activeTab === 'sets' ? (
-          <SetsView onTryOn={handleTryOn} refreshTrigger={refreshTrigger} />
+          <SetsView onTryOn={handleTryOn} refreshTrigger={refreshTrigger} onUpload={() => fileInputRef.current?.click()} />
         ) : (
           <AllItemsView refreshTrigger={refreshTrigger} onUpload={() => fileInputRef.current?.click()} />
         )}
       </div>
-
-      {/* Upload FAB */}
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        className="fixed bottom-20 right-4 w-14 h-14 rounded-full z-40
-          bg-gold shadow-lg shadow-gold/20
-          flex items-center justify-center
-          active:scale-90 transition-transform disabled:opacity-50"
-      >
-        {uploading ? (
-          <div className="w-5 h-5 border-2 border-base border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-base)" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        )}
-      </button>
 
       {/* Hidden file input */}
       <input
@@ -245,6 +242,26 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         onChange={handleFileSelect}
         className="hidden"
       />
+
+      {/* Stylist Concierge Floating Input */}
+      <div className="fixed bottom-[88px] inset-x-0 px-4 z-40">
+        <button
+          onClick={() => navigate('/search')}
+          className="w-full h-14 bg-surface/95 backdrop-blur-xl border border-white/5 rounded-full flex items-center px-5 shadow-2xl active:scale-[0.98] transition-transform"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--color-gold)" className="mr-3 shrink-0">
+            <path d="M12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/>
+          </svg>
+          <span className="flex-1 text-left text-[15px] font-medium text-tertiary">
+            Ask your stylist...
+          </span>
+          <div className="w-8 h-8 bg-gold rounded-full flex items-center justify-center shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-base)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </div>
+        </button>
+      </div>
     </div>
   );
 };
