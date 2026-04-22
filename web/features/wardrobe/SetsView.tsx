@@ -92,7 +92,7 @@ export const SetsView: React.FC<SetsViewProps> = ({ onTryOn, refreshTrigger, onU
         
         <button 
           onClick={onUpload}
-          className="flex items-center justify-center gap-2 w-full max-w-[240px] h-[52px] rounded-full bg-gold text-base font-medium active:scale-95 transition-transform"
+          className="flex items-center justify-center gap-2 w-full max-w-[240px] h-[52px] rounded-full bg-gold text-[#0a0a0a] font-medium active:scale-95 transition-transform"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />

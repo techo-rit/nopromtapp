@@ -86,7 +86,7 @@ export const AllItemsView: React.FC<AllItemsViewProps> = ({ refreshTrigger, onUp
           <button
             onClick={onUpload}
             className="px-6 py-2.5 rounded-xl text-[12px] uppercase tracking-[0.15em] font-semibold
-              bg-gold text-base
+              bg-gold text-[#0a0a0a]
               hover:bg-gold-hover active:scale-[0.98] transition-all"
           >
             Add First Item

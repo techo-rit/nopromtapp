@@ -40,7 +40,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         <button
           onClick={onLoginRequired}
           className="px-8 py-3 rounded-[var(--radius-pill)] text-[13px] uppercase tracking-[0.15em] font-semibold
-            bg-gold text-base hover:bg-gold-hover active:scale-[0.97] transition-all
+            bg-gold text-[#0a0a0a] hover:bg-gold-hover active:scale-[0.97] transition-all
             shadow-[0_0_24px_-4px_rgba(232,195,125,0.25)]"
           style={{ transitionTimingFunction: 'var(--ease-spring)' }}
         >
@@ -116,7 +116,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   };
 
   return (
-    <div className="min-h-screen bg-base pb-24">
+    <div className="w-full h-full overflow-y-auto scrollbar-hide bg-base pb-[120px]">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-base/80 backdrop-blur-xl border-b border-white/5">
         <div className="pl-4 pr-3 pt-4 pb-2 flex items-center justify-between">
@@ -124,7 +124,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/wishlist')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-text-primary text-base font-medium text-[11px] tracking-wide"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary text-[#0a0a0a] font-medium text-[11px] tracking-wide shadow-[0_4px_14px_rgba(255,255,255,0.08)]"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
@@ -139,7 +139,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="w-11 h-11 rounded-full bg-text-primary flex items-center justify-center text-base active:scale-95 transition-transform"
+            className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-[#0a0a0a] active:scale-95 transition-transform"
           >
             {uploading ? (
               <div className="w-4 h-4 border-2 border-base border-t-transparent rounded-full animate-spin" />
@@ -152,7 +152,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-2.5 h-11 px-5 rounded-full bg-text-primary text-base font-medium text-[13px] active:scale-95 transition-transform"
+            className="flex items-center gap-2.5 h-11 px-5 rounded-full bg-primary text-[#0a0a0a] font-medium text-[13px] active:scale-95 transition-transform"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -179,13 +179,13 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         )}
 
         {/* Tabs - horizontal scrolling */}
-        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab('sets')}
             className={`whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold transition-colors duration-200 ${
               activeTab === 'sets'
-                ? 'bg-gold text-base'
-                : 'bg-surface-elevated border border-white/5 text-tertiary hover:text-secondary'
+                ? 'bg-gold text-[#0a0a0a]'
+                : 'bg-elevated border border-white/5 text-tertiary hover:text-secondary'
             }`}
           >
             ALL OUTFITS
@@ -194,21 +194,21 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
             onClick={() => setActiveTab('all')}
             className={`whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold transition-colors duration-200 ${
               activeTab === 'all'
-                ? 'bg-gold text-base'
-                : 'bg-surface-elevated border border-white/5 text-tertiary hover:text-secondary'
+                ? 'bg-gold text-[#0a0a0a]'
+                : 'bg-elevated border border-white/5 text-tertiary hover:text-secondary'
             }`}
           >
             ALL ITEMS
           </button>
           <button
             disabled
-            className="whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold bg-surface-elevated border border-white/5 text-tertiary opacity-50"
+            className="whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold bg-elevated border border-white/5 text-tertiary opacity-50"
           >
             OUTERWEAR
           </button>
           <button
             disabled
-            className="whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold bg-surface-elevated border border-white/5 text-tertiary opacity-50"
+            className="whitespace-nowrap px-5 py-2 rounded-full text-[11px] uppercase tracking-wider font-semibold bg-elevated border border-white/5 text-tertiary opacity-50"
           >
             EVENING
           </button>
