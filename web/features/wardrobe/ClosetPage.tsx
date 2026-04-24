@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { WardrobeOutfit, WardrobeGap, WardrobeSyncEvent } from '../../types';
 import { uploadGarment, startSync, getGaps } from './wardrobeService';
@@ -11,20 +11,47 @@ interface ClosetPageProps {
   onLoginRequired?: () => void;
 }
 
+interface UploadItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: 'pending' | 'uploading' | 'done' | 'error';
+  errorMsg?: string;
+}
+
 type Tab = 'sets' | 'all';
+type SyncResult = { type: 'success' | 'error' | 'info'; message: string } | null;
 
 export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('sets');
   const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState('');
   const [syncProgress, setSyncProgress] = useState(0);
+  const [syncResult, setSyncResult] = useState<SyncResult>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [gaps, setGaps] = useState<WardrobeGap[]>([]);
   const [showGaps, setShowGaps] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const syncAbortRef = useRef<AbortController | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-dismiss upload sheet after all done
+  useEffect(() => {
+    if (uploadQueue.length === 0) return;
+    const allSettled = uploadQueue.every(i => i.status === 'done' || i.status === 'error');
+    if (!allSettled) return;
+    dismissTimerRef.current = setTimeout(() => {
+      setUploadQueue(prev => {
+        prev.forEach(i => URL.revokeObjectURL(i.previewUrl));
+        return [];
+      });
+    }, 3000);
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  }, [uploadQueue]);
 
   // Auth gate
   if (!user) {
@@ -51,56 +78,80 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+    const MAX_FILES = 10;
 
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/jpg'].includes(file.type)) {
-      return;
-    }
+    const rawFiles = Array.from(e.target.files || []);
+    const validFiles = rawFiles.filter(f => ALLOWED_TYPES.has(f.type)).slice(0, MAX_FILES);
+    if (!validFiles.length) return;
 
+    // Build queue with preview URLs
+    const items: UploadItem[] = validFiles.map(file => ({
+      id: Math.random().toString(36).slice(2),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      status: 'pending',
+    }));
+
+    setUploadQueue(items);
     setUploading(true);
-    try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]); // strip data:...;base64,
-        };
-        reader.readAsDataURL(file);
-      });
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
-      await uploadGarment(base64, file.type);
-      setRefreshTrigger(prev => prev + 1);
-    } catch {
-      // silent
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    let anySuccess = false;
+
+    for (const item of items) {
+      setUploadQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'uploading' } : i));
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(item.file);
+        });
+        await uploadGarment(base64, item.file.type);
+        anySuccess = true;
+        setUploadQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'done' } : i));
+      } catch (err) {
+        setUploadQueue(q => q.map(i => i.id === item.id ? {
+          ...i,
+          status: 'error',
+          errorMsg: err instanceof Error ? err.message : 'Upload failed',
+        } : i));
+      }
     }
+
+    if (anySuccess) setRefreshTrigger(prev => prev + 1);
+    setUploading(false);
   };
 
   const handleSync = useCallback(() => {
     if (syncing) return;
     setSyncing(true);
     setSyncProgress(0);
-    setSyncMessage('Starting sync...');
+    setSyncResult({ type: 'info', message: 'Starting sync...' });
 
     syncAbortRef.current = startSync(
       (event: WardrobeSyncEvent) => {
-        setSyncMessage(event.message || '');
+        if (event.message) setSyncResult({ type: 'info', message: event.message });
         if (event.progress != null) setSyncProgress(event.progress);
         if (event.type === 'complete' || event.type === 'error') {
           setSyncing(false);
+          setSyncResult({
+            type: event.type === 'complete' ? 'success' : 'error',
+            message: event.message || (event.type === 'error' ? 'Sync failed. Try again.' : 'Sync complete.'),
+          });
           if (event.type === 'complete') {
             setRefreshTrigger(prev => prev + 1);
-            // Load gaps after sync
             getGaps().then(data => setGaps(data.gaps)).catch(() => {});
           }
         }
       },
       () => {
         setSyncing(false);
-        setSyncMessage('Sync failed. Try again.');
+        setSyncResult({ type: 'error', message: 'Sync failed. Check connection and try again.' });
       },
       () => setSyncing(false),
     );
@@ -110,7 +161,6 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
     // Navigate to changing room with outfit context — future enhancement
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleShopGap = (_gap: WardrobeGap) => {
     // Navigate to shop with gap filters — future enhancement
   };
@@ -148,18 +198,40 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
           </div>
         </div>
 
-        {/* Sync bar */}
+        {/* Sync progress bar (only while running) */}
         {syncing && (
-          <div className="px-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-1 bg-surface rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gold rounded-full transition-all duration-500"
-                  style={{ width: `${syncProgress}%` }}
-                />
-              </div>
-              <span className="text-[11px] text-tertiary shrink-0">{syncMessage}</span>
+          <div className="px-4 pb-2">
+            <div className="flex-1 h-0.5 bg-surface rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gold rounded-full transition-all duration-700 ease-out"
+                style={{ width: syncProgress > 0 ? `${syncProgress}%` : '15%' }}
+              />
             </div>
+          </div>
+        )}
+
+        {/* Sync result banner (persists after sync) */}
+        {!syncing && syncResult && (
+          <div className={`mx-4 mb-2.5 px-3 py-2 rounded-xl flex items-center justify-between gap-3 text-[12px] font-medium
+            ${syncResult.type === 'error' ? 'bg-red-500/10 border border-red-500/30 text-red-400'
+              : syncResult.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+              : 'bg-surface border border-border text-secondary'}`}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {syncResult.type === 'error' && (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              )}
+              {syncResult.type === 'success' && (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+              )}
+              <span className="truncate">{syncResult.message}</span>
+            </div>
+            <button
+              onClick={() => setSyncResult(null)}
+              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
         )}
 
@@ -179,7 +251,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
             </button>
           ))}
 
-          {/* Sync button in tab bar */}
+          {/* Sync button */}
           <button
             onClick={handleSync}
             disabled={syncing}
@@ -237,14 +309,155 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         )}
       </button>
 
-      {/* Hidden file input */}
+      {/* Upload Progress Sheet */}
+      {uploadQueue.length > 0 && (
+        <UploadProgressSheet queue={uploadQueue} onDismiss={() => {
+          if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+          setUploadQueue(prev => {
+            prev.forEach(i => URL.revokeObjectURL(i.previewUrl));
+            return [];
+          });
+        }} />
+      )}
+
+      {/* Hidden file input — multiple, up to 10 */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        multiple
         onChange={handleFileSelect}
         className="hidden"
       />
+    </div>
+  );
+};
+
+// ── Upload Progress Sheet ──────────────────────────────────────────
+
+interface UploadProgressSheetProps {
+  queue: UploadItem[];
+  onDismiss: () => void;
+}
+
+const UploadProgressSheet: React.FC<UploadProgressSheetProps> = ({ queue, onDismiss }) => {
+  const done = queue.filter(i => i.status === 'done').length;
+  const errors = queue.filter(i => i.status === 'error').length;
+  const total = queue.length;
+  const allSettled = done + errors === total;
+  const progress = Math.round(((done + errors) / total) * 100);
+
+  return (
+    <div
+      className="fixed bottom-20 left-3 right-3 z-50 rounded-2xl overflow-hidden
+        border border-white/10 shadow-2xl"
+      style={{
+        background: 'rgba(18,18,18,0.97)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
+    >
+      {/* Thin progress bar at top */}
+      <div className="h-0.5 bg-white/5">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ease-out ${allSettled && errors === total ? 'bg-red-500' : 'bg-gold'}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="p-3">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            {allSettled ? (
+              errors === total ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              )
+            ) : (
+              <div className="w-3.5 h-3.5 border-2 rounded-full border-t-transparent animate-spin" style={{ borderColor: 'var(--color-gold)', borderTopColor: 'transparent' }} />
+            )}
+            <span className="text-[13px] font-semibold text-white">
+              {allSettled
+                ? errors === 0 ? `${done} photo${done !== 1 ? 's' : ''} added`
+                  : errors === total ? `Upload failed`
+                  : `${done} added, ${errors} failed`
+                : `Uploading ${done + errors + 1} of ${total}…`}
+            </span>
+          </div>
+          {allSettled && (
+            <button
+              onClick={onDismiss}
+              className="w-6 h-6 rounded-full flex items-center justify-center
+                text-white/40 hover:text-white/80 hover:bg-white/10 transition-all"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          )}
+        </div>
+
+        {/* Thumbnail row */}
+        <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+          {queue.map(item => (
+            <div key={item.id} className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden">
+              {/* Image or skeleton */}
+              {item.previewUrl ? (
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <div className="w-full h-full bg-white/5 animate-pulse" />
+              )}
+
+              {/* Status overlay */}
+              {item.status === 'pending' && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-white/10 border border-white/20" />
+                </div>
+              )}
+              {item.status === 'uploading' && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  {/* Shimmer sweep */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 w-12 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                      style={{ animation: 'shimmer 1.2s infinite', left: '-3rem' }}
+                    />
+                  </div>
+                  <div className="w-4 h-4 border-2 rounded-full border-t-transparent animate-spin relative z-10"
+                    style={{ borderColor: 'var(--color-gold)', borderTopColor: 'transparent' }}
+                  />
+                </div>
+              )}
+              {item.status === 'done' && (
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/90 flex items-center justify-center">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
+              )}
+              {item.status === 'error' && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-red-500/90 flex items-center justify-center">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(calc(3.5rem * 4 + 100%)); }
+        }
+      `}</style>
     </div>
   );
 };
