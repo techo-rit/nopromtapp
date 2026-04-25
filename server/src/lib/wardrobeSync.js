@@ -17,8 +17,10 @@ const WARDROBE_ACTIVATION_THRESHOLD = 10;
  * @param {string} userId
  * @param {object} userProfile - profiles row
  * @param {object} res - Express response (for SSE)
+ * @param {function} isAborted
+ * @param {object} log - optional logger that writes to server.log
  */
-export async function runWardrobeSync(userId, userProfile, res, isAborted = () => false) {
+export async function runWardrobeSync(userId, userProfile, res, isAborted = () => false, log = logger) {
   const admin = createAdminClient();
 
   const sendEvent = (type, data) => {
@@ -90,7 +92,7 @@ export async function runWardrobeSync(userId, userProfile, res, isAborted = () =
 
       if (isAborted()) return;
 
-      const analysisResults = await analyzeGarmentsBatch(garmentInputs);
+      const analysisResults = await analyzeGarmentsBatch(garmentInputs, log);
 
       // Update garments with extracted attributes in parallel
       await Promise.all(analysisResults.map(async (result) => {
@@ -146,7 +148,7 @@ export async function runWardrobeSync(userId, userProfile, res, isAborted = () =
           await admin.from('wardrobe_garments').update({
             analysis_failed: true,
           }).eq('id', result.id);
-          logger.warn(`Garment ${result.id} analysis failed: ${result.error}`);
+          log.warn(`Garment ${result.id} analysis failed: ${result.error}`);
         }
       }));
 
@@ -243,7 +245,7 @@ export async function runWardrobeSync(userId, userProfile, res, isAborted = () =
       gap_count: gaps.length,
     });
   } catch (err) {
-    logger.error(`Wardrobe sync failed for user ${userId}: ${err.message}`);
+    log.error(`Wardrobe sync failed for user ${userId}: ${err.stack || err.message}`);
     sendEvent('error', { message: 'Sync failed. Please try again.' });
   }
 }

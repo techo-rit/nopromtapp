@@ -80,11 +80,25 @@ Return a JSON array with one object per image, in the same order as the images p
 Analyze based on visual evidence only - do not guess brand or exact fabric if not visible.`;
 
 /**
- * Analyze a batch of garment images using Gemini.
- * @param {Array<{id: string, imageUrl: string, imageBuffer?: Buffer}>} garments
- * @returns {Promise<Array<{id: string, attributes: object|null, error: string|null}>>}
+ * Extract a JSON string from Gemini's response text.
+ * Gemini sometimes wraps JSON in markdown code fences even when
+ * responseMimeType is set — this strips them robustly.
  */
-export async function analyzeGarmentsBatch(garments) {
+function extractJSON(text) {
+  if (!text) return '';
+  // Strip ```json ... ``` or ``` ... ``` markdown fences
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) return fenceMatch[1].trim();
+  // Find first [ or { and last ] or }
+  const start = text.search(/[\[{]/);
+  if (start === -1) return text;
+  // Find matching close from end
+  const lastClose = Math.max(text.lastIndexOf(']'), text.lastIndexOf('}'));
+  if (lastClose <= start) return text;
+  return text.slice(start, lastClose + 1);
+}
+
+export async function analyzeGarmentsBatch(garments, log = logger) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) throw new Error('Gemini API key not configured');
 
@@ -94,14 +108,14 @@ export async function analyzeGarmentsBatch(garments) {
   // Split into batches of MAX_IMAGES_PER_BATCH
   for (let i = 0; i < garments.length; i += MAX_IMAGES_PER_BATCH) {
     const batch = garments.slice(i, i + MAX_IMAGES_PER_BATCH);
-    const batchResults = await analyzeBatch(ai, batch);
+    const batchResults = await analyzeBatch(ai, batch, log);
     results.push(...batchResults);
   }
 
   return results;
 }
 
-async function analyzeBatch(ai, garments) {
+async function analyzeBatch(ai, garments, log = logger) {
   const parts = [];
 
   // Only include garments we actually have image data for
@@ -142,11 +156,19 @@ async function analyzeBatch(ai, garments) {
       },
     });
 
-    const text = response.text || '';
-    const parsed = JSON.parse(text);
+    // response.text may be undefined in some SDK versions — fall back through candidates
+    const rawText =
+      response.text ??
+      response?.candidates?.[0]?.content?.parts?.[0]?.text ??
+      '';
+
+    log.warn(`Gemini raw response length: ${rawText.length} chars`);
+
+    const jsonStr = extractJSON(rawText);
+    const parsed = JSON.parse(jsonStr);
 
     if (!Array.isArray(parsed)) {
-      logger.warn('Gemini returned non-array response for garment batch');
+      log.error(`Gemini non-array response: ${rawText.slice(0, 200)}`);
       return garments.map(g => ({ id: g.id, attributes: null, error: 'Non-array response' }));
     }
 
@@ -166,7 +188,7 @@ async function analyzeBatch(ai, garments) {
     const failed = noImage.map(g => ({ id: g.id, attributes: null, error: 'No image buffer' }));
     return [...analyzed, ...failed];
   } catch (err) {
-    logger.error(`Gemini garment analysis failed: ${err.message}`);
+    log.error(`Gemini garment analysis failed: ${err.stack || err.message}`);
     return garments.map(g => ({ id: g.id, attributes: null, error: err.message }));
   }
 }

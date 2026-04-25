@@ -251,10 +251,11 @@ export async function syncWardrobeHandler(req, res) {
 
     if (aborted) return res.end();
 
-    await runWardrobeSync(user.id, profile, res, () => aborted);
+    const log = makeLogger(req);
+    await runWardrobeSync(user.id, profile, res, () => aborted, log);
   } catch (err) {
     if (!aborted) {
-      logger.error(`Wardrobe sync error: ${err.message}`);
+      makeLogger(req).error(`Wardrobe sync route error: ${err.stack || err.message}`);
       res.write(`data: ${JSON.stringify({ type: 'error', message: 'Sync failed' })}\n\n`);
     }
   } finally {
