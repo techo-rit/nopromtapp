@@ -6,14 +6,20 @@ let _sharp = null;
 let _removeBackground = null;
 
 async function getSharp() {
-  if (!_sharp) {
-    try {
-      const mod = await import('sharp');
-      _sharp = mod.default;
-    } catch (err) {
-      logger.warn(`sharp unavailable (${err.message}). Images will be stored as-is.`);
-      _sharp = false;
-    }
+  if (_sharp !== null) return _sharp || null;
+  try {
+    const mod = await import('sharp');
+    const sharpFn = mod.default;
+    // Probe with a synthetic 1×1 image — catches GLib/native-binary crashes at startup
+    // before any real user request hits the runtime crash.
+    await sharpFn({
+      create: { width: 1, height: 1, channels: 3, background: { r: 0, g: 0, b: 0 } },
+    }).jpeg().toBuffer();
+    _sharp = sharpFn;
+    logger.warn('sharp: native binary OK');
+  } catch (err) {
+    logger.warn(`sharp unavailable or native crash (${err.message}). Images stored as-is.`);
+    _sharp = false;
   }
   return _sharp || null;
 }

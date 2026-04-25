@@ -226,11 +226,9 @@ export const AllItemsView: React.FC<AllItemsViewProps> = ({ refreshTrigger, onUp
                     loading="lazy"
                   />
 
-                  {/* Analysis pending indicator */}
+                  {/* Analysis pending — small dot, not a blocking overlay */}
                   {!garment.is_analyzed && !garment.analysis_failed && !selectMode && (
-                    <div className="absolute inset-0 bg-base/50 flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-                    </div>
+                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold animate-pulse" />
                   )}
 
                   {/* Analysis failed indicator */}
@@ -255,18 +253,22 @@ export const AllItemsView: React.FC<AllItemsViewProps> = ({ refreshTrigger, onUp
                     <div className="absolute inset-0 bg-black/30" />
                   )}
 
-                  {/* Delete button on hover (non-select mode) */}
+                  {/* Delete button — always visible (non-select mode) */}
                   {!selectMode && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(garment.id); }}
                       disabled={deletingId === garment.id}
                       className="absolute top-1.5 left-1.5 w-6 h-6 bg-base/70 backdrop-blur-sm rounded-full
-                        flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity
-                        hover:bg-red-500/80"
+                        flex items-center justify-center transition-colors
+                        hover:bg-red-500/80 disabled:opacity-40"
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
+                      {deletingId === garment.id ? (
+                        <div className="w-3 h-3 border border-white/60 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      )}
                     </button>
                   )}
 
