@@ -79,7 +79,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
-    const MAX_FILES = 10;
+    const MAX_FILES = 30;
 
     const rawFiles = Array.from(e.target.files || []);
     const validFiles = rawFiles.filter(f => ALLOWED_TYPES.has(f.type)).slice(0, MAX_FILES);
@@ -166,7 +166,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   };
 
   return (
-    <div className="min-h-screen bg-base pb-24">
+    <div className="h-full overflow-y-auto bg-base pb-24">
       {/* Header */}
       <div className="sticky top-0 z-40 glass border-b border-border">
         <div className="px-4 py-3 flex items-center justify-between">

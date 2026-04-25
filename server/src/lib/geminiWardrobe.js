@@ -88,31 +88,30 @@ export async function analyzeGarmentsBatch(garments) {
 async function analyzeBatch(ai, garments) {
   const parts = [];
 
+  // Only include garments we actually have image data for
+  const analyzable = garments.filter(g => g.imageBuffer && g.imageBuffer.length > 0);
+  const noImage = garments.filter(g => !g.imageBuffer || g.imageBuffer.length === 0);
+
+  if (analyzable.length === 0) {
+    return garments.map(g => ({ id: g.id, attributes: null, error: 'No image buffer available' }));
+  }
+
   // Add prompt with image index markers
   let promptWithMarkers = ANALYSIS_PROMPT + '\n\n';
-  for (let i = 0; i < garments.length; i++) {
-    promptWithMarkers += `Image ${i + 1}: garment_id="${garments[i].id}"\n`;
+  for (let i = 0; i < analyzable.length; i++) {
+    promptWithMarkers += `Image ${i + 1}: garment_id="${analyzable[i].id}"\n`;
   }
 
   parts.push({ text: promptWithMarkers });
 
-  // Add images
-  for (const garment of garments) {
-    if (garment.imageBuffer) {
-      parts.push({
-        inlineData: {
-          mimeType: 'image/webp',
-          data: garment.imageBuffer.toString('base64'),
-        },
-      });
-    } else if (garment.imageUrl) {
-      parts.push({
-        fileData: {
-          fileUri: garment.imageUrl,
-          mimeType: 'image/webp',
-        },
-      });
-    }
+  // Add images as inlineData — fileData.fileUri is only for Gemini Files API URIs, not HTTPS URLs
+  for (const garment of analyzable) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/webp',
+        data: garment.imageBuffer.toString('base64'),
+      },
+    });
   }
 
   try {
@@ -133,20 +132,21 @@ async function analyzeBatch(ai, garments) {
       return garments.map(g => ({ id: g.id, attributes: null, error: 'Non-array response' }));
     }
 
-    // Match responses to garments by index
-    return garments.map((garment, idx) => {
+    // Match responses to analyzable garments by index; mark no-image garments as failed
+    const analyzed = analyzable.map((garment, idx) => {
       const attrs = parsed[idx] || null;
       if (!attrs) {
         return { id: garment.id, attributes: null, error: 'Missing in response' };
       }
-
       // Post-process: layer reclassification
       if (attrs.garment_category === 'upperwear' && LAYER_TYPES.has(attrs.garment_type)) {
         attrs.garment_category = 'layer';
       }
-
       return { id: garment.id, attributes: attrs, error: null };
     });
+
+    const failed = noImage.map(g => ({ id: g.id, attributes: null, error: 'No image buffer' }));
+    return [...analyzed, ...failed];
   } catch (err) {
     logger.error(`Gemini garment analysis failed: ${err.message}`);
     return garments.map(g => ({ id: g.id, attributes: null, error: err.message }));

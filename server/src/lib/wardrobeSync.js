@@ -37,21 +37,54 @@ export async function runWardrobeSync(userId, userProfile, res, isAborted = () =
     if (gErr) throw gErr;
 
     // ── Step 2: Analyze unanalyzed garments ──
-    const unanalyzed = allGarments.filter(g => !g.is_analyzed && !g.analysis_failed);
+    // Retry analysis_failed garments too — previous failures may have been transient (network/API)
+    const unanalyzed = allGarments.filter(g => !g.is_analyzed);
 
     if (unanalyzed.length > 0) {
       sendEvent('analyzing', { progress: 0, message: `Analyzing ${unanalyzed.length} garments...` });
 
-      // Fetch image buffers in parallel
+      // Reset analysis_failed flag so this sync attempt is treated as fresh
+      const failedIds = unanalyzed.filter(g => g.analysis_failed).map(g => g.id);
+      if (failedIds.length > 0) {
+        await admin.from('wardrobe_garments')
+          .update({ analysis_failed: false })
+          .in('id', failedIds);
+      }
+
+      // Fetch image buffers in parallel.
+      // Primary: Supabase storage download. Fallback: direct HTTP fetch of the public URL.
+      // NOTE: Gemini fileData.fileUri only works with Files API URIs, NOT arbitrary HTTPS URLs —
+      // so we always need a real buffer; never rely on the fileData path.
       const garmentInputs = await Promise.all(unanalyzed.map(async (g) => {
+        // Try storage SDK download first
         try {
           const { data: fileData } = await admin.storage
             .from('wardrobe-items')
             .download(g.storage_path);
-          const buffer = fileData ? Buffer.from(await fileData.arrayBuffer()) : null;
-          return { id: g.id, imageUrl: g.image_url, imageBuffer: buffer };
-        } catch {
-          return { id: g.id, imageUrl: g.image_url };
+          if (fileData) {
+            const buffer = Buffer.from(await fileData.arrayBuffer());
+            return { id: g.id, imageUrl: g.image_url, imageBuffer: buffer };
+          }
+        } catch { /* fall through to HTTP fetch */ }
+
+        // Fallback: fetch the public URL directly as a buffer
+        try {
+          const { default: https } = await import('https');
+          const { default: http } = await import('http');
+          const imageBuffer = await new Promise((resolve, reject) => {
+            const url = new URL(g.image_url);
+            const client = url.protocol === 'https:' ? https : http;
+            client.get(g.image_url, (res) => {
+              const chunks = [];
+              res.on('data', chunk => chunks.push(chunk));
+              res.on('end', () => resolve(Buffer.concat(chunks)));
+              res.on('error', reject);
+            }).on('error', reject);
+          });
+          return { id: g.id, imageUrl: g.image_url, imageBuffer };
+        } catch (fetchErr) {
+          logger.warn(`Could not fetch image for garment ${g.id}: ${fetchErr.message}`);
+          return { id: g.id, imageUrl: g.image_url, imageBuffer: null };
         }
       }));
 
