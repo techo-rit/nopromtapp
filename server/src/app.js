@@ -47,6 +47,9 @@ export function createApp() {
   }
   const logStream = createWriteStream(path.join(logsDir, 'server.log'), { flags: 'a' });
 
+  // Make logStream available to route handlers via req.app.locals
+  app.locals.logStream = logStream;
+
   // Request logging (method, path, status, duration)
   app.use((req, res, next) => {
     const start = Date.now();

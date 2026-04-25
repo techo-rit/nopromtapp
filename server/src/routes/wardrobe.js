@@ -7,6 +7,15 @@ import { getUserFromRequest, createAdminClient } from '../lib/auth.js';
 import { processGarmentImage } from '../lib/imageProcessing.js';
 import { runWardrobeSync } from '../lib/wardrobeSync.js';
 import { processChatMessage } from '../lib/wardrobeConcierge.js';
+function makeLogger(req) {
+  const logStream = req?.app?.locals?.logStream;
+  const write = (level, msg) => {
+    const line = `${new Date().toISOString()} [${level}] ${msg}\n`;
+    if (logStream) logStream.write(line);
+    (level === 'error' ? console.error : console.warn)(msg);
+  };
+  return { warn: (m) => write('WARN', m), error: (m) => write('ERROR', m) };
+}
 const logger = { warn: console.warn.bind(console), error: console.error.bind(console) };
 
 const GARMENT_CAPS = { free: 30, essentials: 75, ultimate: 150 };
@@ -105,7 +114,8 @@ export async function uploadGarmentHandler(req, res) {
 
     return res.json({ garment, count: (count || 0) + 1, cap });
   } catch (err) {
-    logger.error(`Garment upload error: ${err.message}`);
+    const log = makeLogger(req);
+    log.error(`Garment upload error: ${err.stack || err.message}`);
     return res.status(500).json({ error: 'Upload failed' });
   }
 }
