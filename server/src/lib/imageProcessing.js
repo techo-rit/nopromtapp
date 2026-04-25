@@ -48,11 +48,20 @@ export async function processGarmentImage(buffer, mimeType) {
     return { cleanBuffer: buffer, originalResized: buffer, actualMimeType: mimeType };
   }
 
-  // Resize original to 1024px max dimension first (reduces bg-removal time)
-  const originalResized = await sharp(buffer)
-    .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 85 })
-    .toBuffer();
+  let originalResized;
+  try {
+    // Resize original to 1024px max dimension first (reduces bg-removal time)
+    originalResized = await sharp(buffer)
+      .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer();
+  } catch (sharpErr) {
+    // sharp binary loaded but crashed at runtime (e.g. GLib mismatch on server)
+    logger.warn(`sharp runtime error, using original buffer: ${sharpErr.message}`);
+    // Invalidate the cached module so future calls skip straight to fallback
+    _sharp = false;
+    return { cleanBuffer: buffer, originalResized: buffer, actualMimeType: mimeType };
+  }
 
   let cleanBuffer;
   try {
