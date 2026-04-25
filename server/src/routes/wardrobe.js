@@ -2,6 +2,7 @@
  * Wardrobe API Routes — Upload, delete, list, sync, outfits, chat, gaps.
  */
 
+import { randomUUID } from 'crypto';
 import { getUserFromRequest, createAdminClient } from '../lib/auth.js';
 import { processGarmentImage } from '../lib/imageProcessing.js';
 import { runWardrobeSync } from '../lib/wardrobeSync.js';
@@ -62,7 +63,7 @@ export async function uploadGarmentHandler(req, res) {
     const { cleanBuffer, actualMimeType } = await processGarmentImage(buffer, mimeType);
 
     // Generate garment ID for storage path
-    const garmentId = crypto.randomUUID();
+    const garmentId = randomUUID();
     const storagePath = `${user.id}/${garmentId}.webp`;
 
     // Upload to Supabase Storage
