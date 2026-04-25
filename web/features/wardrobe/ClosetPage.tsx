@@ -139,8 +139,11 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
         if (event.progress != null) setSyncProgress(event.progress);
         if (event.type === 'complete' || event.type === 'error') {
           setSyncing(false);
+          // 'complete' with outfit_count means real success; without it means "not enough garments"
+          const ev = event as any;
+          const isRealSuccess = event.type === 'complete' && typeof ev.outfit_count === 'number';
           setSyncResult({
-            type: event.type === 'complete' ? 'success' : 'error',
+            type: isRealSuccess ? 'success' : 'error',
             message: event.message || (event.type === 'error' ? 'Sync failed. Try again.' : 'Sync complete.'),
           });
           if (event.type === 'complete') {
@@ -166,7 +169,7 @@ export const ClosetPage: React.FC<ClosetPageProps> = ({ user, onLoginRequired })
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-base pb-24">
+    <div className="h-full overflow-y-auto scrollbar-hide bg-base pb-24">
       {/* Header */}
       <div className="sticky top-0 z-40 glass border-b border-border">
         <div className="px-4 py-3 flex items-center justify-between">

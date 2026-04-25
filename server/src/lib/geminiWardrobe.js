@@ -9,6 +9,22 @@ const logger = { warn: console.warn.bind(console), error: console.error.bind(con
 const WARDROBE_MODEL = 'gemini-2.0-flash';
 const MAX_IMAGES_PER_BATCH = 15;
 
+/** Detect image MIME type from buffer magic bytes (JPEG / PNG / WebP / GIF). */
+function detectImageMimeType(buffer) {
+  if (!buffer || buffer.length < 4) return 'image/jpeg';
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'image/jpeg';
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'image/png';
+  // WebP: 52 49 46 46 ... 57 45 42 50 (RIFF....WEBP)
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer.length >= 12 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'image/webp';
+  // GIF: 47 49 46
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) return 'image/gif';
+  // Default to JPEG
+  return 'image/jpeg';
+}
+
 const LAYER_TYPES = new Set([
   'jacket', 'cardigan', 'shrug', 'blazer', 'hoodie', 'coat', 'vest',
 ]);
@@ -104,11 +120,13 @@ async function analyzeBatch(ai, garments) {
 
   parts.push({ text: promptWithMarkers });
 
-  // Add images as inlineData — fileData.fileUri is only for Gemini Files API URIs, not HTTPS URLs
+  // Add images as inlineData.
+  // IMPORTANT: detect the actual format from buffer magic bytes — the stored file may be JPEG/PNG
+  // even if it has a .webp extension (happens when sharp native binaries are unavailable).
   for (const garment of analyzable) {
     parts.push({
       inlineData: {
-        mimeType: 'image/webp',
+        mimeType: detectImageMimeType(garment.imageBuffer),
         data: garment.imageBuffer.toString('base64'),
       },
     });

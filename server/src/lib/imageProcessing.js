@@ -43,9 +43,9 @@ export async function processGarmentImage(buffer, mimeType) {
   const sharp = await getSharp();
   const removeBackground = await getRemoveBackground();
 
-  // If sharp is unavailable, return buffer as-is
+  // If sharp is unavailable, return buffer as-is with original mimeType
   if (!sharp) {
-    return { cleanBuffer: buffer, originalResized: buffer };
+    return { cleanBuffer: buffer, originalResized: buffer, actualMimeType: mimeType };
   }
 
   // Resize original to 1024px max dimension first (reduces bg-removal time)
@@ -77,5 +77,5 @@ export async function processGarmentImage(buffer, mimeType) {
     cleanBuffer = originalResized;
   }
 
-  return { cleanBuffer, originalResized };
+  return { cleanBuffer, originalResized, actualMimeType: 'image/webp' };
 }

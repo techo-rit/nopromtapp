@@ -114,12 +114,23 @@ export function templatesStream(req, res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    Connection: 'keep-alive',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',    // Disable nginx buffering for SSE
+    'X-Content-Type-Options': 'nosniff',
   });
   // Send initial heartbeat
   res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
   sseClients.add(res);
-  req.on('close', () => { sseClients.delete(res); });
+
+  // Keepalive comment every 25s to prevent proxy/HTTP2 timeout
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) res.write(': keep-alive\n\n');
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    sseClients.delete(res);
+  });
 }
 
 /**

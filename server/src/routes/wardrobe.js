@@ -59,7 +59,7 @@ export async function uploadGarmentHandler(req, res) {
     }
 
     // Process image (bg removal + resize + WebP)
-    const { cleanBuffer } = await processGarmentImage(buffer, mimeType);
+    const { cleanBuffer, actualMimeType } = await processGarmentImage(buffer, mimeType);
 
     // Generate garment ID for storage path
     const garmentId = crypto.randomUUID();
@@ -69,7 +69,7 @@ export async function uploadGarmentHandler(req, res) {
     const { error: uploadError } = await admin.storage
       .from('wardrobe-items')
       .upload(storagePath, cleanBuffer, {
-        contentType: 'image/webp',
+        contentType: actualMimeType || 'image/webp',
         upsert: false,
       });
 
