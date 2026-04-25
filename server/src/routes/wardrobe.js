@@ -5,7 +5,7 @@
 import { randomUUID } from 'crypto';
 import { getUserFromRequest, createAdminClient } from '../lib/auth.js';
 import { processGarmentImage } from '../lib/imageProcessing.js';
-import { runWardrobeSync } from '../lib/wardrobeSync.js';
+import { runWardrobeSync, analyzeAndPersistGarment } from '../lib/wardrobeSync.js';
 import { processChatMessage } from '../lib/wardrobeConcierge.js';
 function makeLogger(req) {
   const logStream = req?.app?.locals?.logStream;
@@ -111,6 +111,12 @@ export async function uploadGarmentHandler(req, res) {
       logger.error(`Garment insert failed: ${insertError.message}`);
       return res.status(500).json({ error: 'Failed to create garment record' });
     }
+
+    // Fire-and-forget background analysis — don't await, response already sent
+    // Uses the image buffer we already have in memory (no re-download needed)
+    const log = makeLogger(req);
+    analyzeAndPersistGarment(garmentId, cleanBuffer, actualMimeType || mimeType, log)
+      .catch(err => log.error(`BG analysis fire error: ${err.message}`));
 
     return res.json({ garment, count: (count || 0) + 1, cap });
   } catch (err) {

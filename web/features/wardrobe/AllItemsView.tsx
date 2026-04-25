@@ -46,6 +46,14 @@ export const AllItemsView: React.FC<AllItemsViewProps> = ({ refreshTrigger, onUp
     loadGarments();
   }, [loadGarments, refreshTrigger]);
 
+  // Poll every 5s while any garment is pending analysis (background analysis in flight)
+  useEffect(() => {
+    const hasPending = garments.some(g => !g.is_analyzed && !g.analysis_failed);
+    if (!hasPending) return;
+    const timer = setTimeout(() => loadGarments(), 5000);
+    return () => clearTimeout(timer);
+  }, [garments, loadGarments]);
+
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {

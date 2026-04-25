@@ -10,7 +10,87 @@ import { generateVibeReport } from './vibeReport.js';
 import { detectGaps } from './gapAnalysis.js';
 const logger = { warn: console.warn.bind(console), error: console.error.bind(console) };
 
+import { createAdminClient } from './auth.js';
+import { analyzeGarmentsBatch } from './geminiWardrobe.js';
+import { generateOutfits } from './outfitPairing.js';
+import { generateVibeReport } from './vibeReport.js';
+import { detectGaps } from './gapAnalysis.js';
+const logger = { warn: console.warn.bind(console), error: console.error.bind(console) };
+
 const WARDROBE_ACTIVATION_THRESHOLD = 10;
+
+/**
+ * Analyze a single just-uploaded garment in the background (fire-and-forget).
+ * Called immediately after upload so the gold dot disappears without manual sync.
+ */
+export async function analyzeAndPersistGarment(garmentId, imageBuffer, mimeType, log = logger) {
+  const admin = createAdminClient();
+  if (!admin) return;
+  try {
+    const results = await analyzeGarmentsBatch(
+      [{ id: garmentId, imageBuffer, imageUrl: '' }],
+      log,
+    );
+    const result = results[0];
+    if (result?.attributes) {
+      const attrs = result.attributes;
+      await admin.from('wardrobe_garments').update({
+        garment_type: attrs.garment_type,
+        garment_category: attrs.garment_category,
+        primary_color_hex: attrs.primary_color_hex,
+        secondary_color_hex: attrs.secondary_color_hex,
+        color_family: attrs.color_family,
+        color_temperature: attrs.color_temperature,
+        color_intensity: attrs.color_intensity,
+        fit: attrs.fit,
+        fit_silhouette: attrs.fit_silhouette,
+        length: attrs.length,
+        waist_position: attrs.waist_position,
+        volume: attrs.volume,
+        fabric: attrs.fabric,
+        texture: attrs.texture,
+        weight: attrs.weight,
+        stretch: attrs.stretch ?? false,
+        opacity: attrs.opacity,
+        pattern: attrs.pattern,
+        pattern_scale: attrs.pattern_scale,
+        neckline: attrs.neckline,
+        sleeve_length: attrs.sleeve_length,
+        embellishment: attrs.embellishment,
+        hardware: attrs.hardware ?? false,
+        formality: attrs.formality ?? 0.5,
+        occasion_tags: attrs.occasion_tags || [],
+        aesthetic_tags: attrs.aesthetic_tags || [],
+        season_tags: attrs.season_tags || [],
+        perceived_quality: attrs.perceived_quality ?? 0.5,
+        style_tags: attrs.style_tags || [],
+        body_type_fit: attrs.body_type_fit || [],
+        skin_tone_complement: attrs.skin_tone_complement || [],
+        age_group: attrs.age_group || [],
+        trend_tag: attrs.trend_tag || [],
+        sustainability: attrs.sustainability || [],
+        price_tier: attrs.price_tier,
+        gender: attrs.gender,
+        brand_tier: attrs.brand_tier,
+        layering: attrs.layering,
+        care_level: attrs.care_level,
+        origin_aesthetic: attrs.origin_aesthetic,
+        versatility: attrs.versatility,
+        is_analyzed: true,
+        analysis_failed: false,
+      }).eq('id', garmentId);
+      log.warn(`Auto-analyzed garment ${garmentId}: ${attrs.garment_type}`);
+    } else {
+      await admin.from('wardrobe_garments').update({ analysis_failed: true }).eq('id', garmentId);
+      log.error(`Auto-analysis failed for garment ${garmentId}: ${result?.error}`);
+    }
+  } catch (err) {
+    log.error(`Auto-analysis error for garment ${garmentId}: ${err.stack || err.message}`);
+    try {
+      await admin.from('wardrobe_garments').update({ analysis_failed: true }).eq('id', garmentId);
+    } catch { /* ignore */ }
+  }
+}
 
 /**
  * Run the full wardrobe sync pipeline with SSE progress streaming.
