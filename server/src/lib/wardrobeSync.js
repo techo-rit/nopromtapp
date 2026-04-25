@@ -10,13 +10,6 @@ import { generateVibeReport } from './vibeReport.js';
 import { detectGaps } from './gapAnalysis.js';
 const logger = { warn: console.warn.bind(console), error: console.error.bind(console) };
 
-import { createAdminClient } from './auth.js';
-import { analyzeGarmentsBatch } from './geminiWardrobe.js';
-import { generateOutfits } from './outfitPairing.js';
-import { generateVibeReport } from './vibeReport.js';
-import { detectGaps } from './gapAnalysis.js';
-const logger = { warn: console.warn.bind(console), error: console.error.bind(console) };
-
 const WARDROBE_ACTIVATION_THRESHOLD = 10;
 
 /**
@@ -222,6 +215,7 @@ export async function runWardrobeSync(userId, userProfile, res, isAborted = () =
             origin_aesthetic: attrs.origin_aesthetic,
             versatility: attrs.versatility,
             is_analyzed: true,
+            analysis_failed: false,
           }).eq('id', result.id);
         } else {
           // Mark as failed
